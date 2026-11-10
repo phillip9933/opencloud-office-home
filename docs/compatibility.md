@@ -8,14 +8,14 @@ This is local source/build evidence, not certification for a deployed OpenCloud 
 | ------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Foundation         | Full clone of opencloud-eu/web-app-skeleton, commit 77f3194743046cf36ac567f7f241b5f33450df14              | Upstream history retained; no upstream submission                                  |
 | Tooling            | pnpm 11.27.0 and the upstream lockfile/configuration, extended for office testing                         | Local Linux verification only                                                      |
-| OpenCloud packages | Web client, Web package, design system, extension SDK and shared configs resolve to 8.0.0 in the lockfile | Build baseline, not a verified deployment                                          |
+| OpenCloud packages | Web client, Web package, design system, extension SDK and shared configs resolve to 8.2.1 in the lockfile | Matches the observed host's Web release; not a verified deployment                 |
 | Types              | Shared OpenCloud tsconfig with strict null checks, unknown catch variables and Vite client types          | Vite types address the stock starter's TypeScript 6 CSS side-effect import failure |
 | Lint/format        | Shared OpenCloud ESLint and Prettier configurations                                                       | Strict application checks retained                                                 |
 | Package manager    | Local store, install scripts disabled and stale dependencies rejected                                     | Setup needs registry access; checks run without it                                 |
 | Server/editor      | Test deployment observed as OpenCloud 9.0.0 with Web 8.2.1 and no registered office provider (below)      | No editor pairing exists to verify; Collabora remains a provisional reference      |
 | Packaging          | SDK native inspection package and separate synthetic preview                                              | No installable release claim                                                       |
 
-The earlier scratch spike investigated SDK 7.2 interfaces. Its useful application code and tests were ported onto the official starter. The disconnected catalog candidate now compiles against the installed SDK 8.0.0 declarations. This does not require a deployment to adopt that baseline.
+The earlier scratch spike investigated SDK 7.2 interfaces. Its useful application code and tests were ported onto the official starter. The disconnected candidates compile against the installed SDK 8.2.1 declarations, the Web release of the observed test deployment. Another deployment would need its own Web release matched.
 
 ## Observed test deployment (2026-11-11)
 
@@ -35,7 +35,8 @@ Read-only, unauthenticated observations of the authorized test deployment. Authe
 Consequences:
 
 - No create, open, edit, save, template or collaboration test is possible on this deployment until an administrator registers an office provider. The app must show "not configured", not a broken launch.
-- The locked SDK 8.0.0 is older than the host's Web 8.2.1. The declarations for every SDK symbol this app uses (`listMyDrives`, `listFiles`, `getFileInfo`, `search`, `AppProviderService`, app-provider schemas, `AppMenuItemExtension`, `Resource`) are unchanged or widened between 8.0.0 and 8.2.1; `icon` now also accepts named/image icon objects. Running the package inside the 8.2.1 host has not been tested. Aligning the lockfile with 8.2.1 is a separate dependency change.
+- The lockfile now resolves the OpenCloud packages to 8.2.1, matching the host. Between the earlier 8.0.0 baseline and 8.2.1, the declarations for every SDK symbol this app uses (`listMyDrives`, `listFiles`, `getFileInfo`, `search`, `AppProviderService`, app-provider schemas, `AppMenuItemExtension`, `Resource`) are unchanged or widened; `icon` also accepts named/image icon objects. Running the package inside the host has not been tested.
+- The 8.2.1 resolution leaves `@tiptap/extension-table-of-contents` 3.33.0 beside other tiptap packages at 3.31.3, an unmet exact peer range. Official Web 8.2.1 locks tiptap 3.32.0. This app neither imports tiptap nor bundles it: the host supplies `web-pkg` at runtime.
 
 ### Native seams confirmed in Web 8.2.1 source
 

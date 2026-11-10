@@ -6,7 +6,7 @@ Preliminary TypeScript/Vue application for three OpenCloud home screens: Docs, S
 
 ## Supported platforms
 
-Local tooling has been exercised on Linux with Node 26.12.1 and pnpm 11.27.0. The project declares Node >=24, but other Node versions and operating systems have not been tested. The build spike pins OpenCloud Web packages 8.0.0; no server/editor pairing is supported yet.
+Local tooling has been exercised on Linux with Node 26.12.1 and pnpm 11.27.0. The project declares Node >=24, but other Node versions and operating systems have not been tested. The lockfile pins OpenCloud Web packages 8.2.1, matching the Web release observed on the test deployment; no server/editor pairing is supported yet.
 
 ## Quick start
 

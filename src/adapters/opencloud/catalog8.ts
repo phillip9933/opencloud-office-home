@@ -12,7 +12,7 @@ import {
   type Result
 } from '../../contracts/office'
 
-// These method types come from the installed 8.0.0 SDK, not a proposed REST schema.
+// These method types come from the installed 8.x SDK, not a proposed REST schema.
 export interface ReadPort8 {
   drives: Pick<Graph['drives'], 'listMyDrives'>
   webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo'>

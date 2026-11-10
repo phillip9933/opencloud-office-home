@@ -43,7 +43,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Release behaviour:** Native creation formats come from the host's app registry, intersected with tested provider support, with distinct not-configured, unsupported-format and launch-failure states.
 - **Resolution:** Wire the port to `useAppProviderService()` and `useCapabilityStore()` in the native entry together with a verified creation and editor gateway; verify against a deployment with a registered provider.
 - **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The observed deployment's empty registry is a captured test case. Native app and preview entrypoints must not import the candidate while deployment checks are pending.
-- **Tested build and result:** Strict compilation and unit tests against SDK 8.0.0 declarations; the declarations used are unchanged in 8.2.1. Not run inside a host.
+- **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Not run inside a host.
 - **Status:** open
 
 ## DL-004: Disposable local development server example

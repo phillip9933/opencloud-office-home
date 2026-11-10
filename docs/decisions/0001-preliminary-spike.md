@@ -15,4 +15,4 @@ Provisional defaults from guide section 15:
 - Keep a neutral working name and defer license selection until dependency review.
 - Redirect friendly aliases to the existing canonical host only after domains, router and proxy are verified.
 
-The build-only choice of SDK 8.x.0 is an experiment, not a decision that the deployment must use that release. Alternatives include matching a different installed release or starting from a release-matched skeleton once available. Tradeoff: local contracts can be tested now, but no create/edit/save or permission compatibility claim follows from those passes.
+The SDK baseline follows the observed test deployment (Web 8.2.1, previously 8.0.0); it is not a decision that every deployment must use that release. Alternatives include matching a different installed release or starting from a release-matched skeleton once available. Tradeoff: local contracts can be tested now, but no create/edit/save or permission compatibility claim follows from those passes.
