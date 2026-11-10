@@ -1,0 +1,18 @@
+# Preliminary spike assumptions
+
+Status: provisional, not user-approved production policy.
+
+The technical guide permits starting the compatibility spike before final choices. The original source directory was empty, and no deployed OpenCloud baseline or credentials are available. One TypeScript/Vue package, three routes and shared typed services provide the smallest useful local foundation. A synthetic preview permits failure/navigation testing; the native adapter stays unavailable and default release builds fail.
+
+Provisional defaults from guide section 15:
+
+- Match the actual OpenCloud/Web deployment before implementation is pinned; use one Collabora reference deployment first. Euro-Office needs an independent community-support matrix.
+- Create ODT, ODS and ODP initially; open tested Microsoft formats. Prefer DOCX/XLSX/PPTX defaults only if external Office exchange is selected as the priority.
+- Use administrator-managed read-only template folders; defer user-template management.
+- Use a verified upstream recent-access source if one exists; otherwise clearly label browser-local history. No custom history backend is justified yet.
+- Allow only reviewed installed app integrations; no arbitrary remote URLs, modules or user-installable code.
+- Preserve native sharing; defer specialized anonymous office home screens.
+- Keep a neutral working name and defer license selection until dependency review.
+- Redirect friendly aliases to the existing canonical host only after domains, router and proxy are verified.
+
+The build-only choice of SDK 8.x.0 is an experiment, not a decision that the deployment must use that release. Alternatives include matching a different installed release or starting from a release-matched skeleton once available. Tradeoff: local contracts can be tested now, but no create/edit/save or permission compatibility claim follows from those passes.

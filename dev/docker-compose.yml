@@ -1,6 +1,8 @@
+# DEV-LIMIT(DL-004): disposable localhost development only; never production.
 services:
   opencloud:
-    image: ${OC_IMAGE:-opencloudeu/opencloud-rolling:latest}
+    profiles: [development]
+    image: ${OC_IMAGE:?Set an explicit development image tag or digest}
     entrypoint: /bin/sh
     command: ['-c', 'opencloud init || true && opencloud server']
     extra_hosts:
@@ -9,15 +11,15 @@ services:
       OC_URL: https://host.docker.internal:9200
       OC_INSECURE: true
       OC_LOG_LEVEL: error
-      IDM_ADMIN_PASSWORD: admin
+      IDM_ADMIN_PASSWORD: ${OFFICE_DEV_ADMIN_PASSWORD:?Set a disposable development password}
       IDM_CREATE_DEMO_USERS: true
       PROXY_ENABLE_BASIC_AUTH: true
       WEB_ASSET_APPS_PATH: /web/apps
     ports:
-      - '9200:9200'
+      - '127.0.0.1:9200:9200'
     volumes:
       - opencloud-config:/etc/opencloud
-      - ./dist:/web/apps/skeleton
+      - ../dist-spike:/web/apps/office
 
 volumes:
   opencloud-config:

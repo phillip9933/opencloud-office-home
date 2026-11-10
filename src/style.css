@@ -1,0 +1,216 @@
+.office {
+  --office-ink: var(--oc-role-on-surface, #193634);
+  --office-accent: var(--oc-role-primary, #126454);
+  --office-muted: var(--oc-role-on-surface-variant, #526966);
+  --office-line: var(--oc-role-outline-variant, #cbdad5);
+  color: var(--office-ink);
+  background: var(--oc-role-surface-container-low, #f3f6f2);
+  font:
+    1rem/1.5 system-ui,
+    sans-serif;
+  padding: clamp(1rem, 4vw, 3.5rem);
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+}
+.office *,
+.office *::before,
+.office *::after {
+  box-sizing: border-box;
+}
+.office h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+.office h2 {
+  font-size: 1.15rem;
+  margin: 0;
+  font-weight: 650;
+}
+.office p {
+  margin: 0.6rem 0;
+}
+.office button,
+.office input,
+.office select,
+.office a {
+  font: inherit;
+}
+.office button,
+.office input,
+.office select {
+  border: 1px solid var(--office-line);
+  background: var(--oc-role-surface, white);
+  color: var(--office-ink);
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.45rem;
+  min-height: 44px;
+}
+.office button,
+.office a {
+  cursor: pointer;
+}
+.office button:hover:not(:disabled),
+.office a:hover {
+  background: #e9f2ed;
+}
+.office button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.office :focus-visible {
+  outline: 3px solid #a05e05;
+  outline-offset: 3px;
+}
+.office label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+.office input,
+.office select {
+  width: 100%;
+  min-width: 0;
+}
+.office-topline,
+.office-section-title,
+.office-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.office-heading {
+  margin: 2rem 0;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.office-eyebrow {
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+.office-muted,
+.office-section-title > span {
+  color: var(--office-muted);
+  font-size: 0.9rem;
+}
+.office-banner {
+  border: 1px solid #bbcfc2;
+  border-radius: 0.4rem;
+  padding: 0.65rem 1rem;
+  background: #e5eee7;
+  font-size: 0.85rem;
+}
+.office-search {
+  width: min(100%, 24rem);
+}
+.office-panel {
+  background: #fff;
+  border: 1px solid var(--office-line);
+  padding: clamp(1rem, 2vw, 1.6rem);
+  margin: 1.2rem 0;
+  border-radius: 0.7rem;
+}
+.office-create {
+  display: grid;
+  grid-template-columns: 1.3fr 1.2fr 0.6fr auto;
+  align-items: end;
+  gap: 1rem;
+  margin: 1.5rem 0 1rem;
+}
+.office .office-primary {
+  background: var(--office-accent);
+  color: #fff;
+  border-color: var(--office-accent);
+}
+.office .office-primary:hover:not(:disabled) {
+  background: #104d41;
+}
+.office-file-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.office-file-list li {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-top: 1px solid #e1e9e5;
+}
+.office-file-list li > button {
+  text-align: start;
+  border-color: transparent;
+  flex: 1;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.office-file-list li > span:last-child {
+  flex-shrink: 0;
+}
+.office-file-icon {
+  font-size: 1.6rem;
+  color: var(--office-accent);
+}
+.office-empty {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--office-muted);
+}
+.office-notice {
+  border-inline-start: 3px solid var(--office-accent);
+  padding-inline-start: 1rem;
+}
+.office-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.office-switcher {
+  position: relative;
+}
+.office-switcher nav {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  min-width: 15rem;
+  inset-inline-start: 0;
+  top: calc(100% + 0.5rem);
+  background: white;
+  border: 1px solid var(--office-line);
+  box-shadow: 0 8px 24px #153b3020;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+.office-switcher a,
+.office-switcher nav span {
+  padding: 0.75rem;
+  color: inherit;
+  border-radius: 0.3rem;
+}
+.office-switcher a.router-link-active {
+  background: #e5eee7;
+  font-weight: 650;
+}
+@media (max-width: 700px) {
+  .office-create {
+    grid-template-columns: 1fr;
+  }
+  .office-section-title {
+    align-items: start;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+  .office-topline > .office-eyebrow {
+    display: none;
+  }
+  .office-file-list li {
+    gap: 0.4rem;
+  }
+}

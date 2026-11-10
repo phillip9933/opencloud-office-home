@@ -15,3 +15,11 @@ dist
 
 # dev setup
 docker-compose.override.yml
+# Office app inspection and test outputs
+dist-spike/
+dist-preview/
+test-results/
+playwright-report/
+.pnpm-store/
+.pnpm-cache/
+.pnpm-state/

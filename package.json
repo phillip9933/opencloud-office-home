@@ -1,20 +1,26 @@
 {
-  "name": "web-app-skeleton",
-  "version": "1.1.0",
-  "description": "All the bits and pieces for an easy start to build your own web apps and extensions for OpenCloud.",
-  "license": "Apache-2.0",
-  "author": "OpenCloud",
+  "name": "web-app-office",
+  "version": "0.1.0",
+  "description": "Native OpenCloud home screens for Docs, Sheets and Slides.",
+  "license": "UNLICENSED",
   "private": true,
-  "homepage": "https://github.com/opencloud-eu/web-app-skeleton",
+  "homepage": "https://github.com/phillip9933/Office_Launcher",
   "type": "module",
   "scripts": {
     "build": "pnpm vite build",
-    "build:w": "pnpm vite build --watch --mode development",
+    "build:w": "OFFICE_SPIKE_BUILD=1 pnpm vite build --watch --mode development",
     "check:types": "vue-tsc --noEmit",
-    "lint": "eslint 'src/**/*.{js,ts,vue}' --color",
+    "lint": "eslint 'src/**/*.{js,ts,vue}' 'tests/**/*.ts' '*.ts' 'scripts/*.mjs' --color",
     "format:check": "prettier . --check",
     "format:write": "prettier . --write",
-    "test:unit": "NODE_OPTIONS=--unhandled-rejections=throw vitest"
+    "test:unit": "NODE_OPTIONS=--unhandled-rejections=throw vitest run",
+    "dev": "pnpm vite --config vite.preview.config.ts --host 127.0.0.1",
+    "build:spike": "OFFICE_SPIKE_BUILD=1 pnpm vite build",
+    "build:preview": "pnpm vite build --config vite.preview.config.ts",
+    "test": "pnpm test:unit",
+    "test:e2e": "playwright test",
+    "check:artifacts": "node scripts/check-artifacts.mjs",
+    "check": "pnpm check:types && pnpm lint && pnpm format:check && pnpm test:unit && pnpm build:spike && pnpm build:preview && pnpm check:artifacts"
   },
   "devDependencies": {
     "@opencloud-eu/design-system": "^8.0.0",
@@ -35,7 +41,13 @@
     "vue": "^3.5.13",
     "vue-router": "^5.0.0",
     "vue-tsc": "^3.0.0",
-    "vue3-gettext": "^4.0.0"
+    "vue3-gettext": "^4.0.0",
+    "@playwright/test": "1.58.2",
+    "@types/node": "22.20.2",
+    "@vitejs/plugin-vue": "6.0.9"
   },
-  "packageManager": "pnpm@11.27.0"
+  "packageManager": "pnpm@11.27.0",
+  "engines": {
+    "node": ">=24"
+  }
 }

@@ -1,6 +1,11 @@
 {
   "extends": "@opencloud-eu/tsconfig",
   "compilerOptions": {
-    "types": ["vitest/globals"]
-  }
+    "types": ["vitest/globals", "node", "vite/client"],
+    "strict": true,
+    "strictNullChecks": true,
+    "useUnknownInCatchVariables": true,
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.vue", "tests/**/*.ts", "*.ts"]
 }

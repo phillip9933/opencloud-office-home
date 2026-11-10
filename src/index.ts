@@ -1,63 +1,40 @@
-import {
-  defineWebApplication,
-  ApplicationSetupOptions,
-  Extension,
-  AppMenuItemExtension
-} from '@opencloud-eu/web-pkg'
-import { urlJoin } from '@opencloud-eu/web-client'
-import '@opencloud-eu/extension-sdk/tailwind.css'
-import { RouteRecordRaw } from 'vue-router'
 import { computed } from 'vue'
-import { useGettext } from 'vue3-gettext'
+import { useRouter } from 'vue-router'
+import { defineWebApplication, type AppMenuItemExtension } from '@opencloud-eu/web-pkg'
+import '@opencloud-eu/extension-sdk/tailwind.css'
+import './style.css'
+import { officeApps } from './app/registry'
+import { createOfficeContext } from './app/context'
+import { unconfiguredServices } from './adapters/opencloud/unconfigured'
 
 export default defineWebApplication({
-  setup(args) {
-    const { $gettext } = useGettext()
-
-    const appInfo = {
-      id: 'skeleton',
-      name: $gettext('Skeleton'),
-      icon: 'cup',
-      color: '#622a0f'
-    }
-
-    const routes: RouteRecordRaw[] = [
-      {
-        path: '/',
-        redirect: `/${appInfo.id}/hello`
-      },
-      {
-        path: '/hello',
-        name: 'hello',
-        component: () => import('./views/Hello.vue'),
-        meta: {
-          authContext: 'user',
-          title: $gettext('Hello')
-        }
-      }
-    ]
-
-    const extensions = ({ applicationConfig }: ApplicationSetupOptions) => {
-      return computed<Extension[]>(() => {
-        const menuItems: AppMenuItemExtension[] = [
-          {
-            // registers a menu item for the app switcher
-            id: `app.${appInfo.id}.menuItem`,
-            type: 'appMenuItem',
-            label: () => appInfo.name,
-            color: appInfo.color,
-            icon: appInfo.icon,
-            path: urlJoin(appInfo.id)
-          }
-        ]
-        return [...menuItems]
-      })
-    }
-
+  setup() {
+    const context = createOfficeContext(unconfiguredServices())
+    const router = useRouter()
     return {
-      appInfo,
-      routes,
-      extensions: extensions(args)
+      appInfo: { id: 'office', name: 'Office', icon: 'file-text' },
+      routes: [
+        { path: '/', redirect: '/office/docs' },
+        ...officeApps.map((app) => ({
+          path: `/${app.id}`,
+          name: app.id,
+          component: () => import('./views/OfficeHome.vue'),
+          props: { kind: app.id, context },
+          meta: { authContext: 'user', title: app.label }
+        }))
+      ],
+      extensions: computed<AppMenuItemExtension[]>(() =>
+        context.menu.map((app) => ({
+          id: `office.menu.${app.id}`,
+          type: 'appMenuItem',
+          label: () => app.label,
+          icon: app.icon,
+          handler: async () => {
+            await router.push({ name: app.route })
+          },
+          priority: app.order
+        }))
+      )
     }
   }
 })
