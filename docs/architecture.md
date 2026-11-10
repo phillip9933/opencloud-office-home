@@ -13,6 +13,7 @@ The intended product is one native OpenCloud Web package with three home routes 
 | Workflow              | `src/services/home.ts`                                  | Request generations, cancellation, permission refresh, create/open guards and recovery       |
 | Integration contracts | `src/contracts/office.ts`                               | Typed, app-owned catalog, capability, creation and gateway boundaries                        |
 | Native adapter        | `src/adapters/opencloud/unconfigured.ts`, `catalog8.ts` | Fail-closed app entry plus a disconnected read-only SDK candidate                            |
+| Provider capabilities | `src/adapters/opencloud/providers8.ts`                  | Disconnected creation-format candidate from the app registry and app-provider capability     |
 | Recent history        | `src/preferences/recents.ts`                            | References only, instance/user scope, 100 entries and 90-day retention                       |
 | Preview               | `src/preview.ts`, `src/fixtures/services.ts`            | Explicit synthetic, session-only testing without OpenCloud calls                             |
 
@@ -21,6 +22,8 @@ Dependency direction is views → workflow → typed ports → release-specific 
 The larger home loading function intentionally keeps one request generation across spaces, capabilities, destination, catalog and recents. This makes late-response rejection visible in one lifecycle. Mutation and editor workflows are separate functions; further decomposition should follow behavior, not line counts alone.
 
 The disconnected `createCatalog8` candidate accepts only the installed SDK's normal-user space discovery and metadata methods. Its injected session-generation key must include instance, user and authentication generation; changing it clears discovered roots and discards pending responses. Metadata display is separate from content authorization, and every normalized record denies writes/child creation. This module is not imported by the native app or preview and cannot be activated through configuration. Received-share aliases, search and pagination remain unsupported; folder results are labeled partial until deployment behavior is proven. See DL-003.
+
+The disconnected `createProviderCapabilities8` candidate reads the host's app-provider registry and capability on every call, so a provider removed after a screen loaded blocks creation at submit time. The registry is server-wide metadata loaded without authentication; it describes which editors exist, not what the user may do. Creation formats are the intersection of explicitly enabled creation, `allow_creation` from a named provider and the family descriptor. "No provider for this family" and "provider cannot create this family" are separate states. See DL-005 and the observed deployment in [compatibility](compatibility.md).
 
 ## Data flows and trust boundaries
 

@@ -5,6 +5,7 @@ export type AppError =
   | 'forbiddenOrMissing'
   | 'unsupportedType'
   | 'editorUnavailable'
+  | 'providerNotConfigured'
   | 'conflict'
   | 'quotaExceeded'
   | 'invalidName'

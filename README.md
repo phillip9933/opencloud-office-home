@@ -60,7 +60,7 @@ The aggregate check does not claim real OpenCloud, editor fidelity, authenticati
 - `src/app/`: shared catalog and session navigation state.
 - `src/services/`: asynchronous home workflow, cancellation and mutation recovery.
 - `src/contracts/`: application-owned service contracts.
-- `src/adapters/opencloud/`: unavailable native adapter and a disconnected read-only SDK 8.x catalog candidate, awaiting deployed API verification.
+- `src/adapters/opencloud/`: unavailable native adapter plus disconnected SDK 8.x catalog and provider-capability candidates, awaiting deployed API verification.
 - `src/preferences/`: scoped, bounded recent references.
 - `src/fixtures/` and `src/preview.ts`: separate synthetic preview, excluded from native entrypoint.
 - `tests/`: unit boundaries and browser journeys.

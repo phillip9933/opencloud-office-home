@@ -8,7 +8,7 @@ Docs, Sheets and Slides use the same layout: app disclosure navigation, current 
 
 The application menu and native switcher derive from one reviewed descriptor list. Users can reach Files through the native host. Fixture preview labels explain that Files/editor operations are simulations rather than providing a misleading fallback.
 
-Choose a folder before creation. The form shows name, starting point and format. Creation is disabled without a known writable destination or supported format. Repeated activation is locked. A completed create offers an explicit Open created file action; a launch failure retains that resource. Uncertain outcomes pause further creation until reconciliation instead of silently retrying.
+Choose a folder before creation. The form shows name, starting point and format. Creation is disabled without a known writable destination or supported format. A "New files" line states why no format is offered: no office editor configured, or a configured editor that cannot create this family. Repeated activation is locked. A completed create offers an explicit Open created file action; a launch failure retains that resource. Uncertain outcomes pause further creation until reconciliation instead of silently retrying.
 
 Search is folder-scoped in this first preview and debounced. Route changes cancel pending queries. Folder/search views get opaque session keys for Back/Forward and returning to an app; names and query text stay out of URLs. Reload cannot restore memory-only state yet. The release adapter must prove native editor return and proper authenticated lifecycle cleanup.
 

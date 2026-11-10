@@ -23,6 +23,8 @@ export const errorText: Record<AppError, string> = {
   unsupportedType: 'This format is not supported by the configured editor.',
   editorUnavailable:
     'The OpenCloud integration has not been verified. File actions are unavailable.',
+  providerNotConfigured:
+    'No office editor is configured for these files on this OpenCloud server. Ask an administrator to add one.',
   conflict: 'A file with that name already exists. Choose another name.',
   quotaExceeded: 'There is not enough storage available.',
   invalidName: 'Enter a file name without slashes, control characters, or a different extension.',
@@ -57,6 +59,7 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
     next: undefined as string | undefined,
     error: '' as string,
     templateError: '',
+    formatError: '',
     notice: '',
     mutation: false,
     opening: false,
@@ -111,6 +114,12 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
       : []
     state.templates = templates.ok ? templates.value.filter((t) => t.kind === kind) : []
     state.templateError = templates.ok ? '' : errorText[templates.error]
+    // Keep "not configured" distinct from a configured editor that cannot create this family.
+    state.formatError = !formats.ok
+      ? errorText[formats.error]
+      : state.formats.length
+        ? ''
+        : errorText.unsupportedType
     if (!spaces.ok) {
       state.error = errorText[spaces.error]
       state.loading = false
@@ -239,7 +248,10 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
         (f) => f.mimeType === format.mimeType && f.extension === format.extension
       )
     ) {
-      state.notice = errorText['forbiddenOrMissing']
+      state.notice =
+        resolved.ok && resolved.value.access.createChild
+          ? errorText[capabilities.ok ? 'unsupportedType' : capabilities.error]
+          : errorText.forbiddenOrMissing
       state.mutation = false
       return
     }

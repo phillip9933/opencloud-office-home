@@ -221,6 +221,7 @@ onBeforeUnmount(() => {
           / {{ part.name }}</span
         >
       </p>
+      <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
       <p v-if="state.templateError" class="office-muted">Templates: {{ state.templateError }}</p>
       <p v-if="state.uncertain" role="alert">
         Creation is paused until its outcome is reconciled in Files. Do not submit another copy.
