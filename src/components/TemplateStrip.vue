@@ -215,7 +215,12 @@ function setBand(band: TemplateBand) {
       <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
       <p v-if="state.templateError" class="office-muted">Templates: {{ state.templateError }}</p>
       <p v-else-if="!state.loading && !state.templates.length" class="office-muted">
-        No templates are available. Choose a template folder in Settings.
+        No templates are available.
+        {{
+          context.services.policy?.allowPersonalTemplates === false
+            ? 'Ask an administrator to configure the template folder.'
+            : 'Choose a template folder in Settings.'
+        }}
       </p>
       <slot />
     </div>

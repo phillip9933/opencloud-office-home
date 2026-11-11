@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import TemplateStrip from '../../src/components/TemplateStrip.vue'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import {
   defaultPolicy,
@@ -12,6 +14,18 @@ import { createOfficeContext } from '../../src/app/context'
 import { fixtureServices } from '../../src/fixtures/services'
 
 describe('administrator configuration validation and enforcement', () => {
+  it('directs users to the administrator when personal template selection is disabled', () => {
+    const services = fixtureServices()
+    services.policy = { ...defaultPolicy(), allowPersonalTemplates: false }
+    const context = createOfficeContext(services)
+    const wrapper = mount(TemplateStrip, {
+      props: { kind: 'docs', noun: 'document', context, state: context.model('docs').state }
+    })
+    expect(wrapper.text()).toContain('Ask an administrator to configure the template folder.')
+    expect(wrapper.text()).not.toContain('Choose a template folder in Settings.')
+    wrapper.unmount()
+    context.dispose()
+  })
   it('applies the shared template policy even with an existing personal preference', async () => {
     const services = fixtureServices()
     const policy = parsePolicy({
