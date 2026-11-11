@@ -23,6 +23,7 @@ import {
 } from './catalog8'
 import { createProviderCapabilities8, type ProviderPort8 } from './providers8'
 import { nativeAccess8 } from './access8'
+import { canonicalRootDrives8 } from './roots8'
 
 export interface NativeResource8 {
   space: SpaceResource
@@ -67,7 +68,11 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   const session = () =>
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
-  const catalog = createCatalog8(port, session, nativeAccess8)
+  const catalog = createCatalog8(
+    { ...port, drives: canonicalRootDrives8(port) },
+    session,
+    nativeAccess8
+  )
   const capabilities = createProviderCapabilities8(port)
   const pendingNames = new Set<string>()
   const previewUrls = new Set<string>()

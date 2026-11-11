@@ -63,7 +63,7 @@ function setup() {
       getFileInfo: vi
         .fn<NativePort8['webdav']['getFileInfo']>()
         .mockImplementation((_space, ref) => {
-          if (ref?.fileId === 'root') return Promise.resolve(root)
+          if (ref?.fileId === 'root' || ref?.path === '/') return Promise.resolve(root)
           if (ref?.path === '/New.odt') {
             if (!created) return Promise.reject({ statusCode: 404 })
             return Promise.resolve(file({ name: 'New.odt', path: '/New.odt', fileId: 'new' }))
@@ -113,6 +113,7 @@ function setup() {
   })
   return {
     port,
+    space,
     root,
     native,
     setSession(value?: string) {
@@ -135,6 +136,23 @@ describe('native SDK integration boundaries', () => {
         write: false,
         createChild: false
       })
+  })
+  it('uses the authorized DAV root identity when Graph supplies a different root ID', async () => {
+    const t = setup()
+    t.space.root.id = 'graph-drive-item-root'
+    const spaces = await t.init()
+    expect(spaces.ok && spaces.value[0]?.root).toEqual(rootRef)
+    expect((await t.native.services.catalog.resolve(rootRef)).ok).toBe(true)
+    expect(
+      (
+        await t.native.services.catalog.list({
+          folder: rootRef,
+          kind: 'docs',
+          signal: new AbortController().signal
+        })
+      ).ok
+    ).toBe(true)
+    expect(t.space.root.id).toBe('graph-drive-item-root')
   })
   it('creates a native office file and resolves its canonical identity', async () => {
     const t = setup()

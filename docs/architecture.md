@@ -74,3 +74,5 @@ Editor actions are chosen from installed native external-editor actions, preserv
 The catalog currently includes personal/project spaces only. Received-share aliases are rejected rather than guessing canonical identities; Files remains available for them. Folder completeness is marked partial, and bounded name/recent searches mark truncation. No completeness or cross-device open-history claim is made.
 
 Routing also goes through the host's `useRouter` composable (the `$router` service), avoiding a second Vue Router injection key across module-federation bundles. The isolated preview provides that same service explicitly. Native menu links and editor return context therefore use the host router instance.
+
+The native drive-discovery wrapper (`roots8.ts`) resolves each authorized root by its space-relative DAV path before publishing a canonical root reference. Graph DriveItem IDs and DAV file IDs are different contracts. Returned IDs are kept opaque; host drive objects are not mutated. Root identity checks on later reads remain strict.
