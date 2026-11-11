@@ -1,6 +1,6 @@
 {
   "name": "web-app-office",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.1",
   "description": "Native OpenCloud home screens for Docs, Sheets and Slides.",
   "license": "AGPL-3.0-only",
   "private": true,
@@ -8,21 +8,20 @@
   "type": "module",
   "scripts": {
     "build": "pnpm vite build",
-    "build:w": "OFFICE_SPIKE_BUILD=1 pnpm vite build --watch --mode development",
+    "build:w": "pnpm vite build --watch --mode development",
     "check:types": "vue-tsc --noEmit",
     "lint": "eslint 'src/**/*.{js,ts,vue}' 'tests/**/*.ts' '*.ts' 'scripts/*.mjs' --color",
     "format:check": "prettier . --check",
     "format:write": "prettier . --write",
     "test:unit": "NODE_OPTIONS=--unhandled-rejections=throw vitest run",
     "dev": "pnpm vite --config vite.preview.config.ts --host 127.0.0.1",
-    "build:spike": "OFFICE_SPIKE_BUILD=1 pnpm vite build",
     "build:preview": "pnpm vite build --config vite.preview.config.ts",
     "test": "pnpm test:unit",
     "test:e2e": "playwright test",
     "check:artifacts": "node scripts/check-artifacts.mjs",
     "check:dependencies": "node scripts/check-dependencies.mjs",
-    "check": "pnpm check:types && pnpm lint && pnpm format:check && pnpm check:dependencies && pnpm test:unit && pnpm build:spike && pnpm build:preview && pnpm check:artifacts",
-    "build:test-instance": "OFFICE_NATIVE_TEST_BUILD=1 pnpm vite build"
+    "check": "pnpm check:types && pnpm lint && pnpm format:check && pnpm check:dependencies && pnpm test:unit && pnpm build && pnpm build:preview && pnpm check:artifacts",
+    "package:release": "pnpm check:artifacts && node scripts/package-release.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.1",

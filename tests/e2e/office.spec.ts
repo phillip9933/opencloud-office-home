@@ -1,4 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
+import packageInfo from '../../package.json' with { type: 'json' }
+
+const { version } = packageInfo
 
 const recents = (page: Page) => page.getByRole('region', { name: 'Recent', exact: true })
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Office applications' })
@@ -83,7 +86,11 @@ test('failed automatic launch retries opening the same created file', async ({ p
 
 test('sidebar navigation, version, info tip, OpenCloud icons and Back', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByText(/^Office \d+\.\d+\.\d+$/)).toBeVisible()
+  await expect(page.getByText(`Office ${version}`, { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Source code', exact: true })).toHaveAttribute(
+    'href',
+    `https://github.com/phillip9933/opencloud-office-home/tree/v${version}`
+  )
   await expect(page.getByRole('button', { name: 'Browse folders' })).toHaveCount(0)
   await expect(sidebar(page).getByRole('link', { name: 'Docs' })).toHaveAttribute(
     'aria-current',

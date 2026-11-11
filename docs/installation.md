@@ -1,21 +1,23 @@
 # Install Office Home
 
 Office Home uses your existing OpenCloud and office integration. No additional container is needed.
-The current build is a prototype; check the [tested versions and limitations](compatibility.md)
-before installing.
+Check the [tested versions and limitations](compatibility.md) before installing.
 
-## Build
+## Download
 
-Set up the source as described in [Contributing](../CONTRIBUTING.md), then run:
+Download `office-home-<version>.tar.gz` and `SHA256SUMS` from the project's
+[GitHub Releases](https://github.com/phillip9933/opencloud-office-home/releases).
+No Node.js or build tools are needed on the OpenCloud server.
+
+Verify and extract the download on Linux:
 
 ```sh
-pnpm check
-pnpm build:test-instance
-pnpm check:artifacts dist-native-test
+sha256sum --check SHA256SUMS
+tar -xzf office-home-0.1.0-beta.1.tar.gz
 ```
 
-The installable files are in `dist-native-test/`. The default `pnpm build` remains gated while
-release acceptance is incomplete.
+Use the filename for your downloaded version. The archive contains one `office-home/` directory.
+Download from the repository above over HTTPS; checksums verify file integrity, not publisher identity.
 
 ## Add to OpenCloud
 
@@ -24,7 +26,7 @@ OpenCloud loads custom apps from `WEB_ASSET_APPS_PATH`, which defaults to
 [OpenCloud Web documentation](https://docs.opencloud.eu/docs/dev/server/services/web/information/).
 
 1. Back up any existing `office-home` app directory and configuration outside the apps directory.
-2. Copy the contents of `dist-native-test/` into `office-home/` under the apps directory.
+2. Copy the extracted `office-home/` directory into the apps directory.
    Keep the generated subdirectories intact and copy `manifest.json` last.
 3. Optionally add `office-home/config.json` for [template folders and creation defaults](configuration.md).
 4. Restart OpenCloud as required to discover the app. No Collabora restart is needed.
@@ -47,3 +49,16 @@ Back up the installed app and configuration before replacing its assets. Preserv
 To disable the app, set `"disabled": true` in its app-local `config.json` and restart OpenCloud.
 To remove it, move the app directory outside `WEB_ASSET_APPS_PATH` and restart. To roll back,
 restore the previous app directory and configuration. These operations do not remove user documents.
+
+## Build from source
+
+Follow [Contributing](../CONTRIBUTING.md) to install development dependencies, then run:
+
+```sh
+pnpm check
+pnpm package:release
+```
+
+`pnpm build` creates the native app in `dist/` as part of the checks. The packaging command
+writes the installable archive and checksums to `release/`. GitHub release downloads are built in CI
+from their version tag. The archive's `SOURCE.txt` identifies the exact source commit.

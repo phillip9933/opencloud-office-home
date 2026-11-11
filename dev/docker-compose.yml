@@ -19,7 +19,7 @@ services:
       - '127.0.0.1:9200:9200'
     volumes:
       - opencloud-config:/etc/opencloud
-      - ../dist-spike:/web/apps/office
+      - ../dist:/web/apps/office-home
 
 volumes:
   opencloud-config:

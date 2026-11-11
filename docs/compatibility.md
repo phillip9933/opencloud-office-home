@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-Office Home is a working prototype. It runs as a static OpenCloud Web app using the host's files,
+Office Home is available as a beta. It runs as a static OpenCloud Web app using the host's files,
 permissions and configured editor. No additional backend or container is required.
 
 ## Tested baseline
@@ -36,5 +36,5 @@ edit/save/close/reopen round trip passed.
 The standalone development preview uses sample data; the installed native app uses real OpenCloud
 files.
 
-The default release build is gated pending acceptance. The
-[native test build](test-installation.md) is available for installation and evaluation.
+Download an installable beta from [Releases](https://github.com/phillip9933/opencloud-office-home/releases)
+or build from source with `pnpm build`. See [installation](installation.md).

@@ -62,7 +62,7 @@ function fullPath(parent: string, name: string) {
   return `${parent.replace(/\/$/, '')}/${name}`
 }
 
-/** DEV-LIMIT(DL-001): native test integration; acceptance and received-share coverage remain open. */
+/** Session-scoped integration with the host's file, creation and editor services. */
 export function createNativeServices8(port: NativePort8, options: NativeOptions) {
   const initialSession = options.session()
   const session = () =>

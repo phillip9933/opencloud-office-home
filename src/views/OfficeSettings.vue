@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { version } from '../../package.json'
 import AppSidebar from '../components/AppSidebar.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import type { OfficeContext } from '../app/context'
@@ -120,8 +121,8 @@ onMounted(async () => {
               >Your choice applies to Docs, Sheets and Slides in this browser.</span
             >
             An administrator can configure an installation default for all users. Choose ordinary
-            editable documents for templates; template-container conversion is not available in this
-            test build.
+            editable documents for templates; conversion from .ott, .ots and .otp is not yet
+            supported.
           </p>
           <fieldset class="office-settings-group">
             <legend>Template section display</legend>
@@ -142,6 +143,15 @@ onMounted(async () => {
             >
           </fieldset>
         </section>
+        <p>
+          <a
+            :href="`https://github.com/phillip9933/opencloud-office-home/tree/v${version}`"
+            class="office-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Source code for Office Home {{ version }}</a
+          >
+        </p>
       </div>
     </main>
   </div>

@@ -17,15 +17,14 @@ pnpm dev
 
 Open the localhost URL printed by Vite. This preview uses sample files and simulated create/open
 actions. To connect to real OpenCloud files and an editor, follow the
-[installation guide](docs/test-installation.md).
+[installation guide](docs/installation.md).
 
 ## Checks
 
 ```sh
 pnpm check
 pnpm test:e2e
-pnpm build:test-instance
-pnpm check:artifacts dist-native-test
+pnpm package:release
 pnpm audit
 pnpm peers check
 ```
@@ -45,9 +44,13 @@ The pnpm directory must contain `bin/pnpm.mjs`. For browser tests, also set
 `OFFICE_BROWSER_EXECUTABLE` to the matching Chromium executable. Install dependencies separately;
 the isolated runner has no network access.
 
-The default `pnpm build` remains blocked while release acceptance is incomplete. Use the native
-test build above for integration testing. See [compatibility](docs/compatibility.md) and
+`pnpm build` produces the native app in `dist/`. `pnpm package:release` packages that build
+with licenses and checksums in `release/`. See [compatibility](docs/compatibility.md) and
 [dependency status](docs/dependency-status.md) for outstanding limitations.
+
+Versions come from `package.json` and appear in the app manifest and sidebar. Beta tags use
+`vX.Y.Z-beta.N`; the tag workflow validates, builds and publishes a GitHub prerelease.
+Before 1.0, configuration and host compatibility may change between versions; check release notes.
 
 Keep preview fixtures out of the native app and reuse OpenCloud's account, storage, permission
 and editor services. Preserve the [licenses and notices](docs/licensing.md).

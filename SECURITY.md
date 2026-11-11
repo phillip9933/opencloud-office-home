@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-Office Home is a developer prototype. No production-supported release or guaranteed security
-response time is offered. Reports concerning the current `main` branch are welcome. The tested
+Office Home is in beta. Security reports for the latest beta and current `main` branch are welcome.
+No guaranteed security response time is offered. The tested
 OpenCloud baseline and outstanding dependency findings are documented in
 [compatibility](docs/compatibility.md) and [dependency status](docs/dependency-status.md).
 

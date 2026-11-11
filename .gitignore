@@ -25,3 +25,4 @@ playwright-report/
 .pnpm-state/
 
 dist-native-test/
+release/

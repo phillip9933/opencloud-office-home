@@ -15,8 +15,9 @@ is needed. Built on the official [OpenCloud app skeleton](https://github.com/ope
 
 ## Get started
 
-Office Home is a working prototype, currently tested with Collabora.
-See the [installation guide](docs/test-installation.md) to add it to OpenCloud and
+Office Home is available as an installable beta, tested with Collabora.
+Download the app archive from [Releases](https://github.com/phillip9933/opencloud-office-home/releases).
+See the [installation guide](docs/installation.md) to add it to OpenCloud and
 [configuration](docs/configuration.md) to set template folders and defaults.
 [Compatibility and known limitations](docs/compatibility.md) are documented separately.
 

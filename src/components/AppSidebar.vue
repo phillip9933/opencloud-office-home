@@ -8,9 +8,7 @@ import type { OfficeContext } from '../app/context'
 import type { OfficeKind } from '../contracts/office'
 
 const props = defineProps<{ kind: OfficeKind | 'settings'; context: OfficeContext }>()
-const versionLabel = computed(
-  () => `Office ${version}${props.context.services.mode === 'native' ? ' · Test' : ''}`
-)
+const sourceUrl = `https://github.com/phillip9933/opencloud-office-home/tree/v${version}`
 const descriptor = computed(() => officeApps.find((app) => app.id === props.kind))
 function destination(app: AppDescriptor) {
   const view = props.context.lastView.get(app.id)
@@ -48,7 +46,15 @@ function destination(app: AppDescriptor) {
         <OcIcon name="settings-4" fill-type="line" class="office-icon" />
         <span>Settings</span>
       </RouterLink>
-      <p class="office-muted office-version">{{ versionLabel }}</p>
+      <p class="office-muted office-version">Office {{ version }}</p>
+      <a
+        :href="sourceUrl"
+        class="office-link office-version"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Source code
+      </a>
     </div>
   </aside>
 </template>

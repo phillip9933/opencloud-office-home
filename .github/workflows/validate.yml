@@ -1,7 +1,7 @@
 name: Validate
 on:
   push:
-    branches: [main, work/office-home]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -32,8 +32,7 @@ jobs:
           run_install: false
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
-      - run: pnpm build:test-instance
-      - run: pnpm check:artifacts dist-native-test
+      - run: pnpm package:release
       - run: pnpm test:e2e
   dependency-audit:
     runs-on: ubuntu-24.04
