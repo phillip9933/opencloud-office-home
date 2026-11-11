@@ -16,9 +16,21 @@ import { createOfficeContext } from '../../src/app/context'
 import { officeApps, officeRoute } from '../../src/app/registry'
 const services = fixtureServices({ seedHistory: true })
 const blank = services.creation.blank
-services.creation.blank = async (input) => {
-  if (input.name !== 'Unconfirmed.odt') await blank(input)
-  return { ok: false, error: 'timeout', outcome: 'uncertain' }
+if (new URLSearchParams(location.search).get('case') === 'editor-failure') {
+  const open = services.editor.open
+  let first = true
+  services.editor.open = (input) => {
+    if (first) {
+      first = false
+      return Promise.resolve({ ok: false, error: 'editorUnavailable' })
+    }
+    return open(input)
+  }
+} else {
+  services.creation.blank = async (input) => {
+    if (input.name !== 'Unconfirmed.odt') await blank(input)
+    return { ok: false, error: 'timeout', outcome: 'uncertain' }
+  }
 }
 const context = createOfficeContext(services)
 if (new URLSearchParams(location.search).get('case') === 'load-failure') {
