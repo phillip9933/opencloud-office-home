@@ -511,10 +511,19 @@ test('administrator saves approved app links, format choices and template policy
     .getByRole('textbox', { name: 'App URL', exact: true })
     .fill('https://photos.example.org')
   await page.getByRole('button', { name: 'Add app', exact: true }).click()
-  await page.getByRole('textbox', { name: 'Extension', exact: true }).fill('txt')
-  await page.getByRole('textbox', { name: 'MIME type', exact: true }).fill('text/plain')
+  await page
+    .getByRole('combobox', { name: 'Backend file type', exact: true })
+    .selectOption('txt:text/plain')
   await page.getByRole('button', { name: 'Add file type', exact: true }).click()
   await expect(page.getByRole('checkbox', { name: 'TXT', exact: true })).toBeChecked()
+  await page
+    .getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
+    .selectOption('editor-synthetic-text')
+  await expect(page.getByRole('checkbox', { name: 'DOCX', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Refresh integrations', exact: true }).click()
+  await expect(
+    page.getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
+  ).toHaveValue('editor-synthetic-text')
   await page
     .getByRole('checkbox', {
       name: 'Allow users to choose a personal template folder',
@@ -522,7 +531,7 @@ test('administrator saves approved app links, format choices and template policy
     })
     .uncheck()
   await page.getByRole('button', { name: 'Save configuration', exact: true }).click()
-  await expect(page.getByRole('status')).toContainText('Configuration saved')
+  await expect(page.getByRole('status').filter({ hasText: 'Configuration saved' })).toBeVisible()
   await page.getByRole('button', { name: 'Reload Office', exact: true }).click()
   await expect(page.getByRole('link', { name: /Photo workspace/ })).toHaveAttribute(
     'href',
@@ -532,6 +541,9 @@ test('administrator saves approved app links, format choices and template policy
     'rel',
     'noopener noreferrer'
   )
+  await expect(
+    page.getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
+  ).toHaveValue('editor-synthetic-text')
   await expect(
     page.getByRole('checkbox', {
       name: 'Allow users to choose a personal template folder',
@@ -551,4 +563,22 @@ test('administrator saves approved app links, format choices and template policy
   await page.screenshot({ path: test.info().outputPath('admin-mobile.png'), fullPage: true })
   await page.setViewportSize({ width: 1280, height: 900 })
   await page.screenshot({ path: test.info().outputPath('admin-desktop.png'), fullPage: true })
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page
+      .getByRole('heading', { name: 'File types and editors', exact: true })
+      .evaluate((element) => element.scrollIntoView({ block: 'start' }))
+    await page.screenshot({
+      path: test.info().outputPath(`admin-mappings-${width}.png`),
+      fullPage: true
+    })
+    await page
+      .getByRole('heading', { name: 'Creation formats', exact: true })
+      .evaluate((element) => element.scrollIntoView({ block: 'start' }))
+    await page.screenshot({
+      path: test.info().outputPath(`admin-creation-${width}.png`),
+      fullPage: true
+    })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
 })

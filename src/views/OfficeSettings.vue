@@ -4,7 +4,8 @@ import AppSidebar from '../components/AppSidebar.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord } from '../contracts/office'
-import { attempt, errorText } from '../services/home'
+import { errorText } from '../services/home'
+import { describeFolder as describeFolderLabel } from '../services/folderLabel'
 const props = defineProps<{ context: OfficeContext }>()
 const preferences = props.context.preferences
 const choosingFolder = ref(false)
@@ -28,26 +29,14 @@ async function describeFolder() {
       ? props.context.services.templateFolderDefault
       : (preferences.templateFolder ?? props.context.services.templateFolderDefault)
   if (!selected) return
-  const spaces = await attempt(() => props.context.services.catalog.listSpaces(controller.signal))
+  const result = await describeFolderLabel(
+    props.context.services.catalog,
+    selected,
+    controller.signal
+  )
   if (request !== revision) return
-  if (!spaces.ok) {
-    folderError.value = errorText[spaces.error]
-    return
-  }
-  const folder = await attempt(() => props.context.services.catalog.resolve(selected))
-  if (request !== revision) return
-  if (!folder.ok) {
-    folderError.value = errorText[folder.error]
-    return
-  }
-  const space = spaces.value.find((value) => value.id === selected.spaceId)
-  const root = space?.root.itemId === selected.itemId
-  folderLabel.value = [
-    space?.name,
-    root ? undefined : (folder.value.path ?? folder.value.name).replace(/^\/+/, '')
-  ]
-    .filter(Boolean)
-    .join(' / ')
+  if (result.ok) folderLabel.value = result.value
+  else folderError.value = errorText[result.error]
 }
 function chooseTemplateFolder(folder: FileRecord, label: string) {
   if (props.context.services.policy?.allowPersonalTemplates === false) return
@@ -84,10 +73,11 @@ onMounted(async () => {
           >
         </div>
         <section class="office-settings-section" aria-labelledby="template-settings-heading">
-          <h2 id="template-settings-heading">Templates</h2>
+          <h2 id="template-settings-heading">Personal template folder</h2>
           <p>
-            Choose an OpenCloud folder for your template gallery. Files at its root appear under
-            General; subfolders become categories.
+            This optional override changes only your gallery in this browser. It does not change the
+            installation default in Administration. Files at the folder root appear under General;
+            subfolders become categories.
           </p>
           <p>
             <strong

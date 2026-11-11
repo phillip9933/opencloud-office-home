@@ -2,6 +2,7 @@ import type { AppProviderCapability } from '@opencloud-eu/web-client/ocs'
 import type { AppProviderService } from '@opencloud-eu/web-pkg'
 import { officeApps, type AppDescriptor } from '../../app/registry'
 import { fail, ok, type Format, type OfficeCapabilities } from '../../contracts/office'
+import type { RegisteredFormat } from '../../administration/integrations'
 
 // These shapes come from the installed 8.x SDK. Web 8.2.1 loads `mimeTypes` from the
 // unauthenticated app-registry list at boot, so the values describe the server, not a user.
@@ -33,6 +34,44 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
     return false
   // A present but contradictory extension is not treated as the family format.
   return entry.ext === undefined || String(entry.ext).toLowerCase() === format.extension
+}
+
+/** Installation inventory before Office's presentation restrictions are applied. */
+export function discoverProviderFormats8(port: ProviderPort8) {
+  const registry: unknown = port.appProviders.mimeTypes
+  if (!Array.isArray(registry)) return fail<RegisteredFormat[]>('unknown')
+  const creation = record(port.capabilities.filesAppProviders[0])
+  const enabled =
+    creation?.enabled === true && typeof creation.new_url === 'string' && !!creation.new_url.trim()
+  const formats = new Map<string, RegisteredFormat>()
+  for (const value of registry) {
+    const entry = record(value)
+    if (!entry || !hasNamedProvider(entry)) continue
+    const ext = typeof entry.ext === 'string' ? entry.ext.toLowerCase() : ''
+    const mime = typeof entry.mime_type === 'string' ? entry.mime_type.toLowerCase() : ''
+    if ((ext && !/^[a-z0-9]{1,12}$/.test(ext)) || !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(mime))
+      continue
+    const providers = (entry.app_providers as unknown[]).flatMap((value) => {
+      const name = record(value)?.name
+      return typeof name === 'string' && name.trim() && name.length <= 150 ? [name.trim()] : []
+    })
+    if (!providers.length) continue
+    const key = `${ext}:${mime}`
+    const previous = formats.get(key)
+    formats.set(key, {
+      extension: ext,
+      mimeType: mime,
+      label:
+        typeof entry.name === 'string' && entry.name.length <= 150
+          ? entry.name
+          : ext
+            ? ext.toUpperCase()
+            : mime,
+      providers: [...new Set([...(previous?.providers ?? []), ...providers])],
+      canCreate: previous?.canCreate === true || (enabled && entry.allow_creation === true)
+    })
+  }
+  return ok([...formats.values()])
 }
 
 /**

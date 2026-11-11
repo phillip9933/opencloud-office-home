@@ -237,3 +237,45 @@
   margin-block: 0.5rem;
   overflow-wrap: anywhere;
 }
+
+/* Admin rows keep each file type and its editor together across reflow widths. */
+.office-admin-summary {
+  margin-block: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--office-line);
+  border-radius: 0.45rem;
+  background: var(--office-band);
+}
+.office-admin-summary p:last-child {
+  margin-bottom: 0;
+}
+.office-admin-summary summary {
+  cursor: pointer;
+  min-height: 24px;
+}
+.office-admin-entries .office-admin-entry {
+  justify-content: space-between;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--office-line);
+}
+.office-admin-type {
+  flex: 1 1 13rem;
+  min-width: 0;
+}
+.office-admin-type small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.office-editor-choice {
+  flex: 1 1 14rem;
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+.office-editor-choice select {
+  width: 100%;
+  min-width: 0;
+}
+.office-integration-refresh {
+  margin-top: 1.5rem;
+}

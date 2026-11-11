@@ -166,9 +166,10 @@ export function parsePolicy(value: unknown): OfficePolicy {
   unique(policy.handlers.map((entry) => `${entry.extension}:${entry.mimeType}`))
   return policy
 }
-export function policyApplications(policy: OfficePolicy): AppDescriptor[] {
+export function policyApplications(policy: OfficePolicy): (AppDescriptor & { id: OfficeKind })[] {
   return officeApps.map((app) => ({
     ...app,
+    id: app.id as OfficeKind,
     formats: [...app.formats, ...(policy.additionalFormats[app.id] ?? [])]
   }))
 }

@@ -8,7 +8,15 @@ Office Home remains a static OpenCloud Web app. Personal view choices are separa
 - Users can change their own columns, layout, template display and personal template-folder override. Those scoped browser preferences cannot register an editor, change the installation default, or grant file access.
 - Editor/file-type registrations and creation allow-lists belong to OpenCloud's app registry. The native editor bridge retains authorization, file identity, editor sessions and saving.
 
-The administration page is `/office/admin`. It requires the host's settings-management ability (`update-all Setting`), and is separate from personal Settings. With static configuration only, administrators can prepare and download a policy. Direct saving requires the dedicated configuration file described below. The app remains static; no additional service, credential or container is introduced.
+The administration page is `/office/admin`. **Installation template default** sets the shared gallery folder; **Personal template folder** in Settings is a per-browser override and is available only when administrators allow it. The selected folder’s display name is resolved through authorized metadata, including ID-addressed DAV responses whose path is `/`.
+
+**App shortcuts** adds sidebar links. **File types and editors** groups each landing-page type with a selector of matching installed OpenCloud editors. Extension and MIME metadata come from the backend picker, with an explicit custom-type option for discovery-only formats. When the backend supplies a MIME type without an extension, the picker asks for that extension and retains the advertised MIME. A shortcut cannot be selected as an editor. Saved mappings outside the current landing pages remain visible for removal rather than silently disappearing.
+
+**Creation formats** lists only types the backend currently advertises as creatable, intersected with each page’s formats. Provider names accompany choices; opening-only types do not become creation checkboxes. Restrictions can narrow this list or be reset to backend defaults. Refresh integrations rereads the native provider registry without discarding the configuration draft; native editor registrations still require installed routes, and newly installed apps may require a host reload.
+
+Changes are marked as an unsaved draft until a shared save is confirmed. The save action explains disconnected storage, read-only access or uncertain results beside the button. A failed configuration reload clears stale write state. Download draft produces a configuration file for manual installation and never claims it was applied. Reloading a changed policy is explicitly labelled Discard draft and reload.
+
+The administration route requires the host's settings-management ability (`update-all Setting`), and is separate from personal Settings. With static configuration only, administrators can prepare and download a policy. Direct saving requires the dedicated configuration file described below. The app remains static; no additional service, credential or container is introduced.
 
 ## Shared configuration file
 

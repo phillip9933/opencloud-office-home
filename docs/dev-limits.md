@@ -28,7 +28,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 
 - **Type:** placeholder
 - **Purpose:** Exercise the shell and asynchronous workflows without contacting OpenCloud.
-- **Location:** `src/fixtures/services.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
+- **Location:** `src/fixtures/services.ts`, `src/fixtures/integrations.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
 - **Release behaviour:** No synthetic resources, create results, editor acknowledgments or fixture capabilities in the native package.
 - **Resolution:** Keep fixtures in the explicitly invoked preview/test graph; prove exclusion from every eventual release artifact.
 - **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. Preview creation/editor feedback identifies simulated actions. This is a bounded artifact check, not proof of real service behavior.
