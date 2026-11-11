@@ -329,14 +329,19 @@ export function createCatalog8(
         if (access) {
           // Counts diagnose SDK/metadata incompatibilities without exposing names, IDs or URLs.
           const children = page.children ?? []
-          console.info('Office catalog listing', {
-            received: children.length,
-            classified: items.size,
-            readable: [...items.values()].filter((item) => item.access.read).length,
-            folders: children.filter((item) => item.isFolder).length,
-            aliases: children.filter((item) => item.remoteItemId || item.remoteItemPath).length,
-            missingPermissions: children.filter((item) => !item.permissions).length
-          })
+          console.info(
+            'Office catalog listing',
+            JSON.stringify({
+              received: children.length,
+              classified: items.size,
+              readable: [...items.values()].filter((item) => item.access.read).length,
+              folders: children.filter((item) => item.isFolder).length,
+              aliases: children.filter((item) => item.remoteItemId || item.remoteItemPath).length,
+              missingPermissions: children.filter((item) => !item.permissions).length,
+              downloadMethods: children.filter((item) => typeof item.canDownload === 'function')
+                .length
+            })
+          )
         }
         // This SDK result has no verified cursor/total/truncation contract. Keep the limit visible.
         return ok({ items: [...items.values()], partial: true })
@@ -405,14 +410,20 @@ export function createCatalog8(
         if (stopped) return fail(stopped)
         const item = normalize(space.id, resource)
         if (access)
-          console.info('Office catalog resolution', {
-            normalized: item.ok,
-            identityMatches: item.ok && refKey(item.value.ref) === refKey(ref),
-            isFolder: resource.isFolder === true,
-            alias: !!(resource.remoteItemId || resource.remoteItemPath),
-            hasPermissions: !!resource.permissions,
-            readable: item.ok && item.value.access.read
-          })
+          console.info(
+            'Office catalog resolution',
+            JSON.stringify({
+              normalized: item.ok,
+              identityMatches: item.ok && refKey(item.value.ref) === refKey(ref),
+              isFolder: resource.isFolder === true,
+              alias: !!(resource.remoteItemId || resource.remoteItemPath),
+              hasPermissions: !!resource.permissions,
+              readable: item.ok && item.value.access.read,
+              downloadable: resource.canDownload?.() === true,
+              creatable: resource.canCreate?.() === true,
+              inVault: resource.isInVault === true
+            })
+          )
         if (!item.ok) return item.error === 'forbiddenOrMissing' ? fail('unsupportedType') : item
         return refKey(item.value.ref) === refKey(ref) ? item : fail('unknown')
       } catch (error) {
