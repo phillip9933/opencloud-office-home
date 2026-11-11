@@ -249,6 +249,19 @@ export function fixtureServices(
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },
       list: listChildren,
+      search(kind, term) {
+        return Promise.resolve(
+          ok({
+            items: records.filter(
+              (r) =>
+                r.kind === 'file' &&
+                belongsTo(r, kind) &&
+                r.name.toLowerCase().includes(term.toLowerCase())
+            ),
+            partial: false
+          })
+        )
+      },
       recentlyChanged(kind, _signal, filter) {
         const since = now() - RECENT_CHANGE_DAYS * DAY
         const items = records

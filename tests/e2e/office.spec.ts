@@ -257,3 +257,48 @@ test('dark theme tokens and right-to-left layout', async ({ page }) => {
     true
   )
 })
+
+test('name search spans spaces, restores Back state and filters the current folder', async ({
+  page
+}) => {
+  await page.goto('/')
+  const search = page.getByRole('searchbox', { name: 'Search files' })
+  await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeEnabled()
+  await search.fill('handbook')
+  await search.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Search results for “handbook”' })).toBeVisible()
+  await expect(page.getByRole('button', file('Team handbook.docx'))).toBeVisible()
+  await page.getByRole('button', { name: 'Clear search' }).click()
+  await expect(recents(page)).toBeVisible()
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Search results for “handbook”' })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Search scope' }).selectOption('folder')
+  await search.fill('Project')
+  await search.press('Enter')
+  await expect(
+    page
+      .getByRole('region', { name: 'Find office files' })
+      .getByRole('button', file('Project Docs.odt'))
+  ).toBeVisible()
+  await sidebar(page).getByRole('link', { name: 'Sheets' }).click()
+  await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Search results for “Project”' })).toBeVisible()
+})
+
+test('visual inspection artifacts for desktop light and mobile dark', async ({ page }) => {
+  await page.goto('/')
+  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await page.screenshot({ path: test.info().outputPath('desktop-light.png'), fullPage: true })
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true
+  )
+  await expect(page.getByRole('button', { name: 'Settings' }).locator('svg')).toBeVisible()
+  const settings = await page.getByRole('button', { name: 'Settings' }).boundingBox()
+  expect(settings).not.toBeNull()
+  expect(settings!.x).toBeGreaterThanOrEqual(0)
+  expect(settings!.x + settings!.width).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: test.info().outputPath('mobile-dark.png'), fullPage: true })
+})

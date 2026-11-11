@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@opencloud-eu/web-pkg', () => ({
-  defineWebApplication: <T>(definition: T) => definition
+  defineWebApplication: <T>(definition: T) => definition,
+  useRouter: () => ({ push: vi.fn() })
 }))
-vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+
+vi.mock('../../src/adapters/opencloud/host8', () => ({
+  useNativeOffice8: () => ({ value: undefined })
+}))
 
 import application from '../../src/index'
 

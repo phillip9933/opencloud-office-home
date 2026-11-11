@@ -225,3 +225,10 @@ describe('home workflow', () => {
     expect(home.state.rows.map((row) => row.name)).not.toContain('Pending.odt')
   })
 })
+
+it('preserves a search submitted before initial space discovery finishes', async () => {
+  const home = createHomeModel(fixtureServices(), 'docs')
+  await home.load({ ...defaultLocation('docs'), search: { term: 'handbook', scope: 'all' } })
+  expect(home.state.location.search).toEqual({ term: 'handbook', scope: 'all' })
+  expect(home.state.location.spaceId).not.toBe('')
+})

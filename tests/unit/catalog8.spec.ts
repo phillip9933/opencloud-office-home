@@ -406,3 +406,18 @@ describe('8.x SDK catalog candidate', () => {
     expect(catalogError(error)).toBe(expected)
   })
 })
+
+it('uses bounded literal filename search and refuses KQL metacharacters', async () => {
+  const test = setup()
+  await test.catalog.listSpaces(test.query.signal)
+  for (const term of ['" OR name:*', 'a\\b', '*', 'a'.repeat(201)])
+    expect(await test.catalog.search('docs', term, test.query.signal)).toEqual({
+      ok: false,
+      error: 'invalidSearch'
+    })
+  expect(test.port.webdav.search).not.toHaveBeenCalled()
+  await test.catalog.search('docs', 'Quarterly report', test.query.signal)
+  expect(test.port.webdav.search.mock.calls[0]![0]).toBe(
+    'name:"*Quarterly report*" AND mediatype:("document")'
+  )
+})

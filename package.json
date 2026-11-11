@@ -20,7 +20,8 @@
     "test": "pnpm test:unit",
     "test:e2e": "playwright test",
     "check:artifacts": "node scripts/check-artifacts.mjs",
-    "check": "pnpm check:types && pnpm lint && pnpm format:check && pnpm test:unit && pnpm build:spike && pnpm build:preview && pnpm check:artifacts"
+    "check": "pnpm check:types && pnpm lint && pnpm format:check && pnpm test:unit && pnpm build:spike && pnpm build:preview && pnpm check:artifacts",
+    "build:test-instance": "OFFICE_NATIVE_TEST_BUILD=1 pnpm vite build"
   },
   "devDependencies": {
     "@opencloud-eu/design-system": "^8.2.1",

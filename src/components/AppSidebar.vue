@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import { version } from '../../package.json'
 import FamilyIcon from './FamilyIcon.vue'
@@ -7,6 +8,9 @@ import type { OfficeContext } from '../app/context'
 import type { OfficeKind } from '../contracts/office'
 
 const props = defineProps<{ kind: OfficeKind; context: OfficeContext }>()
+const versionLabel = computed(
+  () => `Office ${version}${props.context.services.mode === 'native' ? ' · Test' : ''}`
+)
 const emit = defineEmits<{ settings: [opener: HTMLElement] }>()
 const descriptor = officeApps.find((app) => app.id === props.kind)!
 function destination(app: AppDescriptor) {
@@ -56,7 +60,7 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
         <OcIcon name="settings-4" fill-type="line" class="office-icon" />
         <span>Settings</span>
       </button>
-      <p class="office-muted office-version">Office {{ version }}</p>
+      <p class="office-muted office-version">{{ versionLabel }}</p>
     </div>
   </aside>
 </template>

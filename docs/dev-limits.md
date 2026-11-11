@@ -1,15 +1,15 @@
 # Development limits
 
-No release is permitted while an applicable entry remains open. Current artifacts are local inspection/preview outputs only. Default release builds reject the incomplete adapter; opt-in spike artifacts use a separate directory. Marker text alone does not establish safety.
+No full release is permitted while an applicable entry remains open. An explicit native test-instance artifact may be installed for controlled acceptance with disclosed non-security limits. Default release builds reject the incomplete adapter; opt-in spike artifacts use a separate directory. Marker text alone does not establish safety.
 
-## DL-001: Unavailable native OpenCloud adapter
+## DL-001: Native integration acceptance incomplete
 
 - **Type:** placeholder
 - **Purpose:** Establish typed workflows and registration without inventing deployed APIs or credentials.
-- **Location:** `src/adapters/opencloud/unconfigured.ts`, `vite.config.ts`.
-- **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview, file-action (Show in Files, share, download) and native editor services, plus the administrator template folder (proposed `templateFolder` setting), tested against a pinned deployment.
-- **Resolution:** Implement and verify the adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
-- **Verification:** Default `pnpm build` must fail. `build:spike` is explicit, writes `dist-spike/`, and cannot be mistaken for the default release output.
+- **Location:** `src/adapters/opencloud/native8.ts`, `vite.config.ts`. The unavailable adapter remains test-only.
+- **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview, file-action (Show in Files, share, download) and native editor services, plus the administrator `templateFolder` setting, tested against a pinned deployment.
+- **Resolution:** Verify the connected native adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
+- **Verification:** Default `pnpm build` must fail. `build:spike` writes `dist-spike/`; `build:test-instance` writes `dist-native-test/`. Neither enables the default release build.
 - **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; no production behavior has been tested.
 - **Status:** open
 
@@ -20,29 +20,29 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Location:** `src/fixtures/services.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
 - **Release behaviour:** No synthetic resources, create results, editor acknowledgments or fixture capabilities in the native package.
 - **Resolution:** Keep fixtures in the explicitly invoked preview/test graph; prove exclusion from every eventual release artifact.
-- **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. The preview displays a synthetic-only banner. This is a bounded artifact check, not proof of real service behavior.
+- **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. Preview creation/editor feedback identifies simulated actions. This is a bounded artifact check, not proof of real service behavior.
 - **Tested build and result:** Preliminary spike/preview builds and unit/browser workflows. Native release integration remains unverified.
 - **Status:** open
 
-## DL-003: Disconnected read-only SDK catalog candidate
+## DL-003: Partial native catalog coverage
 
 - **Type:** functional / placeholder
-- **Purpose:** Develop metadata discovery against the pinned SDK without assuming a live deployment or enabling writes.
-- **Location:** `src/adapters/opencloud/catalog8.ts`; imported by its unit tests only.
+- **Purpose:** Develop metadata discovery against the pinned SDK without assuming a live deployment or assuming permissions.
+- **Location:** `src/adapters/opencloud/catalog8.ts`; connected by the native test adapter.
 - **Release behaviour:** Verified native catalog with authorized search (recent changes, all-spaces name search, favorite/tag filters and the tag list), latest-activity lookup, personal/project/received-share identity handling, honest completeness and lifecycle integration.
-- **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before connecting the native entry.
-- **Verification:** The candidate must deny mutation access, reject unsupported search/cursors, discard responses on logout/account changes and reject path-shaped IDs. Its port exposes no mutation methods. Native app and preview entrypoints must not import it while deployment checks are pending.
-- **Tested build and result:** SDK-shaped local tests and strict compilation; no live discovery has been performed.
+- **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before a full release.
+- **Verification:** The candidate must deny mutation access, refuse unsupported query characters/cursors, discard responses on logout/account changes and reject path-shaped IDs. Its read port exposes no mutations. The native test adapter supplies explicit DAV permission normalization; the default normalizer still denies writes. Received shares remain in Files.
+- **Tested build and result:** SDK-shaped isolated tests and strict compilation; authenticated catalog acceptance is pending.
 - **Status:** open
 
-## DL-005: Disconnected provider capability candidate
+## DL-005: Provider acceptance incomplete
 
 - **Type:** functional / placeholder
-- **Purpose:** Derive creation formats from the 8.x app registry and app-provider capability without connecting native creation.
-- **Location:** `src/adapters/opencloud/providers8.ts`; imported by its unit tests only.
+- **Purpose:** Derive creation formats from the 8.x app registry and app-provider capability with missing or changing providers handled explicitly.
+- **Location:** `src/adapters/opencloud/providers8.ts`; connected by the native test adapter.
 - **Release behaviour:** Native creation formats come from the host's app registry, intersected with tested provider support, with distinct not-configured, unsupported-format and launch-failure states.
-- **Resolution:** Wire the port to `useAppProviderService()` and `useCapabilityStore()` in the native entry together with a verified creation and editor gateway; verify against a deployment with a registered provider.
-- **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The observed deployment's empty registry is a captured test case. Native app and preview entrypoints must not import the candidate while deployment checks are pending.
+- **Resolution:** The port is wired to host services; verify against a deployment with a registered provider.
+- **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The earlier empty registry is a captured test case; the current host advertises CollaboraOnline with 65 MIME types. Fixture preview services remain separate; real creation and editor saves still need acceptance.
 - **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Not run inside a host.
 - **Status:** open
 
@@ -57,4 +57,15 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Tested build and result:** Configuration inspected only; no server was installed, started or reconfigured.
 - **Status:** open
 
-Scan scope: source/configuration, native spike and preview output. Exclude dependency code, generated module-federation cache, tests and documentation from marker-based production findings only with their stated role. Native `src/index.ts` and its imports define the package graph; `index.html` belongs to the preview only. The disconnected catalog and provider candidates are test-imported only. The disposable server example is not a release install target. Old pre-gate `dist/` output is obsolete and must not be installed.
+Scan scope: source/configuration, native spike, native test and preview output. Exclude dependency code, generated module-federation cache, tests and documentation from marker-based production findings only with their stated role. Native `src/index.ts` and its imports define the package graph; `index.html` belongs to the preview only. Catalog/provider candidates are now in the native test graph; their acceptance remains incomplete. The disposable server example is not a release install target. Old pre-gate `dist/` output is obsolete and must not be installed.
+
+## DL-006: Template-container conversion pending
+
+- **Type:** functional
+- **Purpose:** Refuse `.ott`, `.ots` and `.otp` creation until the native editor conversion flow can be verified without leaving an empty or mislabeled file.
+- **Location:** `src/adapters/opencloud/native8.ts`.
+- **Release behaviour:** A template container creates a complete independent editable document through the configured native integration.
+- **Resolution:** Implement conversion with interrupted-operation recovery and test real content fidelity. Ordinary same-format document COPY is available for initial testing.
+- **Verification:** A template-container request must refuse before dispatch; ordinary COPY must use overwrite false and preserve the source.
+- **Tested build and result:** Isolated boundary tests pass; live copy/conversion acceptance pending.
+- **Status:** open

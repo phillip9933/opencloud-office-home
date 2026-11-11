@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, toRaw, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
 import CreateDialog from '../components/CreateDialog.vue'
 import FileBrowser from '../components/FileBrowser.vue'
 import RecentFiles from '../components/RecentFiles.vue'
+import SearchFiles from '../components/SearchFiles.vue'
 import SettingsDialog from '../components/SettingsDialog.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
@@ -13,8 +14,8 @@ import type { FileRecord, FileRef, HomeLocation, OfficeKind, Template } from '..
 import { defaultLocation, type FileMenuAction, type HomeModel } from '../services/home'
 
 const props = defineProps<{ kind: OfficeKind; context: OfficeContext }>()
-const route = useRoute()
 const router = useRouter()
+const route = router.currentRoute
 const descriptor = computed(() => officeApps.find((app) => app.id === props.kind)!)
 const model = computed(() => props.context.model(props.kind))
 const state = computed(() => model.value.state)
@@ -41,7 +42,9 @@ function snapshot(): HomeLocation {
 }
 function persist() {
   const id =
-    typeof route.query.view === 'string' ? route.query.view : props.context.lastView.get(props.kind)
+    typeof route.value.query.view === 'string'
+      ? route.value.query.view
+      : props.context.lastView.get(props.kind)
   if (id) props.context.views.set(id, snapshot())
 }
 async function navigate(location: HomeLocation) {
@@ -113,13 +116,13 @@ async function showBrowser() {
   browser.value?.focus()
 }
 watch(
-  () => route.fullPath,
+  () => route.value.fullPath,
   async () => {
     const revision = ++navigation
     const focusAtStart = document.activeElement
     activeModel?.deactivate()
     activeModel = model.value
-    const id = typeof route.query.view === 'string' ? route.query.view : ''
+    const id = typeof route.value.query.view === 'string' ? route.value.query.view : ''
     // Views live in session memory; after a reload an old key starts fresh like a first visit.
     if (!id || !props.context.views.has(id)) {
       // Start where the user last created a file; it is revalidated by the load below.
@@ -143,7 +146,7 @@ watch(
     const saved = props.context.views.get(id)
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
-    browseOpen.value ||= location.trail.length > 0
+    browseOpen.value ||= location.trail.length > 0 || location.search?.scope === 'folder'
     await activeModel.load(location)
     if (revision !== navigation) return
     if (id === rememberedView && state.value.error) {
@@ -194,7 +197,20 @@ onBeforeUnmount(() => {
       </TemplateStrip>
 
       <div class="office-inner">
+        <SearchFiles
+          :key="kind"
+          :context="context"
+          :kind="kind"
+          :search="state.location.search"
+          :folder-rows="state.rows"
+          :folder-partial="state.partial"
+          :ready="!state.loading && !!state.location.folder && !state.error"
+          :opening="state.opening"
+          @search="(search) => navigate({ ...snapshot(), search, scroll: 0 })"
+          @action="act"
+        />
         <RecentFiles
+          v-if="!state.location.search"
           :kind="kind"
           :context="context"
           :entries="state.recent"

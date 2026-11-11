@@ -28,6 +28,7 @@ const router = createRouter({
   ]
 })
 createApp({ render: () => h(RouterView) })
+  .provide('$router', router)
   .component('OcSpinner', OcSpinner)
   .use(router)
   .mount('#app')

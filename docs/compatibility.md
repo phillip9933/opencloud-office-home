@@ -1,8 +1,16 @@
 # Compatibility and foundation
 
-This is local source/build evidence, not certification for a deployed OpenCloud system. The native integration is still unavailable and default release builds remain blocked.
+This is local source/build evidence, not certification for a deployed OpenCloud system. The native adapter is connected for explicit integration-test builds; default release builds remain blocked.
 
-## Recorded baseline
+## Current native test status (2026-11-11)
+
+A later public registry read reports **65 MIME types** under **CollaboraOnline**, replacing the earlier empty-registry observation below. The existing server remains OpenCloud 9.0.0 / Web 8.2.1. The official Web v8.2.1 source was inspected at `6816e1d4e3eb9d376f639ad392e74e3c438c4bca` for native creation, editor return context, explicit `view_mode`, Files selection/sharing routes, downloads, previews and DAV permission methods.
+
+`host8.ts` now binds those host composables to `native8.ts`; the original read catalog is connected with a native permission normalizer, and provider formats are connected to the real registry. Isolated tests cover canonical identities, duplicate dispatch prevention, read-only destinations, same-origin creation, ordinary template COPY without overwrite, refusal to rename ODF template containers, account changes and late responses. A build is not proof of live create/save or permission correctness.
+
+The following historical spike matrix records what was known before the native adapter. Live installation and acceptance results belong in the test-installation record; unsupported share aliases, pagination, template-container conversion, real logout cleanup, collaboration and durability remain release gates.
+
+## Historical spike baseline
 
 | Component          | Verified observation                                                                                      | Limit                                                                              |
 | ------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -17,7 +25,7 @@ This is local source/build evidence, not certification for a deployed OpenCloud 
 
 The earlier scratch spike investigated SDK 7.2 interfaces. Its useful application code and tests were ported onto the official starter. The disconnected candidates compile against the installed SDK 8.2.1 declarations, the Web release of the observed test deployment. Another deployment would need its own Web release matched.
 
-## Observed test deployment (2026-11-11)
+## Earlier unauthenticated observation (2026-11-11)
 
 Read-only, unauthenticated observations of the authorized test deployment. Authenticated discovery is still blocked because no session for the intended test account was available; nothing below establishes user permissions, spaces, shares or search results.
 

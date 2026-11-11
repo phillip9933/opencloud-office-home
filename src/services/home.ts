@@ -27,6 +27,8 @@ export const errorText: Record<AppError, string> = {
     'No office editor is configured for these files on this OpenCloud server. Ask an administrator to add one.',
   conflict: 'A file with that name already exists. Choose another name.',
   quotaExceeded: 'There is not enough storage available.',
+  invalidSearch:
+    'Use up to 200 characters without quotes, backslashes, question marks or wildcards.',
   invalidName: 'Enter a file name without slashes, control characters, or a different extension.',
   timeout: 'The result is uncertain. Check the destination in Files before trying again.',
   network: 'The service could not be reached. Try loading again.',
@@ -89,6 +91,7 @@ export function createHomeModel(
   let generation = 0
   let abort = new AbortController()
   let active = false
+  let disposed = false
   let recentRequest = 0
   let recentAbort = new AbortController()
 
@@ -175,10 +178,9 @@ export function createHomeModel(
       state.next = undefined
       state.partial = false
     }
-    const [spaces, formats, templates] = await Promise.all([
+    const [spaces, formats] = await Promise.all([
       attempt(() => services.catalog.listSpaces(signal)),
-      attempt(() => services.capabilities.creationFormats(kind)),
-      attempt(() => services.templates(kind))
+      attempt(() => services.capabilities.creationFormats(kind))
     ])
     if (!current()) return
     state.spaces = spaces.ok ? spaces.value : []
@@ -189,6 +191,10 @@ export function createHomeModel(
             .formats.some((f) => f.mimeType === format.mimeType && f.extension === format.extension)
         )
       : []
+    const templates = spaces.ok
+      ? await attempt(() => services.templates(kind))
+      : fail('unauthenticated')
+    if (!current()) return
     state.templates = templates.ok ? templates.value.filter((t) => t.kind === kind) : []
     state.templateError = templates.ok ? '' : errorText[templates.error]
     // Keep "not configured" distinct from a configured editor that cannot create this family.
@@ -215,6 +221,7 @@ export function createHomeModel(
     if (space.id !== location.spaceId)
       state.location = {
         ...defaultLocation(kind),
+        search: location.search,
         spaceId: space.id,
         folder: space.root
       }
@@ -370,6 +377,7 @@ export function createHomeModel(
         ? services.creation.fromTemplate({ ...input, template })
         : services.creation.blank(input)
     )
+    if (disposed) return
     if (result.ok) {
       state.created = result.value
       if (
@@ -398,6 +406,15 @@ export function createHomeModel(
       modifiedAt === undefined ? [] : [{ file, modifiedAt }]
     )
   }
-  return { state, load, refreshRecent, deactivate, open, runAction, create, clearRecents }
+  function dispose() {
+    disposed = true
+    deactivate()
+    state.spaces = []
+    state.templates = []
+    state.formats = []
+    state.created = null
+    state.notice = ''
+  }
+  return { state, load, refreshRecent, deactivate, dispose, open, runAction, create, clearRecents }
 }
 export type HomeModel = ReturnType<typeof createHomeModel>

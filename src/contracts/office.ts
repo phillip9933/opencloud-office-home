@@ -11,6 +11,7 @@ export type AppError =
   | 'conflict'
   | 'quotaExceeded'
   | 'invalidName'
+  | 'invalidSearch'
   | 'timeout'
   | 'network'
   | 'unknown'
@@ -76,6 +77,7 @@ export interface FileCatalog {
     filter: RecentFilter
   ): Promise<Result<Page<FileRecord>>>
   // Tags the user can filter by; only offered when the server advertises tags.
+  search(kind: OfficeKind, term: string, signal: AbortSignal): Promise<Result<Page<FileRecord>>>
   listTags(signal: AbortSignal): Promise<Result<string[]>>
   // The newest activity-log entry for a file, as plain text; null when none is recorded.
   latestActivity(ref: FileRef, signal: AbortSignal): Promise<Result<Activity | null>>
@@ -122,6 +124,7 @@ export interface HomeLocation {
   folder: FileRef | null
   trail: { name: string; ref: FileRef }[]
   scroll: number
+  search?: { term: string; scope: 'all' | 'folder' }
 }
 export interface EditorGateway {
   open(input: {
@@ -147,7 +150,7 @@ export interface RecentStore {
   clear(): void
 }
 export interface OfficeServices {
-  mode: 'unconfigured' | 'fixture'
+  mode: 'unconfigured' | 'fixture' | 'native'
   catalog: FileCatalog
   actions: FileActions
   creation: FileCreation

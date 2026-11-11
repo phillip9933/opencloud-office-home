@@ -88,7 +88,7 @@ function record(value: unknown): Record<string, unknown> | undefined {
     : undefined
 }
 
-function opaqueSegment(value: unknown): value is string {
+export function opaqueSegment(value: unknown): value is string {
   // The SDK accepts a bare ID, not an arbitrary path or an already encoded URL.
   return (
     typeof value === 'string' &&
@@ -107,6 +107,8 @@ export function catalogError(error: unknown): AppError {
   const status = record(details?.response)?.status ?? details?.statusCode ?? details?.status
   if (status === 401) return 'unauthenticated'
   if (status === 403 || status === 404) return 'forbiddenOrMissing'
+  if (status === 409 || status === 412) return 'conflict'
+  if (status === 507) return 'quotaExceeded'
   if (status === 408 || status === 504 || details?.code === 'ECONNABORTED') return 'timeout'
   if (details?.code === 'ERR_NETWORK') return 'network'
   return 'unknown'
@@ -169,14 +171,20 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
 }
 
 /**
- * DEV-LIMIT(DL-003): unconnected, read-only candidate for personal/project spaces.
+ * DEV-LIMIT(DL-003): personal/project spaces only; received-share aliases remain in Files.
  * getSessionKey must come from the native auth lifecycle and include instance,
  * account and authentication generation. No cookies/tokens are accepted here.
  */
 export function createCatalog8(
   port: ReadPort8,
-  getSessionKey: () => string | undefined
-): FileCatalog & { dispose(): void } {
+  getSessionKey: () => string | undefined,
+  access?: (resource: Resource) => FileRecord['access']
+): FileCatalog & { dispose(): void; space(id: string): SpaceResource | undefined } {
+  function normalize(spaceId: string, resource: Resource) {
+    const result = normalizeReadMetadata(spaceId, resource)
+    if (result.ok && access) result.value.access = access(resource)
+    return result
+  }
   const spaces = new Map<string, SpaceResource>()
   let session: string | undefined
   let generation = 0
@@ -213,7 +221,7 @@ export function createCatalog8(
       let skipped = 0
       for (const resource of found.resources) {
         const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
-        const item = space ? normalizeReadMetadata(space.id, resource) : undefined
+        const item = space ? normalize(space.id, resource) : undefined
         if (!item?.ok || item.value.modifiedAt === undefined) {
           skipped++
           continue
@@ -234,6 +242,9 @@ export function createCatalog8(
     }
   }
   return {
+    space(id) {
+      return currentSession() ? spaces.get(id) : undefined
+    },
     dispose() {
       disposed = true
       spaces.clear()
@@ -296,7 +307,7 @@ export function createCatalog8(
         )
         const stopped = interrupted(key, query.signal)
         if (stopped) return fail(stopped)
-        const folder = normalizeReadMetadata(space.id, page.resource)
+        const folder = normalize(space.id, page.resource)
         if (
           !folder.ok ||
           folder.value.kind !== 'folder' ||
@@ -305,7 +316,7 @@ export function createCatalog8(
           return fail('forbiddenOrMissing')
         const items = new Map<string, FileRecord>()
         for (const resource of page.children ?? []) {
-          const item = normalizeReadMetadata(space.id, resource)
+          const item = normalize(space.id, resource)
           if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
             items.set(refKey(item.value.ref), item.value)
         }
@@ -326,6 +337,12 @@ export function createCatalog8(
       } catch (error) {
         return fail(interrupted(key, signal) ?? catalogError(error))
       }
+    },
+    search(kind, term, signal) {
+      const phrase = term.trim()
+      if (!phrase || phrase.length > 200 || /["\\*?\u0000-\u001f]/.test(phrase))
+        return Promise.resolve(fail('invalidSearch'))
+      return searchHits(`name:"*${phrase}*" AND mediatype:("${MEDIA_TYPE[kind]}")`, kind, signal)
     },
     recentlyChanged(kind, signal, filter) {
       return searchHits(recentQuery(kind, filter), kind, signal)
@@ -360,7 +377,7 @@ export function createCatalog8(
         })
         const stopped = interrupted(key)
         if (stopped) return fail(stopped)
-        const item = normalizeReadMetadata(space.id, resource)
+        const item = normalize(space.id, resource)
         if (!item.ok) return item
         return refKey(item.value.ref) === refKey(ref) ? item : fail('forbiddenOrMissing')
       } catch (error) {

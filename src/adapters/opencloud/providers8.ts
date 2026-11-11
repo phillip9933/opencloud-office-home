@@ -36,8 +36,7 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
 }
 
 /**
- * DEV-LIMIT(DL-005): unconnected creation-format candidate for the 8.x app registry.
- * The native entry still uses the unavailable adapter until deployment checks pass.
+ * DEV-LIMIT(DL-005): creation support derived from the 8.x registry; live provider acceptance remains open.
  */
 export function createProviderCapabilities8(port: ProviderPort8): OfficeCapabilities {
   return {

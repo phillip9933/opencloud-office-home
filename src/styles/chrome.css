@@ -217,6 +217,8 @@
     border-bottom: 1px solid var(--office-line);
   }
   .office-sidebar nav {
+    min-width: 0;
+    width: 100%;
     order: 3;
     flex-basis: 100%;
     overflow-x: auto;
@@ -235,7 +237,7 @@
     display: none;
   }
   /* Icon-only on phones; the label stays available to assistive technology. */
-  .office-settings-button > span {
+  .office-settings-button > span:not(.office-icon) {
     position: absolute;
     width: 1px;
     height: 1px;

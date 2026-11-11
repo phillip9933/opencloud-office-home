@@ -20,6 +20,9 @@ export function unconfiguredServices(): OfficeServices {
       recentlyChanged() {
         return Promise.resolve(fail('editorUnavailable'))
       },
+      search() {
+        return Promise.resolve(fail('editorUnavailable'))
+      },
       listTags() {
         return Promise.resolve(fail('editorUnavailable'))
       },

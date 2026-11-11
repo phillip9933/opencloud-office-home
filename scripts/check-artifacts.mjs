@@ -11,7 +11,9 @@ async function textTree(directory) {
   )
   return contents.join('\n')
 }
-const native = await textTree('dist-spike')
+const directory = process.argv[2] ?? 'dist-spike'
+assert(['dist-spike', 'dist-native-test'].includes(directory), 'Unknown artifact scope')
+const native = await textTree(directory)
 assert(
   !native.includes('synthetic-preview'),
   'Fixture services leaked into the native spike artifact'
@@ -24,8 +26,8 @@ assert(
   !native.includes('fixture-templates') && !native.includes('data:image/svg+xml'),
   'Synthetic template folder or drawn previews leaked into the native spike artifact'
 )
-const manifest = JSON.parse(await readFile('dist-spike/manifest.json', 'utf8'))
+const manifest = JSON.parse(await readFile(`${directory}/manifest.json`, 'utf8'))
 assert.equal(typeof manifest.entrypoint, 'string')
 console.log(
-  'Native spike manifest exists; fixture services are excluded. Release remains blocked by DL-001.'
+  'Native manifest exists; fixture services are excluded. Release remains blocked by DL-001.'
 )

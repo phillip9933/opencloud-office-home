@@ -9,3 +9,5 @@ playwright-report/
 .pnpm-store/
 .pnpm-cache/
 .pnpm-state/
+
+dist-native-test/

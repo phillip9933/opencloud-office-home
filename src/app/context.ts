@@ -24,10 +24,22 @@ export function createOfficeContext(
   const session = Math.random().toString(36).slice(2, 8)
   // View choices shared by the three apps, kept in the user's scoped browser store.
   const preferences = reactive(services.viewPreferences.load())
-  watch(preferences, () => services.viewPreferences.save(toRaw(preferences)), { deep: true })
+  const stopPreferences = watch(
+    preferences,
+    () => services.viewPreferences.save(toRaw(preferences)),
+    { deep: true }
+  )
   // Filters are session-only so a forgotten filter cannot hide files on the next visit.
   const recentFilter = reactive<RecentFilter>({ favorites: false, tags: [] })
   return {
+    id: session,
+    dispose() {
+      stopPreferences()
+      for (const model of models.values()) model.dispose()
+      models.clear()
+      views.clear()
+      lastView.clear()
+    },
     services,
     menu,
     preferences,
