@@ -1,4 +1,8 @@
-# The federation type tool pins an older Axios. Keep its patched replacement explicit.
+# Reviewed transitive fixes; see docs/dependency-status.md for API checks and removal criteria.
 overrides:
   '@module-federation/dts-plugin>axios': 1.20.0
   '@module-federation/dts-plugin>ws': 8.21.0
+  '@module-federation/dts-plugin>adm-zip': 0.6.1
+  'vue3-gettext>glob': 14.0.4
+  'js-beautify>glob': 14.0.4
+  minimatch: 11.0.5
