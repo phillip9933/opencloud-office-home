@@ -232,3 +232,16 @@ it('preserves a search submitted before initial space discovery finishes', async
   expect(home.state.location.search).toEqual({ term: 'handbook', scope: 'all' })
   expect(home.state.location.spaceId).not.toBe('')
 })
+
+it('keeps recent references after a transient open failure instead of treating them as revoked', async () => {
+  const source = fixtureServices({ seedHistory: true })
+  const home = createHomeModel(source, 'docs')
+  await home.load(defaultLocation('docs'))
+  const entry = home.state.recent[0]!
+  const before = source.recents.list('docs')
+  vi.spyOn(source.catalog, 'resolve').mockResolvedValue(fail('network'))
+  await home.open(entry.file)
+  expect(home.state.recent.some((r) => r.file.ref.itemId === entry.file.ref.itemId)).toBe(true)
+  expect(source.recents.list('docs')).toEqual(before)
+  expect(home.state.notice).toContain('could not be reached')
+})

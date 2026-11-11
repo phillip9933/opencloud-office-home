@@ -302,7 +302,7 @@ export function createCatalog8(
       try {
         const page = await port.webdav.listFiles(
           space,
-          { fileId: query.folder.itemId },
+          query.folder.itemId === space.root?.id ? { path: '/' } : { fileId: query.folder.itemId },
           { depth: 1, signal: query.signal }
         )
         const stopped = interrupted(key, query.signal)
@@ -319,6 +319,18 @@ export function createCatalog8(
           const item = normalize(space.id, resource)
           if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
             items.set(refKey(item.value.ref), item.value)
+        }
+        if (access) {
+          // Counts diagnose SDK/metadata incompatibilities without exposing names, IDs or URLs.
+          const children = page.children ?? []
+          console.info('Office catalog listing', {
+            received: children.length,
+            classified: items.size,
+            readable: [...items.values()].filter((item) => item.access.read).length,
+            folders: children.filter((item) => item.isFolder).length,
+            aliases: children.filter((item) => item.remoteItemId || item.remoteItemPath).length,
+            missingPermissions: children.filter((item) => !item.permissions).length
+          })
         }
         // This SDK result has no verified cursor/total/truncation contract. Keep the limit visible.
         return ok({ items: [...items.values()], partial: true })
@@ -378,8 +390,17 @@ export function createCatalog8(
         const stopped = interrupted(key)
         if (stopped) return fail(stopped)
         const item = normalize(space.id, resource)
-        if (!item.ok) return item
-        return refKey(item.value.ref) === refKey(ref) ? item : fail('forbiddenOrMissing')
+        if (access)
+          console.info('Office catalog resolution', {
+            normalized: item.ok,
+            identityMatches: item.ok && refKey(item.value.ref) === refKey(ref),
+            isFolder: resource.isFolder === true,
+            alias: !!(resource.remoteItemId || resource.remoteItemPath),
+            hasPermissions: !!resource.permissions,
+            readable: item.ok && item.value.access.read
+          })
+        if (!item.ok) return item.error === 'forbiddenOrMissing' ? fail('unsupportedType') : item
+        return refKey(item.value.ref) === refKey(ref) ? item : fail('unknown')
       } catch (error) {
         return fail(interrupted(key) ?? catalogError(error))
       }

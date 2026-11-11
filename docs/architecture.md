@@ -76,3 +76,5 @@ The catalog currently includes personal/project spaces only. Received-share alia
 Routing also goes through the host's `useRouter` composable (the `$router` service), avoiding a second Vue Router injection key across module-federation bundles. The isolated preview provides that same service explicitly. Native menu links and editor return context therefore use the host router instance.
 
 The native drive-discovery wrapper (`roots8.ts`) resolves each authorized root by its space-relative DAV path before publishing a canonical root reference. Graph DriveItem IDs and DAV file IDs are different contracts. Returned IDs are kept opaque; host drive objects are not mutated. Root identity checks on later reads remain strict.
+
+Root folder listings use the SDK's space-relative `/` path, then validate that the response has the expected canonical file ID. Child folders continue to use opaque IDs. Native listing diagnostics report counts only (received, classified, readable, folders, share aliases and missing permission metadata); no names, IDs, URLs, credentials or content are logged or sent elsewhere.

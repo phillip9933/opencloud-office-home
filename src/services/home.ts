@@ -292,9 +292,15 @@ export function createHomeModel(
     const request = generation
     const resolved = await attempt(() => services.catalog.resolve(file.ref))
     if (!resolved.ok || !resolved.value.access.read) {
-      state.rows = state.rows.filter((r) => refKey(r.ref) !== refKey(file.ref))
-      state.recent = state.recent.filter((r) => refKey(r.file.ref) !== refKey(file.ref))
-      services.recents.remove(file.ref)
+      // Transient transport or adapter failures do not prove a file was deleted or revoked.
+      if (resolved.ok || resolved.error === 'forbiddenOrMissing') {
+        state.rows = state.rows.filter((r) => refKey(r.ref) !== refKey(file.ref))
+        state.recent = state.recent.filter((r) => refKey(r.file.ref) !== refKey(file.ref))
+        services.recents.remove(file.ref)
+      } else if (resolved.error === 'unauthenticated') {
+        state.rows = []
+        state.recent = []
+      }
       state.notice = errorText[resolved.ok ? 'forbiddenOrMissing' : resolved.error]
     } else if (active && request === generation) {
       const launched = await attempt(() =>

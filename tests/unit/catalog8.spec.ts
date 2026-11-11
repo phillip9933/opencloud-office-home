@@ -168,7 +168,7 @@ describe('8.x SDK catalog candidate', () => {
     ).toBe(true)
     expect(test.port.webdav.listFiles).toHaveBeenCalledWith(
       test.personal,
-      { fileId: 'opaque:root' },
+      { path: '/' },
       { depth: 1, signal: test.query.signal }
     )
   })
@@ -232,7 +232,7 @@ describe('8.x SDK catalog candidate', () => {
         spaceId: test.personal.id,
         itemId: 'requested'
       })
-    ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
+    ).toEqual({ ok: false, error: 'unknown' })
     test.port.webdav.getFileInfo.mockRejectedValue({
       response: { status: 403, data: 'sensitive upstream details' }
     })
