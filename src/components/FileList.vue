@@ -105,16 +105,18 @@ function extension(file: FileRecord) {
       <tbody>
         <tr v-for="item in items" :key="item.file.ref.spaceId + item.file.ref.itemId">
           <td>
-            <button
-              type="button"
-              class="office-row-button"
-              :disabled="opening"
-              @click="emit('action', 'open', item.file)"
-            >
-              <FamilyIcon :kind="kind" />
-              <span>{{ item.file.name }}</span>
-            </button>
-            <FileMarks :file="metadata(item.file)" />
+            <div class="office-file-name">
+              <button
+                type="button"
+                class="office-row-button"
+                :disabled="opening"
+                @click="emit('action', 'open', item.file)"
+              >
+                <FamilyIcon :kind="kind" />
+                <span>{{ item.file.name }}</span>
+              </button>
+              <FileMarks :file="metadata(item.file)" />
+            </div>
             <span
               v-if="columns.includes('location') && columns.length <= 2"
               class="office-mobile-location office-muted"

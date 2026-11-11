@@ -191,8 +191,8 @@
   display: none;
 }
 @media (max-width: 700px) {
-  .office-table td:first-child {
-    flex-wrap: wrap;
+  .office-file-name .office-row-button {
+    flex: 1 1 0;
   }
   .office-mobile-location {
     display: block;
