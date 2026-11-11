@@ -1,68 +1,49 @@
-# Native test installation
+# Install Office Home
 
-This is an opt-in integration test, not a supported production release. It uses the existing
-OpenCloud and configured office integration. No additional app container, backend, login or
-office-server installer is required.
+Office Home uses your existing OpenCloud and office integration. No additional container is needed.
+The current build is a prototype; check the [tested versions and limitations](compatibility.md)
+before installing.
 
-## Build and scope
+## Build
 
-Run the normal checks in an isolated environment, then `pnpm build:test-instance`. This writes
-`dist-native-test/`, containing only the native application and its SDK-generated manifest. `pnpm
-check:artifacts dist-native-test` checks the fixture boundary. Keep dependencies, source, private
-instructions, previews and browser/test artifacts out of the install. Record the source commit and
-SHA-256 of every installed file separately.
+Set up the source as described in [Contributing](../CONTRIBUTING.md), then run:
 
-The test build supports personal/project destination selection and recent changes, browser-scoped
-opens/preferences, native blank creation, ordinary document template copies, native editor opening
-and Files/share/download entry points. These are implementation claims until exercised on a pinned
-host. Received-share aliases, folder completeness, template-container conversion, real account
-switching and editor save/collaboration acceptance remain open. Default `pnpm build` deliberately
-fails.
+```sh
+pnpm check
+pnpm build:test-instance
+pnpm check:artifacts dist-native-test
+```
 
-## Install alongside existing apps
+The installable files are in `dist-native-test/`. The default `pnpm build` remains gated while
+release acceptance is incomplete.
 
-Follow the host version's [Web application
-documentation](https://docs.opencloud.eu/docs/dev/server/services/web/information/). OpenCloud loads
-custom app directories from `WEB_ASSET_APPS_PATH`, defaulting to
-`$OC_BASE_DATA_PATH/web/assets/apps`.
+## Add to OpenCloud
 
-1. Verify the actual data mount and asset path. Inventory existing apps/configuration without reading secrets. Do not replace the core Web files or an unrelated app.
-2. Back up any existing directory with the intended ID and its app-specific configuration outside the apps discovery directory. For a new ID, record that no prior directory/configuration exists.
-3. Stage the tested artifact in a new `office-home` directory, preserving its `js/` and `assets/` subdirectories. Transfer the generated `manifest.json` last, after checking all payload files. Do not edit its generated entrypoint.
-4. If templates are needed, add an app-local `config.json` containing `{"config":{"templateFolder":{"spaceId":"<space id>","itemId":"<folder id>"}}}`. For all supported static defaults and migration from the removed console, see [configuration](configuration.md). Omit optional configuration for the default behavior and empty gallery. No server secrets belong here.
-5. Restart only the existing OpenCloud service/container, as required by the host to discover a new app. This briefly interrupts OpenCloud; leave Collabora and other services alone.
-6. Verify `config.json` registers `/assets/apps/office-home/...`, then load `/office/docs`, `/office/sheets` and `/office/slides`. Confirm Files remains usable and the menu entries work.
+OpenCloud loads custom apps from `WEB_ASSET_APPS_PATH`, which defaults to
+`$OC_BASE_DATA_PATH/web/assets/apps`. Locate that directory in your deployment; see the
+[OpenCloud Web documentation](https://docs.opencloud.eu/docs/dev/server/services/web/information/).
 
-All users who can load this Web host may discover the test app. It adds no permissions: OpenCloud
-still authorizes every read/write. Install only on a host approved for this controlled test.
+1. Back up any existing `office-home` app directory and configuration outside the apps directory.
+2. Copy the contents of `dist-native-test/` into `office-home/` under the apps directory.
+   Keep the generated subdirectories intact and copy `manifest.json` last.
+3. Optionally add `office-home/config.json` for [template folders and creation defaults](configuration.md).
+4. Restart OpenCloud as required to discover the app. No Collabora restart is needed.
+5. Open the Office menu entry and check document creation, editing and saving.
 
-## Acceptance and rollback
+Direct routes on the OpenCloud host are:
 
-Use a new disposable test folder with a visible destination. Create a document, spreadsheet and
-presentation; open through the native editor, add a harmless marker, save, close and reopen through
-Files and Office Home. Confirm one file/identity per creation, read-only opening, name conflicts,
-cancellation, rapid navigation, native return state, source-template preservation and denied access.
-Do not test overwrite/delete on existing user documents.
+- `/office/docs`
+- `/office/sheets`
+- `/office/slides`
 
-To disable the new app without deleting it, place `{"disabled":true}` in its app-local `config.json`
-(preserving any configuration backup), then restart OpenCloud. Alternatively move the complete app
-directory outside `WEB_ASSET_APPS_PATH` and restart. Restore the prior app directory/configuration
-if replacing an earlier version. Test this disable/re-enable procedure before considering the
-install accepted. Existing user documents are not part of the app rollback.
+Friendly domains such as `sheets.example.com` can redirect to the corresponding route on the
+canonical OpenCloud host. Authentication stays on that host.
 
-## Acceptance evidence and limits
+## Update or remove
 
-The controlled test baseline is OpenCloud 9.0.0 / Web 8.2.1. Verified behavior includes:
+Back up the installed app and configuration before replacing its assets. Preserve your
+`config.json`, copy the new manifest last, then restart OpenCloud and reload the browser.
 
-- Native registration, three family routes, destination selection and cancellation.
-- ODF/Microsoft blank creation, editor launch/return and app disable/re-enable rollback.
-- Ordinary ODT/ODS/ODP template copies with independent identities, unchanged sources and
-  byte-identical downloaded content.
-
-Content save/reopen, template rendering/container conversion, received shares and complete
-pagination remain unverified. Dependency security, licensing and release gates remain open. Build
-provenance and deployment-specific evidence are retained outside the source repository.
-
-Installation configuration uses the administrator-owned static file. No administration console or
-shared-policy read/write path remains. Historical shared-policy files may be retained by an
-installation as recovery material; Office no longer reads them.
+To disable the app, set `"disabled": true` in its app-local `config.json` and restart OpenCloud.
+To remove it, move the app directory outside `WEB_ASSET_APPS_PATH` and restart. To roll back,
+restore the previous app directory and configuration. These operations do not remove user documents.

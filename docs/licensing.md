@@ -19,21 +19,7 @@ AGPL requires a prominent opportunity for remote users of a modified version to 
 corresponding source at no charge. Read the full license for the exact obligations.
 
 The [source repository](https://github.com/phillip9933/opencloud-office-home) contains the application
-and its build instructions. A deployment must identify the source corresponding to its installed
-version and make that source accessible to its users, including local modifications. Before wider
-hosted use, expose a source link in the application. Do not include private workspace instructions,
-credentials, user documents or operational backups in source archives. Publishing this repository
-does not constitute a supported binary release or complete every deployment's license obligations.
-
-## Upstream contribution
-
-The official [Web extensions collection](https://github.com/opencloud-eu/web-extensions) declares
-AGPL-3.0. Its README places new applications under `packages/web-app-*` and describes the development
-Compose mount. Office Home retains the official skeleton history and the `web-app-office` package
-name; inclusion in that collection would require adapting its package layout and current tooling.
-No upstream submission or acceptance is implied.
-
-The general [OpenCloud contribution guidance](https://github.com/opencloud-eu/opencloud/blob/main/CONTRIBUTING.md#licensing-and-cla)
-states that no CLA is required for public OpenCloud code. Recheck the destination repository's
-current contribution requirements before a submission. No upstream submission or acceptance is
-implied by publishing this standalone prototype.
+and its build instructions. Make the source corresponding to your installed version accessible to
+users, including any local modifications, and expose a source link when hosting a modified version.
+Keep credentials and user documents out of source archives. Read the full license for the terms
+that apply to your distribution or deployment.
