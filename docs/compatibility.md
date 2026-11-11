@@ -92,3 +92,5 @@ The SDK 8.x toolchain requires fresh security and license review before release.
 No domain, proxy, DNS, TLS, identity, server installation or deployment changes have been made. The optional development Compose example is manually selected and disposable; it is not production setup or an office-server installer.
 
 See [upstream foundation](upstream-skeleton.md), [development limits](dev-limits.md), [architecture](architecture.md) and [provisional decisions](decisions/0001-preliminary-spike.md).
+
+The DAV `Z` flag describes the ability to deny grants to other users; it does not indicate that the current user's access is denied. This is defined by [Reva's role serializer](https://github.com/opencloud-eu/reva/blob/5b77843d7cdc8ab182b9452b5ba252334e989e35/pkg/conversions/role.go#L162). The native adapter uses nonempty permission metadata plus the SDK's read/create helpers and explicit edit flags, while the server remains authoritative. Missing permission metadata and vaults still fail closed. Personal spaces precede project spaces for a fresh home; explicit saved locations take precedence.

@@ -120,6 +120,15 @@ describe('8.x SDK catalog candidate', () => {
     expect(unknown.ok && unknown.value.createdAt).toBeUndefined()
     expect(unknown.ok && unknown.value.owner).toBeUndefined()
   })
+  it('puts the personal space first for a new home without changing explicit folder selection', async () => {
+    const test = setup()
+    test.port.drives.listMyDrives.mockResolvedValue([
+      space('project', { driveType: 'project' }),
+      test.personal
+    ])
+    const result = await test.catalog.listSpaces(test.query.signal)
+    expect(result.ok && result.value.map((value) => value.id)).toEqual(['opaque:space', 'project'])
+  })
   it('rejects path syntax in opaque references before sending any SDK request', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)

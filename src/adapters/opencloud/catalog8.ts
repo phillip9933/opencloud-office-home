@@ -270,7 +270,11 @@ export function createCatalog8(
         if (request !== generation) return fail('cancelled')
         const refreshed = new Map<string, SpaceResource>()
         const available = []
-        for (const space of found) {
+        // A new home starts in Personal; explicit saved folders still select their own space.
+        const ordered = [...found].sort(
+          (a, b) => Number(b.driveType === 'personal') - Number(a.driveType === 'personal')
+        )
+        for (const space of ordered) {
           if (space.disabled || !['personal', 'project'].includes(space.driveType)) continue
           if (
             !opaqueSegment(space.id) ||

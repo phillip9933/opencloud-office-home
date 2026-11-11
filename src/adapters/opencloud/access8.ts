@@ -5,7 +5,9 @@ import type { FileRecord } from '../../contracts/office'
 // Match AppWrapper's edit check; never infer write access from ownership or a filename.
 export function nativeAccess8(resource: Resource): FileRecord['access'] {
   const permissions = resource.permissions ?? ''
-  const denied = !permissions || permissions.includes(DavPermission.Deny) || resource.isInVault
+  // Z (DenyGrant) means this user can manage others' access, not that their own access is denied.
+  // See Reva Role.WebDAVPermissions; the server still authorizes every operation.
+  const denied = !permissions || resource.isInVault
   return {
     read: !denied && resource.canDownload?.() === true,
     write:

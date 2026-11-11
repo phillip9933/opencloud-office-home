@@ -84,3 +84,5 @@ The settings view (`src/views/OfficeSettings.vue`) owns template-folder and colu
 Optional owner/creation-date columns use per-call DAV metadata (`d:creationdate`) and the SDK owner display name. Search hits missing these fields are resolved only when the corresponding columns are enabled, through a context-owned queue with at most four concurrent requests (`src/services/details.ts`). Results are held only in the mounted file list and discarded on navigation/context disposal; they are not cached in browser storage. Failed metadata reads remain unavailable. The creation date is never inferred from modification time.
 
 Native catalog diagnostics serialize only primitive counts and booleans, so inspection tools can read them without expanding runtime objects. They exclude resource identities, names, paths, links, content and credentials.
+
+DAV `Z` is a permission-management capability (DenyGrant), not an access-denied marker. The adapter must not reject owner/manager resources for carrying it. Authenticated SDK access helpers, explicit edit flags, vault exclusion, identity validation and server checks retain their separate roles.

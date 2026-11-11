@@ -130,12 +130,29 @@ describe('native SDK integration boundaries', () => {
   it('uses explicit DAV permissions and refuses vault or unknown access', () => {
     expect(nativeAccess8(file())).toEqual({ read: true, write: true, createChild: false })
     expect(nativeAccess8(file({ isFolder: true })).createChild).toBe(true)
-    for (const overrides of [{ permissions: '' }, { permissions: 'Z' }, { isInVault: true }])
+    // Z grants permission-management capability; it is not an access-denied marker.
+    for (const overrides of [
+      { permissions: '' },
+      { permissions: 'X', canDownload: () => false },
+      { isInVault: true }
+    ])
       expect(nativeAccess8(file(overrides))).toEqual({
         read: false,
         write: false,
         createChild: false
       })
+  })
+  it('keeps manager resources readable and writable when their DAV permissions contain Z', () => {
+    expect(nativeAccess8(file({ permissions: 'RDNVWZP' }))).toEqual({
+      read: true,
+      write: true,
+      createChild: false
+    })
+    expect(nativeAccess8(file({ permissions: 'RDNVCKZP', isFolder: true }))).toEqual({
+      read: true,
+      write: false,
+      createChild: true
+    })
   })
   it('uses the authorized DAV root identity when Graph supplies a different root ID', async () => {
     const t = setup()
