@@ -15,8 +15,9 @@ const props = defineProps<{
   entries: RecentEntry[]
   note: string
   opening: boolean
+  loading?: boolean
 }>()
-const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord] }>()
+const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord]; retry: [] }>()
 const preferences = props.context.preferences
 const filter = props.context.recentFilter
 const filtered = computed(() => filter.favorites || filter.tags.length > 0)
@@ -42,8 +43,14 @@ const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAY
       </div>
       <FileToolbar :context="context" />
     </div>
-    <p v-if="note" class="office-muted" role="status">{{ note }}</p>
-    <p v-if="!entries.length && filtered" class="office-empty">
+    <p v-if="loading" role="status">Loading recent files…</p>
+    <p v-if="note" class="office-muted" role="status">
+      {{ note }}
+      <button type="button" class="office-link" :disabled="loading" @click="emit('retry')">
+        Retry Recent
+      </button>
+    </p>
+    <p v-if="!loading && !note && !entries.length && filtered" class="office-empty">
       No recent files match these filters.
       <button
         type="button"
@@ -53,7 +60,9 @@ const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAY
         Clear filters
       </button>
     </p>
-    <p v-else-if="!entries.length" class="office-empty">No recent files yet.</p>
+    <p v-else-if="!loading && !note && !entries.length" class="office-empty">
+      No recent files yet.
+    </p>
     <section
       v-for="group in groups"
       :key="group.label"

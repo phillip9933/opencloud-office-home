@@ -213,8 +213,12 @@ function setBand(band: TemplateBand) {
         </template>
       </div>
       <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
+      <p v-if="state.templateNote" class="office-muted" role="status">{{ state.templateNote }}</p>
       <p v-if="state.templateError" class="office-muted">Templates: {{ state.templateError }}</p>
-      <p v-else-if="!state.loading && !state.templates.length" class="office-muted">
+      <p
+        v-else-if="!state.loading && !state.error && !state.templateNote && !state.templates.length"
+        class="office-muted"
+      >
         No templates are available.
         {{
           context.services.configuration?.allowPersonalTemplates === false

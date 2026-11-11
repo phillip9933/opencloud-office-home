@@ -37,8 +37,11 @@ export function createHomeModel(
     formats: [] as Format[],
     templates: [] as Template[],
     loading: false,
+    recentLoading: false,
+    spaceNote: '',
     error: '' as string,
     templateError: '',
+    templateNote: '',
     recentNote: '',
     formatError: '',
     notice: '',
@@ -64,8 +67,10 @@ export function createHomeModel(
     recentAbort.abort()
     recentAbort = new AbortController()
     const request = ++recentRequest
+    state.recentLoading = true
     const result = await loadRecent(recentAbort.signal)
     if (!active || request !== recentRequest) return
+    state.recentLoading = false
     state.recent = result.entries
     state.recentNote = result.note
   }
@@ -76,12 +81,15 @@ export function createHomeModel(
     abort.abort()
     recentAbort.abort()
     state.loading = false
+    state.recentLoading = false
     state.recent = []
     state.destinationWritable = false
   }
 
   async function load(location: HomeLocation) {
     active = true
+    recentAbort.abort()
+    state.recentLoading = false
     abort.abort()
     abort = new AbortController()
     const request = ++generation
@@ -97,7 +105,11 @@ export function createHomeModel(
       attempt(() => services.capabilities.creationFormats(kind))
     ])
     if (!current()) return
-    state.spaces = spaces.ok ? spaces.value : []
+    state.spaces = spaces.ok ? spaces.value.items : []
+    state.spaceNote =
+      spaces.ok && spaces.value.partial
+        ? 'Some spaces could not be loaded. Retry loading to refresh them.'
+        : ''
     state.formats = formats.ok
       ? formats.value.filter((format) =>
           officeApps
@@ -107,10 +119,14 @@ export function createHomeModel(
       : []
     const templates = spaces.ok
       ? await attempt(() => services.templates(kind, templateFolder()))
-      : fail('unauthenticated')
+      : fail(spaces.error)
     if (!current()) return
-    state.templates = templates.ok ? templates.value.filter((t) => t.kind === kind) : []
-    state.templateError = templates.ok ? '' : errorText[templates.error]
+    state.templates = templates.ok ? templates.value.items.filter((t) => t.kind === kind) : []
+    state.templateNote =
+      templates.ok && templates.value.partial
+        ? 'Some templates could not be shown. The gallery reads up to 20 categories and 200 templates; check the source folder in Files.'
+        : ''
+    state.templateError = !spaces.ok || templates.ok ? '' : errorText[templates.error]
     // Keep "not configured" distinct from a configured editor that cannot create this family.
     state.formatError = !formats.ok
       ? errorText[formats.error]
@@ -124,7 +140,7 @@ export function createHomeModel(
     }
     const space = state.spaces.find((s) => s.id === location.spaceId) ?? state.spaces[0]
     if (location.spaceId && !state.spaces.some((s) => s.id === location.spaceId)) {
-      state.error = errorText.forbiddenOrMissing
+      state.error = errorText.spaceUnavailable
       state.loading = false
       return
     }
@@ -142,7 +158,7 @@ export function createHomeModel(
     state.location.folder = { ...folder }
     const recentLoad = ++recentRequest
     const [destination, recent] = await Promise.all([
-      attempt(() => services.catalog.resolve(folder)),
+      attempt(() => services.catalog.resolve(folder, signal)),
       loadRecent(signal)
     ])
     if (!current()) return
@@ -184,7 +200,7 @@ export function createHomeModel(
     state.opening = true
     state.notice = ''
     const request = generation
-    const resolved = await attempt(() => services.catalog.resolve(file.ref))
+    const resolved = await attempt(() => services.catalog.resolve(file.ref, abort.signal))
     if (!resolved.ok || !resolved.value.access.read) {
       // Transient transport or adapter failures do not prove a file was deleted or revoked.
       if (resolved.ok || resolved.error === 'forbiddenOrMissing') {

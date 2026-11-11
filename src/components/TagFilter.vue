@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
+import { nextTick, onBeforeUnmount, ref } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { FileCatalog, RecentFilter } from '../contracts/office'
-import { errorText } from '../services/errors'
+import { attempt, errorText } from '../services/errors'
 
 const props = defineProps<{ catalog: FileCatalog; filter: RecentFilter }>()
 const emit = defineEmits<{ change: [tags: string[]] }>()
 const open = ref(false)
+const root = ref<HTMLElement>()
 const loading = ref(false)
 const tags = ref<string[]>([])
 const error = ref('')
@@ -15,14 +16,15 @@ const panel = ref<HTMLElement>()
 let abort: AbortController | undefined
 
 async function show() {
-  open.value = !open.value
-  if (!open.value) return abort?.abort()
+  if (open.value) return close()
+  open.value = true
+  document.addEventListener('click', outside, true)
   abort?.abort()
   const controller = new AbortController()
   abort = controller
   loading.value = true
   error.value = ''
-  const result = await props.catalog.listTags(controller.signal)
+  const result = await attempt(() => props.catalog.listTags(controller.signal))
   if (controller.signal.aborted) return
   loading.value = false
   // Selected tags stay listed even if the server no longer reports them, so they can be cleared.
@@ -31,10 +33,14 @@ async function show() {
   await nextTick()
   panel.value?.querySelector<HTMLElement>('input, button')?.focus()
 }
-function close() {
+function outside(event: MouseEvent) {
+  if (!root.value?.contains(event.target as Node)) close(false)
+}
+function close(restoreFocus = true) {
   abort?.abort()
   open.value = false
-  toggle.value?.focus()
+  document.removeEventListener('click', outside, true)
+  if (restoreFocus) toggle.value?.focus()
 }
 function choose(tag: string, checked: boolean) {
   emit(
@@ -42,10 +48,11 @@ function choose(tag: string, checked: boolean) {
     checked ? [...props.filter.tags, tag] : props.filter.tags.filter((selected) => selected !== tag)
   )
 }
+onBeforeUnmount(() => close(false))
 </script>
 
 <template>
-  <div class="office-popover" @keydown.esc.stop.prevent="close">
+  <div ref="root" class="office-popover" @keydown.esc.stop.prevent="close()">
     <button
       ref="toggle"
       type="button"
@@ -88,7 +95,7 @@ function choose(tag: string, checked: boolean) {
         >
           Clear tags
         </button>
-        <button type="button" @click="close">Done</button>
+        <button type="button" @click="close()">Done</button>
       </div>
     </div>
   </div>

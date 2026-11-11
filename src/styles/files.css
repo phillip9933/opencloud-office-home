@@ -125,14 +125,9 @@
   max-width: 18rem;
 }
 .office-toast-region {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 1rem;
   display: flex;
   justify-content: center;
-  pointer-events: none;
-  z-index: 4;
-  padding-inline: 1rem;
+  margin-block: 1rem;
 }
 .office-toast {
   pointer-events: auto;

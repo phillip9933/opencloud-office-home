@@ -6,7 +6,7 @@ it('names nested folders even when an ID-addressed response has path /', async (
   const services = fixtureServices()
   const spaces = await services.catalog.listSpaces(new AbortController().signal)
   if (!spaces.ok) throw new Error('Fixture spaces missing')
-  const ref = { spaceId: spaces.value[0]!.id, itemId: 'nested' }
+  const ref = { spaceId: spaces.value.items[0]!.id, itemId: 'nested' }
   vi.spyOn(services.catalog, 'resolve').mockResolvedValue(
     ok({
       ref,

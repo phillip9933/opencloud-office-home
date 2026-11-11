@@ -160,7 +160,7 @@ describe('native SDK integration boundaries', () => {
     const t = setup()
     t.space.root.id = 'graph-drive-item-root'
     const spaces = await t.init()
-    expect(spaces.ok && spaces.value[0]?.root).toEqual(rootRef)
+    expect(spaces.ok && spaces.value.items[0]?.root).toEqual(rootRef)
     expect((await t.native.services.catalog.resolve(rootRef)).ok).toBe(true)
     expect(
       (
@@ -262,23 +262,29 @@ describe('native SDK integration boundaries', () => {
     t.root.canCreate = () => false
     expect(await t.native.services.creation.blank(input)).toEqual({
       ok: false,
-      error: 'forbiddenOrMissing'
+      error: 'forbiddenOrMissing',
+      outcome: 'notSubmitted'
     })
     t.root.canCreate = () => true
     t.setCreated(true)
-    expect(await t.native.services.creation.blank(input)).toEqual({ ok: false, error: 'conflict' })
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'conflict',
+      outcome: 'notSubmitted'
+    })
     t.setCreated(false)
     t.port.capabilities.filesAppProviders[0]!.new_url = 'https://other.example/new'
     expect(await t.native.services.creation.blank(input)).toEqual({
       ok: false,
-      error: 'providerNotConfigured'
+      error: 'providerNotConfigured',
+      outcome: 'notSubmitted'
     })
     expect(
       await t.native.services.creation.blank({
         ...input,
         destination: { ...rootRef, itemId: '../private' }
       })
-    ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
+    ).toEqual({ ok: false, error: 'forbiddenOrMissing', outcome: 'notSubmitted' })
     expect(t.port.requestNew).not.toHaveBeenCalled()
   })
   it('refuses creation when the resolved destination path identifies a different folder', async () => {
@@ -287,7 +293,8 @@ describe('native SDK integration boundaries', () => {
     t.port.webdav.getPathForFileId.mockResolvedValue('/Moved')
     expect(await t.native.services.creation.blank(input)).toEqual({
       ok: false,
-      error: 'forbiddenOrMissing'
+      error: 'forbiddenOrMissing',
+      outcome: 'notSubmitted'
     })
     expect(t.port.requestNew).not.toHaveBeenCalled()
   })
@@ -303,7 +310,11 @@ describe('native SDK integration boundaries', () => {
     )
     const pending = t.native.services.creation.blank(input)
     await vi.waitFor(() => expect(t.port.requestNew).toHaveBeenCalledOnce())
-    expect(await t.native.services.creation.blank(input)).toEqual({ ok: false, error: 'conflict' })
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'conflict',
+      outcome: 'notSubmitted'
+    })
     t.setCreated(true)
     finish({ status: 200 })
     await pending
@@ -336,7 +347,8 @@ describe('native SDK integration boundaries', () => {
     )
     expect(await t.native.services.creation.fromTemplate({ ...input, template })).toEqual({
       ok: false,
-      error: 'unsupportedType'
+      error: 'unsupportedType',
+      outcome: 'notSubmitted'
     })
     expect(t.port.webdav.copyFiles).toHaveBeenCalledOnce()
   })
@@ -356,7 +368,8 @@ describe('native SDK integration boundaries', () => {
     })
     expect(await t.native.services.creation.blank(input)).toEqual({
       ok: false,
-      error: 'unauthenticated'
+      error: 'unauthenticated',
+      outcome: 'notSubmitted'
     })
     expect(t.port.open).toHaveBeenCalledOnce()
   })
@@ -378,7 +391,11 @@ describe('native SDK integration boundaries', () => {
     const t = setup()
     await t.init()
     t.port.requestNew.mockRejectedValue({ code: 'ERR_NETWORK' })
-    expect(await t.native.services.creation.blank(input)).toEqual({ ok: false, error: 'network' })
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'network',
+      outcome: 'uncertain'
+    })
     expect(t.port.requestNew).toHaveBeenCalledOnce()
   })
   it('pauses retry when creation succeeded but result metadata cannot be read', async () => {
@@ -390,7 +407,39 @@ describe('native SDK integration boundaries', () => {
         return Promise.reject({ statusCode: 404 })
       return original(space, ref, options)
     })
-    expect(await t.native.services.creation.blank(input)).toEqual({ ok: false, error: 'timeout' })
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'timeout',
+      outcome: 'uncertain'
+    })
     expect(t.port.requestNew).toHaveBeenCalledOnce()
   })
+})
+
+import { createOfficeFile } from '../../src/services/creation'
+
+it('allows retry after a failed native preflight that sent no mutation', async () => {
+  const t = setup()
+  await t.init()
+  t.port.webdav.getPathForFileId.mockRejectedValue({ code: 'ERR_NETWORK' })
+  const result = await createOfficeFile(t.native.services, 'docs', rootRef, 'New', 'odt', [format])
+  expect(t.port.requestNew).not.toHaveBeenCalled()
+  expect(t.port.webdav.copyFiles).not.toHaveBeenCalled()
+  expect(result).toEqual({ ok: false, error: 'network' })
+  t.native.dispose()
+})
+it('keeps healthy roots available when one project root cannot be read', async () => {
+  const t = setup()
+  const project = { ...t.space, id: 'project', driveType: 'project' }
+  t.port.drives.listMyDrives.mockResolvedValue([t.space, project])
+  const original = t.port.webdav.getFileInfo.getMockImplementation()!
+  t.port.webdav.getFileInfo.mockImplementation((space, ref, options) =>
+    space.id === 'project' ? Promise.reject({ statusCode: 403 }) : original(space, ref, options)
+  )
+  expect(await t.init()).toMatchObject({
+    ok: true,
+    value: { items: [{ id: 'space' }], partial: true }
+  })
+  expect((await t.native.services.catalog.resolve(rootRef)).ok).toBe(true)
+  t.native.dispose()
 })

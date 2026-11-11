@@ -3,6 +3,7 @@ import {
   ok,
   refKey,
   type CreationRequest,
+  type CreationResult,
   type FileRecord,
   type FileRef,
   type Format,
@@ -11,6 +12,7 @@ import {
   type Result,
   type Template
 } from '../contracts/office'
+import { officeApps } from '../app/registry'
 import { attempt } from './errors'
 
 function creationRequest(
@@ -29,7 +31,12 @@ function creationRequest(
     /[/\\\u0000-\u001f\u007f]/.test(stem) ||
     stem === '.' ||
     stem === '..' ||
-    (stem.includes('.') && !stem.toLowerCase().endsWith(`.${extension}`))
+    officeApps.some((app) =>
+      app.formats.some(
+        (format) =>
+          format.extension !== extension && stem.toLowerCase().endsWith(`.${format.extension}`)
+      )
+    )
   )
     return fail('invalidName')
   return ok({
@@ -79,15 +86,19 @@ export async function createOfficeFile(
     )
       return fail('forbiddenOrMissing')
   }
-  const created = await attempt(() =>
-    template
+  let created: CreationResult
+  try {
+    created = await (template
       ? services.creation.fromTemplate({ ...input, template })
-      : services.creation.blank(input)
-  )
+      : services.creation.blank(input))
+  } catch {
+    // A broken adapter contract gives no reliable dispatch information. Preserve the lock.
+    created = { ok: false, error: 'unknown', outcome: 'uncertain' }
+  }
   if (created.ok) return ok({ file: created.value, destinationName: resolved.value.name })
-  return ['network', 'timeout', 'unknown'].includes(created.error)
-    ? { ...created, uncertain: input }
-    : created
+  return created.outcome === 'uncertain'
+    ? { ...fail(created.error), uncertain: input }
+    : fail(created.error)
 }
 
 // A partial listing can establish a positive match, never absence. Revalidate the returned ID.
@@ -110,7 +121,7 @@ export async function findCreation(
       file.access.read
   )
   if (matches.length !== 1) return ok(null)
-  const resolved = await attempt(() => services.catalog.resolve(matches[0]!.ref))
+  const resolved = await attempt(() => services.catalog.resolve(matches[0]!.ref, signal))
   if (!resolved.ok) return resolved
   if (signal.aborted) return fail('cancelled')
   const file = resolved.value

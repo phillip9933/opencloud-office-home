@@ -175,3 +175,16 @@ personal template selection and writable creation destinations.
 
 The interface currently uses English strings. Translation catalogs and locale switching remain
 unimplemented; the upstream gettext dependency alone does not provide translated application text.
+
+## Recoverable failures
+
+Home discovery failures appear with their actual safe message and a Retry loading action. The
+chosen save folder stays selected until the user changes it. Partial spaces, Recent and template
+results are identified visibly; partial Recent has its own retry. Loading and failed results do not
+masquerade as an empty collection. Creation failures distinguish a retryable preflight from an
+uncertain submitted write.
+
+Operation notices are inline above Recent, inside the scrolling main pane, so persistent recovery
+messages cannot overlay keyboard targets on narrow screens. Created-file focus remains explicit.
+Tags and file/column menus close on outside click or Escape; cancellation/unmount aborts associated
+reads without moving focus to removed controls. No generalized menu framework is introduced.

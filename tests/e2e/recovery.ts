@@ -14,14 +14,25 @@ import OfficeSettings from '../../src/views/OfficeSettings.vue'
 import { fixtureServices } from '../../src/fixtures/services'
 import { createOfficeContext } from '../../src/app/context'
 import { officeApps, officeRoute } from '../../src/app/registry'
-import { fail } from '../../src/contracts/office'
 const services = fixtureServices({ seedHistory: true })
 const blank = services.creation.blank
 services.creation.blank = async (input) => {
   if (input.name !== 'Unconfirmed.odt') await blank(input)
-  return fail('timeout')
+  return { ok: false, error: 'timeout', outcome: 'uncertain' }
 }
 const context = createOfficeContext(services)
+if (new URLSearchParams(location.search).get('case') === 'load-failure') {
+  context.preferences.lastFolder.docs = { spaceId: 'fixture-personal', itemId: 'reports' }
+  const listSpaces = services.catalog.listSpaces
+  let first = true
+  services.catalog.listSpaces = (signal) => {
+    if (first) {
+      first = false
+      return Promise.resolve({ ok: false, error: 'network' })
+    }
+    return listSpaces(signal)
+  }
+}
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

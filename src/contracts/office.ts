@@ -10,6 +10,7 @@ export interface OfficeConfiguration {
 export type AppError =
   | 'unauthenticated'
   | 'forbiddenOrMissing'
+  | 'spaceUnavailable'
   | 'unsupportedType'
   | 'editorUnavailable'
   | 'providerNotConfigured'
@@ -21,7 +22,7 @@ export type AppError =
   | 'unknown'
   | 'cancelled'
 export type Result<T> = { ok: true; value: T } | { ok: false; error: AppError }
-export const ok = <T>(value: T): Result<T> => ({ ok: true, value })
+export const ok = <T>(value: T): { ok: true; value: T } => ({ ok: true, value })
 export const fail = <T = never>(error: AppError): Result<T> => ({
   ok: false,
   error
@@ -70,9 +71,9 @@ export interface CatalogQuery {
   signal: AbortSignal
 }
 export interface FileCatalog {
-  listSpaces(signal: AbortSignal): Promise<Result<Space[]>>
+  listSpaces(signal: AbortSignal): Promise<Result<Page<Space>>>
   list(query: CatalogQuery): Promise<Result<Page<FileRecord>>>
-  resolve(ref: FileRef): Promise<Result<FileRecord>>
+  resolve(ref: FileRef, signal?: AbortSignal): Promise<Result<FileRecord>>
   // Family files changed within RECENT_CHANGE_DAYS across the user's spaces, newest first.
   recentlyChanged(
     kind: OfficeKind,
@@ -115,9 +116,13 @@ export interface Template {
   // Optional administrator image; without it the template file's own server preview is tried.
   preview?: FileRef
 }
+// Only the mutation boundary knows whether a failed write may have reached the server.
+export type CreationResult =
+  | { ok: true; value: FileRecord }
+  | { ok: false; error: AppError; outcome: 'notSubmitted' | 'rejected' | 'uncertain' }
 export interface FileCreation {
-  blank(input: CreationRequest): Promise<Result<FileRecord>>
-  fromTemplate(input: CreationRequest & { template: Template }): Promise<Result<FileRecord>>
+  blank(input: CreationRequest): Promise<CreationResult>
+  fromTemplate(input: CreationRequest & { template: Template }): Promise<CreationResult>
 }
 export interface OfficeCapabilities {
   creationFormats(kind: OfficeKind): Promise<Result<Format[]>>
@@ -160,7 +165,7 @@ export interface OfficeServices {
   capabilities: OfficeCapabilities
   editor: EditorGateway
   recents: RecentStore
-  templates(kind: OfficeKind, folder?: FileRef): Promise<Result<Template[]>>
+  templates(kind: OfficeKind, folder?: FileRef): Promise<Result<Page<Template>>>
   preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
   // Host feature availability decides which filters are offered.
   filters: { favorites: boolean; tags: boolean }

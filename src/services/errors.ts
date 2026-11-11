@@ -3,6 +3,7 @@ import { fail, type AppError, type Result } from '../contracts/office'
 export const errorText: Record<AppError, string> = {
   unauthenticated: 'Sign in again through OpenCloud.',
   forbiddenOrMissing: 'This item is unavailable or you no longer have access.',
+  spaceUnavailable: 'This space could not be verified. Retry loading or choose another folder.',
   unsupportedType: 'This format is not supported by the configured editor.',
   editorUnavailable:
     'The OpenCloud integration has not been verified. File actions are unavailable.',

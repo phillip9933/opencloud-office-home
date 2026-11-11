@@ -62,9 +62,6 @@ export function createOfficeContext(services: OfficeServices) {
       preferences.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
       preferences.createdCount = Math.min(preferences.createdCount + 1, 1000)
     },
-    forgetFolder(kind: OfficeKind) {
-      delete preferences.lastFolder[kind]
-    },
     saveView(location: HomeLocation) {
       const id = `v${session}.${++sequence}`
       views.set(id, structuredClone(toRaw(location)))

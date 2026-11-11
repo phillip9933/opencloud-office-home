@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import CreatePanel from '../../src/components/CreatePanel.vue'
 import { fixtureServices } from '../../src/fixtures/services'
 import { createHomeModel, defaultLocation } from '../../src/services/home'
-import { ok, type FileRecord, type Result } from '../../src/contracts/office'
+import { ok, type CreationResult } from '../../src/contracts/office'
 
 async function setup() {
   const services = fixtureServices()
@@ -76,7 +76,7 @@ describe('inline creation', () => {
   })
   it('holds the one explicit creation while pending and retains fixable errors', async () => {
     const test = await setup()
-    let finish!: (value: Result<FileRecord>) => void
+    let finish!: (value: CreationResult) => void
     const blank = vi.spyOn(test.services.creation, 'blank').mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -90,7 +90,7 @@ describe('inline creation', () => {
     await test.wrapper.get('form').trigger('submit')
     expect(blank).toHaveBeenCalledTimes(1)
     expect(test.wrapper.get('button[type="submit"]').attributes('disabled')).toBeDefined()
-    finish({ ok: false, error: 'conflict' })
+    finish({ ok: false, error: 'conflict', outcome: 'rejected' })
     await flushPromises()
     expect(test.wrapper.text()).toContain('already exists')
     expect(test.wrapper.find('section').exists()).toBe(true)

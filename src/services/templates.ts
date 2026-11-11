@@ -7,6 +7,7 @@ import {
   type FileRecord,
   type FileRef,
   type OfficeKind,
+  type Page,
   type Result,
   type Template
 } from '../contracts/office'
@@ -59,21 +60,32 @@ export async function folderTemplates(
   folder: FileRef,
   kind: OfficeKind,
   signal: AbortSignal
-): Promise<Result<Template[]>> {
+): Promise<Result<Page<Template>>> {
+  if (signal.aborted) return fail('cancelled')
   const root = await catalog.list({ folder, kind: 'any', signal })
   if (!root.ok) return root
+  let partial = root.value.partial
   const templates = templatesIn(root.value.items, kind, GENERAL_CATEGORY)
   const categories = root.value.items
     .filter((item) => item.kind === 'folder' && item.access.read)
     .sort((a, b) => a.name.localeCompare(b.name))
-    .slice(0, MAX_CATEGORIES)
-  for (const category of categories) {
+  partial ||= categories.length > MAX_CATEGORIES
+  for (const category of categories.slice(0, MAX_CATEGORIES)) {
+    if (signal.aborted) return fail('cancelled')
     const listed = await catalog.list({ folder: category.ref, kind: 'any', signal })
-    if (!listed.ok) return fail(listed.error)
+    if (!listed.ok) {
+      if (listed.error === 'unauthenticated' || listed.error === 'cancelled')
+        return fail(listed.error)
+      partial = true
+      continue
+    }
+    partial ||= listed.value.partial
     templates.push(...templatesIn(listed.value.items, kind, category.name))
   }
-  return ok(
-    templates
+  if (signal.aborted) return fail('cancelled')
+  return ok({
+    partial: partial || templates.length > MAX_TEMPLATES,
+    items: templates
       .sort(
         (a, b) =>
           Number(b.category === GENERAL_CATEGORY) - Number(a.category === GENERAL_CATEGORY) ||
@@ -81,5 +93,5 @@ export async function folderTemplates(
           a.name.localeCompare(b.name)
       )
       .slice(0, MAX_TEMPLATES)
-  )
+  })
 }

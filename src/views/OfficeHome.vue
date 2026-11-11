@@ -28,7 +28,6 @@ const heading = ref<HTMLHeadingElement>()
 const openCreated = ref<HTMLButtonElement>()
 let activeModel: HomeModel | undefined
 let navigation = 0
-let rememberedView: string | undefined
 
 function snapshot(): HomeLocation {
   return {
@@ -93,7 +92,6 @@ watch(
             }
           : defaultLocation(props.kind)
       )
-      rememberedView = remembered ? initial : undefined
       await router.replace({
         path: `/office/${props.kind}`,
         query: { view: initial }
@@ -105,16 +103,6 @@ watch(
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
     await activeModel.load(location)
     if (revision !== navigation) return
-    if (id === rememberedView && state.value.error) {
-      // The remembered folder is gone or no longer accessible: forget it and start at the root.
-      props.context.forgetFolder(props.kind)
-      rememberedView = undefined
-      await router.replace({
-        path: `/office/${props.kind}`,
-        query: { view: props.context.saveView(defaultLocation(props.kind)) }
-      })
-      return
-    }
     await nextTick()
     if (viewport.value) viewport.value.scrollTop = location.scroll
     // Announce the new view, unless the user already moved focus while it was loading.
@@ -156,6 +144,23 @@ onBeforeUnmount(() => {
       </TemplateStrip>
 
       <div class="office-inner">
+        <div v-if="state.error" role="alert" class="office-load-error">
+          <p>{{ state.error }}</p>
+          <button type="button" :disabled="state.loading" @click="model.load(snapshot())">
+            Retry loading
+          </button>
+        </div>
+        <p v-if="state.spaceNote" role="status">
+          {{ state.spaceNote }}
+          <button
+            v-if="!state.error"
+            type="button"
+            :disabled="state.loading"
+            @click="model.load(snapshot())"
+          >
+            Retry loading
+          </button>
+        </p>
         <CreatePanel
           :key="kind"
           ref="createPanel"
@@ -166,38 +171,41 @@ onBeforeUnmount(() => {
           :preferred="context.preferences.lastFormat[kind]"
           @created="remember"
         />
+        <div class="office-toast-region" role="status">
+          <p v-if="state.notice && !createPanel?.isOpen" class="office-toast">
+            <span>{{ state.notice }}</span>
+            <button
+              v-if="state.created"
+              ref="openCreated"
+              type="button"
+              class="office-link"
+              :disabled="state.opening || state.mutation"
+              @click="model.open(state.created)"
+            >
+              Open created file
+            </button>
+            <button
+              type="button"
+              class="office-link"
+              aria-label="Dismiss message"
+              @click="state.notice = ''"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+          </p>
+        </div>
         <RecentFiles
+          v-if="!state.error || state.recent.length"
           :kind="kind"
           :context="context"
           :entries="state.recent"
           :note="state.recentNote"
           :opening="state.opening"
+          :loading="state.loading || state.recentLoading"
+          @retry="model.refreshRecent()"
           @action="act"
         />
       </div>
     </main>
-    <div class="office-toast-region" role="status">
-      <p v-if="state.notice && !createPanel?.isOpen" class="office-toast">
-        <span>{{ state.notice }}</span>
-        <button
-          v-if="state.created"
-          ref="openCreated"
-          type="button"
-          class="office-link"
-          :disabled="state.opening || state.mutation"
-          @click="model.open(state.created)"
-        >
-          Open created file
-        </button>
-        <button
-          type="button"
-          class="office-link"
-          aria-label="Dismiss message"
-          @click="state.notice = ''"
-        >
-          <span aria-hidden="true">✕</span>
-        </button>
-      </p>
-    </div>
   </div>
 </template>

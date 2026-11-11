@@ -8,6 +8,7 @@ import {
   type ActionFeedback,
   type CatalogQuery,
   type CreationRequest,
+  type CreationResult,
   type FileRecord,
   type FileRef,
   type OfficeKind,
@@ -231,13 +232,13 @@ export function fixtureServices(
     return ok({ items, partial: false })
   }
   let counter = 0
-  function create(input: CreationRequest) {
+  function create(input: CreationRequest): Promise<CreationResult> {
     if (
       records.some(
         (r) => parents.get(refKey(r.ref)) === refKey(input.destination) && r.name === input.name
       )
     )
-      return Promise.resolve(fail<FileRecord>('conflict'))
+      return Promise.resolve({ ok: false, error: 'conflict', outcome: 'rejected' })
     const record = file(
       { spaceId: input.destination.spaceId, itemId: `created-${++counter}` },
       input.name,
@@ -256,14 +257,18 @@ export function fixtureServices(
     catalog: {
       listSpaces() {
         return Promise.resolve(
-          ok([
-            { id: root.spaceId, name: 'Personal files', root },
-            { id: team.spaceId, name: 'Team space', root: team },
-            { id: templatesRoot.spaceId, name: 'Templates', root: templatesRoot }
-          ])
+          ok({
+            items: [
+              { id: root.spaceId, name: 'Personal files', root },
+              { id: team.spaceId, name: 'Team space', root: team },
+              { id: templatesRoot.spaceId, name: 'Templates', root: templatesRoot }
+            ],
+            partial: false
+          })
         )
       },
-      resolve(ref) {
+      resolve(ref, signal) {
+        if (signal?.aborted) return Promise.resolve(fail('cancelled'))
         const record = records.find((r) => refKey(r.ref) === refKey(ref))
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },

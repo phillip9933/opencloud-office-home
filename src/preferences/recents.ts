@@ -13,8 +13,10 @@ export function createRecentStore(
   if (!scope.instance || !scope.user) throw new Error('Authenticated recent scope required')
   const key = JSON.stringify(['office-recents', 1, scope.instance, scope.user])
   let entries: RecentRef[] = []
+  let persisted: string | undefined
   try {
-    const raw: unknown = JSON.parse(storage?.getItem(key) ?? '[]')
+    persisted = storage?.getItem(key) ?? '[]'
+    const raw: unknown = JSON.parse(persisted)
     if (Array.isArray(raw))
       entries = raw
         .filter(
@@ -32,7 +34,8 @@ export function createRecentStore(
           openedAt: r.openedAt
         }))
   } catch {
-    /* Browser storage can be denied or corrupt. Remain session-local. */
+    // If reading failed, do not overwrite unknown persisted data. Malformed JSON can be sanitized.
+    if (persisted === undefined) storage = undefined
   }
   function prune() {
     entries = entries
@@ -43,15 +46,19 @@ export function createRecentStore(
   function persist() {
     prune()
     try {
-      storage?.setItem(key, JSON.stringify(entries))
+      const serialized = JSON.stringify(entries)
+      if (storage && serialized !== persisted) {
+        storage.setItem(key, serialized)
+        persisted = serialized
+      }
     } catch {
       /* session-local fallback */
     }
   }
-  prune()
+  persist()
   return {
     list(kind) {
-      prune()
+      persist()
       return structuredClone(entries.filter((r) => r.kind === kind))
     },
     record(ref, kind) {

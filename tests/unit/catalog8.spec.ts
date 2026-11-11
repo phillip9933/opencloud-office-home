@@ -127,7 +127,10 @@ describe('8.x SDK catalog candidate', () => {
       test.personal
     ])
     const result = await test.catalog.listSpaces(test.query.signal)
-    expect(result.ok && result.value.map((value) => value.id)).toEqual(['opaque:space', 'project'])
+    expect(result.ok && result.value.items.map((value) => value.id)).toEqual([
+      'opaque:space',
+      'project'
+    ])
   })
   it('rejects path syntax in opaque references before sending any SDK request', async () => {
     const test = setup()
@@ -140,24 +143,25 @@ describe('8.x SDK catalog candidate', () => {
     }
     expect(test.port.webdav.getFileInfo).not.toHaveBeenCalled()
   })
-  it('clears discovered roots when a later refresh contains malformed space metadata', async () => {
+  it('isolates malformed space metadata while retaining healthy roots', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)
     test.port.drives.listMyDrives.mockResolvedValue([
       test.personal,
       space('malformed', { root: {} })
     ])
-    expect(await test.catalog.listSpaces(test.query.signal)).toEqual({
-      ok: false,
-      error: 'unknown'
+    expect(await test.catalog.listSpaces(test.query.signal)).toMatchObject({
+      ok: true,
+      value: { items: [{ id: test.personal.id }], partial: true }
     })
     expect(
-      await test.catalog.resolve({
-        spaceId: test.personal.id,
-        itemId: 'opaque:item'
-      })
-    ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
-    expect(test.port.webdav.getFileInfo).not.toHaveBeenCalled()
+      (await test.catalog.resolve({ spaceId: test.personal.id, itemId: 'opaque:item' })).ok
+    ).toBe(true)
+    expect(await test.catalog.resolve({ spaceId: 'malformed', itemId: 'opaque:item' })).toEqual({
+      ok: false,
+      error: 'spaceUnavailable'
+    })
+    expect(test.port.webdav.getFileInfo).toHaveBeenCalledOnce()
   })
   it('uses normal-user space discovery, excludes special roots and disabled spaces, and keeps opaque IDs', async () => {
     const test = setup()
@@ -169,10 +173,10 @@ describe('8.x SDK catalog candidate', () => {
     ])
     const signal = new AbortController().signal
     const result = await test.catalog.listSpaces(signal)
-    expect(result.ok && result.value.map((s) => s.id)).toEqual(['opaque:space', 'project'])
-    expect(result.ok && result.value[0]!.root.itemId).toBe('opaque:root')
+    expect(result.ok && result.value.items.map((s) => s.id)).toEqual(['opaque:space', 'project'])
+    expect(result.ok && result.value.items[0]!.root.itemId).toBe('opaque:root')
     expect(test.port.drives.listMyDrives).toHaveBeenCalledWith(undefined, {
-      signal
+      signal: expect.any(AbortSignal)
     })
   })
   it('lists one folder depth with cancellation, family filtering and explicit partial status; never grants mutations', async () => {
@@ -224,7 +228,7 @@ describe('8.x SDK catalog candidate', () => {
         spaceId: 'opaque:space',
         itemId: 'opaque:item'
       })
-    ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
+    ).toEqual({ ok: false, error: 'spaceUnavailable' })
     expect(test.port.webdav.getFileInfo).toHaveBeenCalledTimes(1)
   })
   it('rejects cancellation before/after a source ignoring abort, and refuses use after disposal', async () => {
@@ -426,4 +430,56 @@ describe('8.x SDK catalog candidate', () => {
   ])('maps SDK failure categories without raw responses', (error, expected) => {
     expect(catalogError(error)).toBe(expected)
   })
+})
+
+import { fixtureServices } from '../../src/fixtures/services'
+import { recentLoader } from '../../src/services/loadRecent'
+
+it('preserves valid recents while a shared space refresh is pending', async () => {
+  const t = setup()
+  await t.catalog.listSpaces(t.query.signal)
+  const services = fixtureServices()
+  services.catalog = t.catalog
+  const ref = { spaceId: t.personal.id, itemId: 'opaque:item' }
+  services.recents.record(ref, 'docs')
+  let finish!: (value: SpaceResource[]) => void
+  t.port.drives.listMyDrives.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  const refreshing = t.catalog.listSpaces(t.query.signal)
+  const metadataCalls = t.port.webdav.getFileInfo.mock.calls.length
+  const recent = recentLoader(services, 'docs', { favorites: false, tags: [] })(t.query.signal)
+  expect(services.recents.list('docs')).toHaveLength(1)
+  expect(t.port.webdav.getFileInfo.mock.calls.length).toBe(metadataCalls + 1)
+  finish([t.personal])
+  await refreshing
+  await recent
+  expect(services.recents.list('docs')).toHaveLength(1)
+  expect((await t.catalog.resolve(ref)).ok).toBe(true)
+  t.catalog.dispose()
+})
+
+it('shares pending discovery while allowing one caller to stop waiting', async () => {
+  const t = setup()
+  let finish!: (value: SpaceResource[]) => void
+  t.port.drives.listMyDrives.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  const cancelled = new AbortController()
+  const first = t.catalog.listSpaces(cancelled.signal)
+  const second = t.catalog.listSpaces(new AbortController().signal)
+  expect(t.port.drives.listMyDrives).toHaveBeenCalledOnce()
+  cancelled.abort()
+  expect(await first).toEqual({ ok: false, error: 'cancelled' })
+  expect(t.port.drives.listMyDrives.mock.calls[0]![1]!.signal!.aborted).toBe(false)
+  finish([t.personal])
+  expect((await second).ok).toBe(true)
+  t.catalog.dispose()
+  expect(t.port.drives.listMyDrives.mock.calls[0]![1]!.signal!.aborted).toBe(true)
 })

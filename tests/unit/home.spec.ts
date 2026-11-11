@@ -25,7 +25,7 @@ describe('home workflow', () => {
   it('refuses an unavailable selected space without falling back to personal files', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load({ ...defaultLocation('docs'), spaceId: 'revoked-space' })
-    expect(home.state.error).toContain('no longer have access')
+    expect(home.state.error).toContain('space could not be verified')
     expect(home.state.destinationWritable).toBe(false)
   })
   it('does not expose a fake live integration', async () => {
@@ -96,7 +96,9 @@ describe('home workflow', () => {
   it('blocks blind retries after uncertain mutation outcomes', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
-    const create = vi.spyOn(services.creation, 'blank').mockResolvedValue(fail('timeout'))
+    const create = vi
+      .spyOn(services.creation, 'blank')
+      .mockResolvedValue({ ok: false, error: 'timeout', outcome: 'uncertain' } as const)
     await home.create('A report', 'odt')
     await home.create('Another report', 'odt')
     expect(create).toHaveBeenCalledTimes(1)
@@ -205,7 +207,7 @@ describe('home workflow', () => {
   it('retains a completed mutation when navigating to a different destination', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
-    const pending = deferred<Result<FileRecord>>()
+    const pending = deferred<import('../../src/contracts/office').CreationResult>()
     vi.spyOn(services.creation, 'blank').mockImplementation(() => pending.promise)
     const creating = home.create('Pending', 'odt')
     await vi.waitFor(() => expect(services.creation.blank).toHaveBeenCalledOnce())
@@ -257,7 +259,7 @@ it('reconciles an uncertain creation through read-only checks without resubmissi
   const original = services.creation.blank
   const create = vi.spyOn(services.creation, 'blank').mockImplementation(async (input) => {
     await original(input)
-    return fail('timeout')
+    return { ok: false, error: 'timeout', outcome: 'uncertain' } as const
   })
   await home.create('Lost acknowledgement', 'odt')
   expect(home.state.uncertain).toBe(true)
@@ -274,7 +276,9 @@ it('keeps ambiguous creation locked when a partial listing finds no file or acce
   const services = fixtureServices()
   const home = createHomeModel(services, 'docs')
   await home.load(defaultLocation('docs'))
-  const create = vi.spyOn(services.creation, 'blank').mockResolvedValue(fail('timeout'))
+  const create = vi
+    .spyOn(services.creation, 'blank')
+    .mockResolvedValue({ ok: false, error: 'timeout', outcome: 'uncertain' } as const)
   await home.create('Unconfirmed', 'odt')
   vi.spyOn(services.catalog, 'list').mockResolvedValue(ok({ items: [], partial: true }))
   await home.reconcileCreation()
@@ -308,7 +312,7 @@ it('rejects a stale reconciliation result after navigating away even if listing 
   vi.spyOn(services.creation, 'blank').mockImplementation(async (input) => {
     const result = await original(input)
     if (result.ok) created = result.value
-    return fail('timeout')
+    return { ok: false, error: 'timeout', outcome: 'uncertain' } as const
   })
   await home.create('Pending reconciliation', 'odt')
   const listing = deferred<Result<{ items: FileRecord[]; partial: boolean }>>()
@@ -326,7 +330,11 @@ it('requires fresh file access before unlocking an uncertain creation', async ()
   const services = fixtureServices()
   const home = createHomeModel(services, 'docs')
   await home.load(defaultLocation('docs'))
-  vi.spyOn(services.creation, 'blank').mockResolvedValue(fail('timeout'))
+  vi.spyOn(services.creation, 'blank').mockResolvedValue({
+    ok: false,
+    error: 'timeout',
+    outcome: 'uncertain'
+  } as const)
   await home.create('Unconfirmed', 'odt')
   vi.spyOn(services.catalog, 'list').mockResolvedValue(
     ok({

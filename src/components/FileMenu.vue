@@ -8,6 +8,7 @@ import type { FileMenuAction } from '../services/home'
 const props = defineProps<{ file: FileRecord; services: OfficeServices; disabled: boolean }>()
 const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord] }>()
 const open = ref(false)
+const root = ref<HTMLElement>()
 const toggle = ref<HTMLButtonElement>()
 const panel = ref<HTMLElement>()
 const activity = ref<Activity | null>()
@@ -16,13 +17,14 @@ let abort: AbortController | undefined
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
 function outside(event: MouseEvent) {
-  if (!panel.value?.contains(event.target as Node) && event.target !== toggle.value) close(false)
+  if (!root.value?.contains(event.target as Node)) close(false)
 }
 async function show() {
   if (open.value) return close(true)
   open.value = true
   document.addEventListener('click', outside, true)
   await nextTick()
+  if (!open.value) return
   panel.value?.querySelector<HTMLElement>('button')?.focus()
   // The activity line is fetched only when asked for, one request per opened menu.
   abort = new AbortController()
@@ -48,7 +50,7 @@ onBeforeUnmount(() => close(false))
 </script>
 
 <template>
-  <div class="office-popover office-file-menu" @keydown.esc.stop.prevent="close(true)">
+  <div ref="root" class="office-popover office-file-menu" @keydown.esc.stop.prevent="close(true)">
     <button
       ref="toggle"
       type="button"

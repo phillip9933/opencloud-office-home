@@ -25,7 +25,7 @@ function item(id: string, name: string, mimeType?: string, kind: 'file' | 'folde
 }
 function catalog(children: Record<string, FileRecord[]>): FileCatalog {
   return {
-    listSpaces: () => Promise.resolve(ok([])),
+    listSpaces: () => Promise.resolve(ok({ items: [], partial: false })),
     resolve: () => Promise.resolve(fail('forbiddenOrMissing')),
     recentlyChanged: () => Promise.resolve(ok({ items: [], partial: false })),
     listTags: () => Promise.resolve(ok([])),
@@ -57,21 +57,24 @@ describe('administrator template folder', () => {
     const docs = await folderTemplates(source, root, 'docs', signal)
     expect(docs).toEqual({
       ok: true,
-      value: [
-        expect.objectContaining({
-          name: 'Letterhead',
-          category: GENERAL_CATEGORY,
-          format: expect.objectContaining({ extension: 'odt' }),
-          preview: { spaceId: 'templates', itemId: 'letterhead-png' }
-        }),
-        expect.objectContaining({ name: 'Report', category: 'Business' })
-      ]
+      value: {
+        partial: false,
+        items: [
+          expect.objectContaining({
+            name: 'Letterhead',
+            category: GENERAL_CATEGORY,
+            format: expect.objectContaining({ extension: 'odt' }),
+            preview: { spaceId: 'templates', itemId: 'letterhead-png' }
+          }),
+          expect.objectContaining({ name: 'Report', category: 'Business' })
+        ]
+      }
     })
-    if (docs.ok) expect(docs.value[1]).not.toHaveProperty('preview')
+    if (docs.ok) expect(docs.value.items[1]).not.toHaveProperty('preview')
     const sheets = await folderTemplates(source, root, 'sheets', signal)
-    expect(sheets.ok && sheets.value.map((t) => [t.name, t.format.extension, !!t.preview])).toEqual(
-      [['Budget', 'ods', true]]
-    )
+    expect(
+      sheets.ok && sheets.value.items.map((t) => [t.name, t.format.extension, !!t.preview])
+    ).toEqual([['Budget', 'ods', true]])
   })
   it('only lists the folder: no copy, upload or recursive crawl beyond one level', async () => {
     await folderTemplates(source, root, 'slides', signal)
@@ -79,7 +82,7 @@ describe('administrator template folder', () => {
     for (const [query] of vi.mocked(source.list).mock.calls) expect(query.kind).toBe('any')
   })
   it('reports an unreadable template folder instead of an empty gallery', async () => {
-    const broken = catalog({ [refKey(root)]: [business] })
+    const broken = catalog({})
     expect(await folderTemplates(broken, root, 'docs', signal)).toEqual({
       ok: false,
       error: 'forbiddenOrMissing'
@@ -95,10 +98,10 @@ describe('administrator template folder', () => {
     const services = fixtureServices()
     const templates = await services.templates('slides')
     if (!templates.ok) throw new Error('fixture templates missing')
-    expect(new Set(templates.value.map((t) => t.category))).toEqual(
+    expect(new Set(templates.value.items.map((t) => t.category))).toEqual(
       new Set(['Business', 'Personal', 'Education'])
     )
-    const source = templates.value[0]!
+    const source = templates.value.items[0]!
     const created = await services.creation.fromTemplate({
       kind: 'slides',
       destination: { spaceId: 'fixture-personal', itemId: 'root' },
@@ -109,5 +112,36 @@ describe('administrator template folder', () => {
     expect(created.ok && created.value.name).toBe('Deck.odp')
     const unchanged = await services.catalog.resolve(source.source)
     expect(unchanged.ok && unchanged.value.access.write).toBe(false)
+  })
+})
+
+it('reports category and result caps instead of silently presenting a complete gallery', async () => {
+  const categories = Array.from({ length: 21 }, (_, i) =>
+    item(`folder-${i}`, `Category ${i}`, undefined, 'folder')
+  )
+  const source = catalog(
+    Object.fromEntries([
+      [
+        refKey(root),
+        [
+          ...categories,
+          ...Array.from({ length: 201 }, (_, i) => item(`doc-${i}`, `Template ${i}.odt`))
+        ]
+      ],
+      ...categories.map((folder) => [refKey(folder.ref), []])
+    ])
+  )
+  const result = await folderTemplates(source, root, 'docs', new AbortController().signal)
+  expect(result.ok && result.value.partial).toBe(true)
+  expect(result.ok && result.value.items).toHaveLength(200)
+  expect(source.list).toHaveBeenCalledTimes(21)
+})
+it('keeps healthy template categories and reports an unreadable category as partial', async () => {
+  const broken = item('broken', 'Broken', undefined, 'folder')
+  const source = catalog({ [refKey(root)]: [item('doc', 'Available.odt'), broken] })
+  const result = await folderTemplates(source, root, 'docs', new AbortController().signal)
+  expect(result).toMatchObject({
+    ok: true,
+    value: { partial: true, items: [{ name: 'Available' }] }
   })
 })

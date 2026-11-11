@@ -22,7 +22,7 @@ export function createDetailLoader(catalog: FileCatalog) {
         continue
       }
       inFlight++
-      void attempt(() => catalog.resolve(job.ref))
+      void attempt(() => catalog.resolve(job.ref, job.signal))
         .then((result) => {
           job.finish(disposed || job.signal.aborted ? fail('cancelled') : result)
         })

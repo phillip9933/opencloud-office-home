@@ -5,6 +5,7 @@ import {
   ok,
   refKey,
   type CreationRequest,
+  type CreationResult,
   type ActionFeedback,
   type FileRecord,
   type FileRef,
@@ -68,11 +69,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
   const configuration = options.configuration ?? defaultConfiguration()
-  const catalog = createCatalog8(
-    { ...port, drives: canonicalRootDrives8(port) },
-    session,
-    nativeAccess8
-  )
+  const catalog = createCatalog8(port, session, nativeAccess8, canonicalRootDrives8(port))
   const capabilities = createProviderCapabilities8(port, configuration.creationFormats)
   const pendingNames = new Set<string>()
   const previewUrls = new Set<string>()
@@ -82,7 +79,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     if (!session()) return fail('unauthenticated')
     if (!opaqueSegment(ref.spaceId) || !opaqueSegment(ref.itemId)) return fail('forbiddenOrMissing')
     const space = catalog.space(ref.spaceId)
-    if (!space) return fail('forbiddenOrMissing')
+    if (!space) return fail('spaceUnavailable')
     try {
       const resource = await port.webdav.getFileInfo(
         space,
@@ -101,120 +98,133 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     }
   }
 
-  async function create(input: CreationRequest, source?: FileRef): Promise<Result<FileRecord>> {
-    if (!session()) return fail('unauthenticated')
-    const lock = `${refKey(input.destination)}:${input.name.toLowerCase()}`
-    if (pendingNames.has(lock)) return fail('conflict')
-    if (
-      !input.name.trim() ||
-      input.name.length > 255 ||
-      /[/\\\u0000-\u001f\u007f]/.test(input.name) ||
-      !input.name.toLowerCase().endsWith(`.${input.format.extension}`)
-    )
-      return fail('invalidName')
-    pendingNames.add(lock)
+  async function create(input: CreationRequest, source?: FileRef): Promise<CreationResult> {
     let dispatched = false
     let acknowledged = false
-    try {
-      const destination = await read(input.destination)
-      if (!destination.ok) return destination
-      if (!destination.value.file.access.createChild) return fail('forbiddenOrMissing')
-      const formats = await capabilities.creationFormats(input.kind)
-      if (!formats.ok) return formats
-      if (
-        !formats.value.some(
-          (f) => f.extension === input.format.extension && f.mimeType === input.format.mimeType
-        )
-      )
-        return fail('unsupportedType')
-      // ID-addressed DAV hrefs do not necessarily carry a space-relative folder path.
-      // Resolve it through the native metadata endpoint, then verify that path still names
-      // the selected writable folder before any mutation (including a concurrent move).
-      const parentPath: unknown = await port.webdav.getPathForFileId(input.destination.itemId, {
-        signal: abort.signal
-      })
-      if (
-        typeof parentPath !== 'string' ||
-        !parentPath.startsWith('/') ||
-        parentPath.length > 4096 ||
-        /[\\\u0000-\u001f\u007f]/.test(parentPath) ||
-        parentPath.split('/').some((part) => part === '.' || part === '..')
-      )
-        return fail('forbiddenOrMissing')
-      const parent = await port.webdav.getFileInfo(
-        destination.value.space,
-        { path: parentPath },
-        { signal: abort.signal }
-      )
+    async function execute(): Promise<Result<FileRecord>> {
       if (!session()) return fail('unauthenticated')
+      const lock = `${refKey(input.destination)}:${input.name.toLowerCase()}`
+      if (pendingNames.has(lock)) return fail('conflict')
       if (
-        parent.fileId !== input.destination.itemId ||
-        !parent.isFolder ||
-        !nativeAccess8(parent).createChild
+        !input.name.trim() ||
+        input.name.length > 255 ||
+        /[/\\\u0000-\u001f\u007f]/.test(input.name) ||
+        !input.name.toLowerCase().endsWith(`.${input.format.extension}`)
       )
-        return fail('forbiddenOrMissing')
-      const path = fullPath(parentPath, input.name)
-      // Refuse pre-existing names; COPY additionally uses Overwrite:F. The app-provider remains
-      // authoritative for a concurrent blank-name collision (verified live before release).
+        return fail('invalidName')
+      pendingNames.add(lock)
       try {
-        await port.webdav.getFileInfo(destination.value.space, { path }, { signal: abort.signal })
-        return fail('conflict')
-      } catch (error) {
-        if (catalogError(error) !== 'forbiddenOrMissing' || !isNotFound(error)) throw error
-      }
-      if (!session()) return fail('unauthenticated')
-      if (source) {
-        const original = await read(source)
-        if (!original.ok) return original
-        // DEV-LIMIT(DL-006): ODF template containers need native editor conversion, never rename.
+        const destination = await read(input.destination)
+        if (!destination.ok) return destination
+        if (!destination.value.file.access.createChild) return fail('forbiddenOrMissing')
+        const formats = await capabilities.creationFormats(input.kind)
+        if (!formats.ok) return formats
         if (
-          original.value.file.kind !== 'file' ||
-          original.value.file.mimeType !== input.format.mimeType ||
-          !original.value.file.name.toLowerCase().endsWith(`.${input.format.extension}`)
+          !formats.value.some(
+            (f) => f.extension === input.format.extension && f.mimeType === input.format.mimeType
+          )
         )
           return fail('unsupportedType')
-        if (!session()) return fail('unauthenticated')
-        dispatched = true
-        const copied = await port.webdav.copyFiles(
-          original.value.space,
-          { fileId: source.itemId },
-          destination.value.space,
-          { parentFolderId: input.destination.itemId, name: input.name },
-          { overwrite: false }
-        )
-        if (copied.status !== 201) return fail('timeout')
-      } else {
-        const capability = port.capabilities.filesAppProviders[0]
-        if (!capability?.new_url) return fail('providerNotConfigured')
-        const endpoint = new URL(capability.new_url, options.instance)
+        // ID-addressed DAV hrefs do not necessarily carry a space-relative folder path.
+        // Resolve it through the native metadata endpoint, then verify that path still names
+        // the selected writable folder before any mutation (including a concurrent move).
+        const parentPath: unknown = await port.webdav.getPathForFileId(input.destination.itemId, {
+          signal: abort.signal
+        })
         if (
-          endpoint.origin !== new URL(options.instance).origin ||
-          endpoint.username ||
-          endpoint.password
+          typeof parentPath !== 'string' ||
+          !parentPath.startsWith('/') ||
+          parentPath.length > 4096 ||
+          /[\\\u0000-\u001f\u007f]/.test(parentPath) ||
+          parentPath.split('/').some((part) => part === '.' || part === '..')
         )
-          return fail('providerNotConfigured')
-        endpoint.searchParams.set('parent_container_id', input.destination.itemId)
-        endpoint.searchParams.set('filename', input.name)
-        dispatched = true
-        const response = await port.requestNew(endpoint.href)
-        if (response.status !== 200) throw new HttpStatusError(response.status)
+          return fail('forbiddenOrMissing')
+        const parent = await port.webdav.getFileInfo(
+          destination.value.space,
+          { path: parentPath },
+          { signal: abort.signal }
+        )
+        if (!session()) return fail('unauthenticated')
+        if (
+          parent.fileId !== input.destination.itemId ||
+          !parent.isFolder ||
+          !nativeAccess8(parent).createChild
+        )
+          return fail('forbiddenOrMissing')
+        const path = fullPath(parentPath, input.name)
+        // Refuse pre-existing names; COPY additionally uses Overwrite:F. The app-provider remains
+        // authoritative for a concurrent blank-name collision (verified live before release).
+        try {
+          await port.webdav.getFileInfo(destination.value.space, { path }, { signal: abort.signal })
+          return fail('conflict')
+        } catch (error) {
+          if (catalogError(error) !== 'forbiddenOrMissing' || !isNotFound(error)) throw error
+        }
+        if (!session()) return fail('unauthenticated')
+        if (source) {
+          const original = await read(source)
+          if (!original.ok) return original
+          // DEV-LIMIT(DL-006): ODF template containers need native editor conversion, never rename.
+          if (
+            original.value.file.kind !== 'file' ||
+            original.value.file.mimeType !== input.format.mimeType ||
+            !original.value.file.name.toLowerCase().endsWith(`.${input.format.extension}`)
+          )
+            return fail('unsupportedType')
+          if (!session()) return fail('unauthenticated')
+          dispatched = true
+          const copied = await port.webdav.copyFiles(
+            original.value.space,
+            { fileId: source.itemId },
+            destination.value.space,
+            { parentFolderId: input.destination.itemId, name: input.name },
+            { overwrite: false }
+          )
+          if (copied.status !== 201) return fail('timeout')
+        } else {
+          const capability = port.capabilities.filesAppProviders[0]
+          if (!capability?.new_url) return fail('providerNotConfigured')
+          const endpoint = new URL(capability.new_url, options.instance)
+          if (
+            endpoint.origin !== new URL(options.instance).origin ||
+            endpoint.username ||
+            endpoint.password
+          )
+            return fail('providerNotConfigured')
+          endpoint.searchParams.set('parent_container_id', input.destination.itemId)
+          endpoint.searchParams.set('filename', input.name)
+          dispatched = true
+          const response = await port.requestNew(endpoint.href)
+          if (response.status !== 200) throw new HttpStatusError(response.status)
+        }
+        acknowledged = true
+        if (!session()) return fail('unauthenticated')
+        const resource = await port.webdav.getFileInfo(destination.value.space, { path })
+        if (!session()) return fail('unauthenticated')
+        const result = normalizeReadMetadata(destination.value.space.id, resource)
+        if (!result.ok) return fail('timeout')
+        if (result.value.name !== input.name || result.value.mimeType !== input.format.mimeType)
+          return fail('timeout')
+        result.value.access = nativeAccess8(resource)
+        return result
+      } catch (error) {
+        return fail(
+          acknowledged ? 'timeout' : dispatched ? mutationError(error) : catalogError(error)
+        )
+      } finally {
+        pendingNames.delete(lock)
       }
-      acknowledged = true
-      if (!session()) return fail('unauthenticated')
-      const resource = await port.webdav.getFileInfo(destination.value.space, { path })
-      if (!session()) return fail('unauthenticated')
-      const result = normalizeReadMetadata(destination.value.space.id, resource)
-      if (!result.ok) return fail('timeout')
-      if (result.value.name !== input.name || result.value.mimeType !== input.format.mimeType)
-        return fail('timeout')
-      result.value.access = nativeAccess8(resource)
-      return result
-    } catch (error) {
-      return fail(
-        acknowledged ? 'timeout' : dispatched ? mutationError(error) : catalogError(error)
-      )
-    } finally {
-      pendingNames.delete(lock)
+    }
+    const result = await execute()
+    if (result.ok) return result
+    return {
+      ...result,
+      outcome: !dispatched
+        ? 'notSubmitted'
+        : acknowledged ||
+            ['network', 'timeout', 'unknown', 'cancelled', 'unauthenticated'].includes(result.error)
+          ? 'uncertain'
+          : 'rejected'
     }
   }
 
@@ -232,7 +242,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     },
     templates(kind, selectedFolder) {
       const folder = selectedFolder ?? configuration.templateFolder
-      if (!folder) return Promise.resolve(ok([]))
+      if (!folder) return Promise.resolve(ok({ items: [], partial: false }))
       return folderTemplates(catalog, folder, kind, abort.signal)
     },
     editor: {

@@ -19,6 +19,7 @@ const trail = ref<{ name: string; ref: FileRef; detached?: boolean }[]>([])
 const filter = ref('')
 const loading = ref(false)
 const partial = ref(false)
+const discoveryPartial = ref(false)
 const error = ref('')
 let revision = 0
 let controller = new AbortController()
@@ -49,7 +50,7 @@ async function load(target: FileRef) {
   partial.value = false
   error.value = ''
   const [resolved, result] = await Promise.all([
-    attempt(() => props.catalog.resolve(target)),
+    attempt(() => props.catalog.resolve(target, controller.signal)),
     attempt(() => props.catalog.list({ folder: target, kind: 'any', signal: controller.signal }))
   ])
   if (request !== revision) return
@@ -94,7 +95,8 @@ onMounted(async () => {
     error.value = errorText[result.error]
     return
   }
-  spaces.value = result.value
+  spaces.value = result.value.items
+  discoveryPartial.value = result.value.partial
   const selected = props.start
     ? spaces.value.find((space) => space.id === props.start!.spaceId)
     : spaces.value[0]
@@ -145,6 +147,9 @@ onBeforeUnmount(() => {
     <div class="office-folder-browser">
       <nav aria-label="Folder locations" class="office-folder-locations">
         <h3>Locations</h3>
+        <p v-if="discoveryPartial" role="status">
+          Some locations could not be loaded. Reopen the chooser to retry.
+        </p>
         <button
           v-for="space in spaces"
           :key="space.id"

@@ -1,3 +1,6 @@
+import { catalogError } from './errors8'
+export { catalogError } from './errors8'
+import { waitForResult } from '../../services/cancellation'
 import { sdkRecord } from './metadata8'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import type { Graph } from '@opencloud-eu/web-client/graph'
@@ -14,6 +17,7 @@ import {
   type OfficeKind,
   type Activity,
   type Page,
+  type Space,
   type RecentFilter,
   type Result
 } from '../../contracts/office'
@@ -97,19 +101,6 @@ export function opaqueSegment(value: unknown): value is string {
   )
 }
 
-export function catalogError(error: unknown): AppError {
-  const details = sdkRecord(error)
-  if (details?.name === 'AbortError' || details?.code === 'ERR_CANCELED') return 'cancelled'
-  const status = sdkRecord(details?.response)?.status ?? details?.statusCode ?? details?.status
-  if (status === 401) return 'unauthenticated'
-  if (status === 403 || status === 404) return 'forbiddenOrMissing'
-  if (status === 409 || status === 412) return 'conflict'
-  if (status === 507) return 'quotaExceeded'
-  if (status === 408 || status === 504 || details?.code === 'ECONNABORTED') return 'timeout'
-  if (details?.code === 'ERR_NETWORK') return 'network'
-  return 'unknown'
-}
-
 // Only https links are offered for copying; anything else is dropped rather than shown.
 function privateLink(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.length > 2048) return undefined
@@ -180,7 +171,11 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
 export function createCatalog8(
   port: ReadPort8,
   getSessionKey: () => string | undefined,
-  access?: (resource: Resource) => FileRecord['access']
+  access?: (resource: Resource) => FileRecord['access'],
+  discover = async (signal: AbortSignal): Promise<Page<SpaceResource>> => ({
+    items: await port.drives.listMyDrives(undefined, { signal }),
+    partial: false
+  })
 ): FileCatalog & { dispose(): void; space(id: string): SpaceResource | undefined } {
   function normalize(spaceId: string, resource: Resource) {
     const result = normalizeReadMetadata(spaceId, resource)
@@ -189,14 +184,17 @@ export function createCatalog8(
   }
   const spaces = new Map<string, SpaceResource>()
   let session: string | undefined
-  let generation = 0
+  let refresh: Promise<Result<Page<Space>>> | undefined
+  let lifetime = new AbortController()
   let disposed = false
 
   function currentSession() {
     const key = disposed ? undefined : getSessionKey()
     if (key !== session) {
       spaces.clear()
-      generation++
+      lifetime.abort()
+      lifetime = new AbortController()
+      refresh = undefined
       session = key
     }
     return key
@@ -204,6 +202,44 @@ export function createCatalog8(
   function interrupted(key: string, signal?: AbortSignal): AppError | undefined {
     if (currentSession() !== key) return 'unauthenticated'
     if (signal?.aborted) return 'cancelled'
+  }
+  async function discoverSpaces(key: string, signal: AbortSignal): Promise<Result<Page<Space>>> {
+    try {
+      const found = await discover(signal)
+      const stopped = interrupted(key, signal)
+      if (stopped) return fail(stopped)
+      const refreshed = new Map<string, SpaceResource>()
+      const available: Space[] = []
+      let partial = found.partial
+      const ordered = [...found.items].sort(
+        (a, b) => Number(b.driveType === 'personal') - Number(a.driveType === 'personal')
+      )
+      for (const space of ordered) {
+        if (space.disabled || !['personal', 'project'].includes(space.driveType)) continue
+        if (
+          !opaqueSegment(space.id) ||
+          typeof space.name !== 'string' ||
+          !space.name ||
+          !opaqueSegment(space.root?.id)
+        ) {
+          partial = true
+          continue
+        }
+        refreshed.set(space.id, space)
+        available.push({
+          id: space.id,
+          name: space.name,
+          root: { spaceId: space.id, itemId: space.root.id }
+        })
+      }
+      // Readers retain a usable snapshot during refresh; every resource operation still asks
+      // the server for current permissions. Never interpret an empty transient cache as revocation.
+      spaces.clear()
+      for (const [id, space] of refreshed) spaces.set(id, space)
+      return ok({ items: available, partial })
+    } catch (error) {
+      return fail(interrupted(key, signal) ?? catalogError(error))
+    }
   }
   // Maps search hits to known spaces by storage ID, as Web does; shares mounted elsewhere
   // are skipped and reported as partial rather than guessed.
@@ -250,50 +286,23 @@ export function createCatalog8(
     dispose() {
       disposed = true
       spaces.clear()
-      generation++
+      lifetime.abort()
+      lifetime = new AbortController()
+      refresh = undefined
       session = undefined
     },
-    async listSpaces(signal) {
+    listSpaces(signal) {
       const key = currentSession()
-      if (!key) return fail('unauthenticated')
-      if (signal.aborted) return fail('cancelled')
-      const request = ++generation
-      spaces.clear()
-      try {
-        const found = await port.drives.listMyDrives(undefined, { signal })
-        const stopped = interrupted(key, signal)
-        if (stopped) return fail(stopped)
-        if (request !== generation) return fail('cancelled')
-        const refreshed = new Map<string, SpaceResource>()
-        const available = []
-        // A new home starts in Personal; explicit saved folders still select their own space.
-        const ordered = [...found].sort(
-          (a, b) => Number(b.driveType === 'personal') - Number(a.driveType === 'personal')
-        )
-        for (const space of ordered) {
-          if (space.disabled || !['personal', 'project'].includes(space.driveType)) continue
-          if (
-            !opaqueSegment(space.id) ||
-            typeof space.name !== 'string' ||
-            !space.name ||
-            !opaqueSegment(space.root?.id)
-          )
-            return fail('unknown')
-          refreshed.set(space.id, space)
-          available.push({
-            id: space.id,
-            name: space.name,
-            root: { spaceId: space.id, itemId: space.root.id }
-          })
-        }
-        spaces.clear()
-        for (const [id, space] of refreshed) spaces.set(id, space)
-        return ok(available)
-      } catch (error) {
-        const stopped = interrupted(key, signal)
-        if (request === generation) spaces.clear()
-        return fail(stopped ?? catalogError(error))
+      if (!key) return Promise.resolve(fail('unauthenticated'))
+      if (signal.aborted) return Promise.resolve(fail('cancelled'))
+      if (!refresh) {
+        const pending = discoverSpaces(key, lifetime.signal)
+        refresh = pending
+        void pending.then(() => {
+          if (refresh === pending) refresh = undefined
+        })
       }
+      return waitForResult(refresh, signal)
     },
     async list(query) {
       const key = currentSession()
@@ -302,7 +311,7 @@ export function createCatalog8(
       if (!opaqueSegment(query.folder.itemId) || !opaqueSegment(query.folder.spaceId))
         return fail('forbiddenOrMissing')
       const space = spaces.get(query.folder.spaceId)
-      if (!space) return fail('forbiddenOrMissing')
+      if (!space) return fail('spaceUnavailable')
       try {
         const page = await port.webdav.listFiles(
           space,
@@ -362,26 +371,30 @@ export function createCatalog8(
         return fail(interrupted(key, signal) ?? catalogError(error))
       }
     },
-    async resolve(ref) {
+    async resolve(ref, signal) {
       const key = currentSession()
       if (!key) return fail('unauthenticated')
+      if (signal?.aborted) return fail('cancelled')
       if (!opaqueSegment(ref.itemId) || !opaqueSegment(ref.spaceId))
         return fail('forbiddenOrMissing')
       const space = spaces.get(ref.spaceId)
-      if (!space) return fail('forbiddenOrMissing')
+      if (!space) return fail('spaceUnavailable')
       try {
         const resource = await port.webdav.getFileInfo(
           space,
           { fileId: ref.itemId },
-          { extraProps: ['d:creationdate'] }
+          {
+            extraProps: ['d:creationdate'],
+            signal: signal ? AbortSignal.any([signal, lifetime.signal]) : lifetime.signal
+          }
         )
-        const stopped = interrupted(key)
+        const stopped = interrupted(key, signal)
         if (stopped) return fail(stopped)
         const item = normalize(space.id, resource)
         if (!item.ok) return item.error === 'forbiddenOrMissing' ? fail('unsupportedType') : item
         return refKey(item.value.ref) === refKey(ref) ? item : fail('unknown')
       } catch (error) {
-        return fail(interrupted(key) ?? catalogError(error))
+        return fail(interrupted(key, signal) ?? catalogError(error))
       }
     }
   }

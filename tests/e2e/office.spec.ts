@@ -431,6 +431,7 @@ test('visual inspection artifacts for desktop light and mobile dark', async ({ p
   await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeFocused()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({
     path: test.info().outputPath('settings-mobile-dark.png'),
     fullPage: true
@@ -539,6 +540,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
         true
       )
       await expect(page.getByRole('button', file('Favorites')).locator('svg')).toBeVisible()
+      const noticeBox = await toast(page).boundingBox()
+      const recentBox = await recents(page).boundingBox()
+      expect(noticeBox!.y + noticeBox!.height).toBeLessThanOrEqual(recentBox!.y)
       await page.screenshot({ path: info.outputPath('recovery-paused.png'), fullPage: true })
       const check = page.getByRole('button', file('Check destination'))
       await check.focus()
@@ -561,3 +565,23 @@ for (const colorScheme of ['light', 'dark'] as const) {
     })
   }
 }
+
+test('load failure is visible and retry retains the chosen save folder', async ({ page }, info) => {
+  await page.goto('/tests/e2e/recovery.html?case=load-failure')
+  await expect(page.getByRole('alert')).toContainText('The service could not be reached')
+  await expect(page.getByText('Sign in again through OpenCloud')).toHaveCount(0)
+  await expect(page.getByText('No recent files yet.')).toHaveCount(0)
+  await expect(page.getByText('No templates are available.', { exact: false })).toHaveCount(0)
+  await page.screenshot({ path: info.outputPath('load-failure-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.screenshot({ path: info.outputPath('load-failure-mobile.png'), fullPage: true })
+  await page.getByRole('button', { name: 'Retry loading', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await page.getByRole('button', { name: 'Blank document' }).click()
+  await expect(page.getByRole('region', file('New document'))).toContainText(
+    'Save in Personal files / Reports'
+  )
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+})

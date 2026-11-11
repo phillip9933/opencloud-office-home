@@ -82,7 +82,7 @@ save state. This app must not introduce an identity system, WOPI protocol, priva
 token storage. Native editor launch acceptance is distinct from durable saving. The current fixture
 gateway only simulates acceptance.
 
-Search and folder changes abort previous requests and reject late responses even when cancellation
+Filter and folder changes abort previous requests and reject late responses even when cancellation
 is ignored. Loading and failed refreshes remove previous private metadata. A selected space that
 becomes unavailable is an error; the workflow does not silently switch to another space.
 
@@ -233,3 +233,24 @@ immediately before creation. The console-only capability inventory, refresh port
 synthetic policy store have been removed. Static configuration can restrict the fixed office family
 formats; it cannot enable an unsupported backend operation. Native editor selection uses the host's
 default ordering.
+
+## Failure and cancellation contracts
+
+Space discovery is single-flight per account. A caller can stop waiting without cancelling another
+caller; account disposal aborts shared discovery. Healthy roots are published atomically, while
+individual failed roots produce an explicit partial result. An absent discovery entry is
+`spaceUnavailable`, not proof of resource revocation. Previously known roots can support a fresh
+server-authorized read while discovery refreshes; cached permissions never grant access.
+
+Browser Recent lookups have at most four concurrent requests per refresh, propagate cancellation to
+DAV, and stop scheduling or pruning when cancelled. Only authoritative missing/forbidden results
+remove history. A partial failure keeps independently refreshed authorized entries and displays a
+retry notice; an authentication failure clears the result. Expired or malformed stored references
+are rewritten on store load/read, when storage is writable. Cleanup runs only while the app runs.
+
+Creation returns an explicit `notSubmitted`, `rejected` or `uncertain` failure outcome from the native
+mutation boundary. A preflight failure remains retryable; ambiguous post-dispatch results retain
+the original request for read-only reconciliation. Ordinary dots in titles are accepted; recognized
+conflicting office suffixes remain rejected. Load failures never silently reset a remembered save
+folder. Template discovery returns a partial flag for inaccessible categories, incomplete listings
+or the documented 20-category/200-template bounds.
