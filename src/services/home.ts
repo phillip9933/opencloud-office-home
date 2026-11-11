@@ -398,7 +398,7 @@ export function createHomeModel(
           ...state.rows.filter((r) => refKey(r.ref) !== refKey(result.value.ref))
         ]
       }
-      state.notice = `Created ${result.value.name} in ${resolved.value.path ?? resolved.value.name}. Use Open created file to continue.`
+      state.notice = `Created ${result.value.name} in ${resolved.value.name}. Use Open created file to continue.`
     } else {
       // Network/timeout/unknown can mean the mutation committed. No blind retry or pretend idempotency.
       state.uncertain = ['network', 'timeout', 'unknown'].includes(result.error)

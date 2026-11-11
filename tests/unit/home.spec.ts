@@ -79,6 +79,7 @@ describe('home workflow', () => {
     await Promise.all([home.create('A report', 'odt'), home.create('A report', 'odt')])
     expect(create).toHaveBeenCalledTimes(1)
     expect(home.state.created?.name).toBe('A report.odt')
+    expect(home.state.notice).toContain('in Personal files.')
     vi.spyOn(services.editor, 'open').mockResolvedValue(fail('editorUnavailable'))
     await home.open(home.state.created!)
     expect(home.state.created?.name).toBe('A report.odt')
