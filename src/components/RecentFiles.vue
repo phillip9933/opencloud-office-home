@@ -81,7 +81,6 @@ const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !=
       </div>
     </div>
     <p class="office-muted office-recents-scope">
-      {{ context.services.mode === 'fixture' ? 'Synthetic preview history.' : '' }}
       Changed in OpenCloud in the last {{ RECENT_CHANGE_DAYS }} days, by you or people you share
       with, or opened in this browser.
       <button v-if="hasOpened" type="button" class="office-link" @click="emit('clear')">
