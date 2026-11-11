@@ -71,7 +71,7 @@ OFFICE_PNPM_PACKAGE=/absolute/tooling/node_modules/pnpm \
 
 The aggregate check does not claim real OpenCloud, editor fidelity, authentication, accessibility
 conformance, clean dependency security or production readiness. See the compatibility note for
-missing evidence. No remote CI has been configured.
+missing evidence. The validation workflow runs these checks plus native packaging and browser journeys on Node 24/26; see [validation](docs/validation.md) for its scope and remaining evidence.
 
 ## Repository map
 

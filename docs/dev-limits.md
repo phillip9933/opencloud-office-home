@@ -10,7 +10,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview, file-action (Show in Files, share, download) and native editor services, plus the administrator `templateFolder` setting, tested against a pinned deployment.
 - **Resolution:** Verify the connected native adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
 - **Verification:** Default `pnpm build` must fail. `build:spike` writes `dist-spike/`; `build:test-instance` writes `dist-native-test/`. Neither enables the default release build.
-- **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; no production behavior has been tested.
+- **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; controlled host test evidence exists, but production acceptance is incomplete.
 - **Status:** open
 
 ## DL-007: Retired shared configuration console
@@ -43,7 +43,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Release behaviour:** Verified native catalog with authorized search (recent changes, favorite/tag filters and the tag list; general name search stays in the host), latest-activity lookup, personal/project/received-share identity handling, honest completeness and lifecycle integration.
 - **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before a full release.
 - **Verification:** The candidate must deny mutation access, discard responses on logout/account changes and reject path-shaped IDs. Its read port exposes no mutations; standalone filename search and cursor contracts are absent. The native test adapter supplies explicit DAV permission normalization; the default normalizer still denies writes. Received shares remain in Files.
-- **Tested build and result:** SDK-shaped isolated tests and strict compilation; authenticated catalog acceptance is pending.
+- **Tested build and result:** SDK-shaped isolated tests and strict compilation; personal/project metadata has controlled host evidence; received shares, completeness and full lifecycle acceptance remain pending.
 - **Status:** open
 
 ## DL-005: Provider acceptance incomplete
@@ -54,7 +54,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Release behaviour:** Native creation formats come from the host's app registry, intersected with tested provider support, with distinct not-configured, unsupported-format and launch-failure states.
 - **Resolution:** The port is wired to host services; verify against a deployment with a registered provider.
 - **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The earlier empty registry is a captured test case; the current host advertises CollaboraOnline with 65 MIME types. Fixture preview services remain separate; real creation and editor saves still need acceptance.
-- **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Not run inside a host.
+- **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Controlled host tests created the six office formats and launched the native editor; content save/reopen remains unverified.
 - **Status:** open
 
 ## DL-004: Disposable local development server example
