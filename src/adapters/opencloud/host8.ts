@@ -1,6 +1,7 @@
 import { shallowRef, watch } from 'vue'
 import {
   useAppProviderService,
+  useAbility,
   useAuthStore,
   useCapabilityStore,
   useClientService,
@@ -15,6 +16,7 @@ import {
 import { createOfficeContext, type OfficeContext } from '../../app/context'
 import type { FileRef } from '../../contracts/office'
 import { createNativeServices8 } from './native8'
+import { openNativeEditor8 } from './editorRoute8'
 
 function templateFolder(config: unknown): FileRef | undefined {
   if (!config || typeof config !== 'object' || !('templateFolder' in config)) return undefined
@@ -35,6 +37,7 @@ function templateFolder(config: unknown): FileRef | undefined {
 /** Bind only to the host's public composables. The app never copies or persists auth tokens. */
 export function useNativeOffice8(applicationConfig: unknown) {
   const client = useClientService()
+  const ability = useAbility()
   const config = useConfigStore()
   const auth = useAuthStore()
   const user = useUserStore()
@@ -77,20 +80,7 @@ export function useNativeOffice8(applicationConfig: unknown) {
           appProviders: providers,
           capabilities,
           requestNew: (url) => client.httpAuthenticated.post(url),
-          async open({ resource, space }, mode) {
-            const options = { space, resources: [resource] }
-            const action = actions
-              .getAllOpenWithActions(options)
-              .find((item) => item.name.startsWith('editor-external-') && item.route)
-            const route = action?.route?.(options)
-            if (!route || typeof route === 'string') return false
-            // Web 8.2.1's external editor forwards view_mode to the app-provider. 'read' cannot
-            // silently become 'write', even for an otherwise writable file.
-            return !(await router.push({
-              ...route,
-              query: { ...route.query, view_mode: mode === 'view' ? 'read' : 'write' }
-            }))
-          },
+          open: (item, mode) => openNativeEditor8(actions, router, item, mode),
           async files({ resource }, sharing) {
             const route = getParentFolderLink(resource)
             if (!route.name || !router.hasRoute(route.name)) return false
@@ -114,7 +104,7 @@ export function useNativeOffice8(applicationConfig: unknown) {
           storage,
           templateFolder: templates,
           filters: {
-            favorites: router.hasRoute('files-favorites'),
+            favorites: ability.can('read', 'Favorite'),
             tags: capabilities.filesTags === true
           }
         }

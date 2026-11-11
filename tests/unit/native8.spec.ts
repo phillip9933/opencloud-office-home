@@ -1,6 +1,7 @@
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import { describe, expect, it, vi } from 'vitest'
 import { createNativeServices8, type NativePort8 } from '../../src/adapters/opencloud/native8'
+import { openNativeEditor8 } from '../../src/adapters/opencloud/editorRoute8'
 import { nativeAccess8 } from '../../src/adapters/opencloud/access8'
 import { officeApps } from '../../src/app/registry'
 
@@ -170,6 +171,52 @@ describe('native SDK integration boundaries', () => {
       ).ok
     ).toBe(true)
     expect(t.space.root.id).toBe('graph-drive-item-root')
+  })
+  it('honors a native file handler before a generic external editor without fabricating URLs', async () => {
+    const t = setup()
+    const resource = file()
+    const actions = {
+      getAllOpenWithActions: () => [
+        {
+          name: 'editor-text-editor',
+          icon: 'file-text',
+          label: () => 'Text editor',
+          isVisible: () => true,
+          handler: () => {},
+          route: () => ({ name: 'text-editor-main', query: { nativeContext: 'kept' } })
+        }
+      ]
+    }
+    const router = { push: vi.fn().mockResolvedValue(undefined) }
+    const item = {
+      space: t.space,
+      resource,
+      file: {
+        ref: { spaceId: 'space', itemId: 'file' },
+        name: 'Template.odt',
+        kind: 'file' as const,
+        access: { read: true, write: true, createChild: false }
+      }
+    }
+    expect(await openNativeEditor8(actions, router, item, 'edit')).toBe(true)
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'text-editor-main',
+      query: { nativeContext: 'kept' }
+    })
+    router.push.mockClear()
+    expect(await openNativeEditor8(actions, router, item, 'view')).toBe(false)
+    expect(router.push).not.toHaveBeenCalled()
+    const external = {
+      getAllOpenWithActions: () =>
+        actions
+          .getAllOpenWithActions()
+          .map((action) => ({ ...action, name: 'editor-external-reference' }))
+    }
+    expect(await openNativeEditor8(external, router, item, 'view')).toBe(true)
+    expect(router.push).toHaveBeenCalledWith({
+      name: 'text-editor-main',
+      query: { nativeContext: 'kept', view_mode: 'read' }
+    })
   })
   it('creates a native office file and resolves its canonical identity', async () => {
     const t = setup()

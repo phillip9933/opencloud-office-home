@@ -14,7 +14,7 @@ A browser-based administrator editor for installation settings is **not implemen
 
 An external website shortcut and a file editor are different integration contracts. Administrator-configured native Web menu extensions can link to approved internal routes or external HTTPS sites. Registering a website URL alone does not give it a secure open/save integration with OpenCloud files.
 
-To add an editor or a new file family, install/register its supported OpenCloud Web app or app-provider integration and advertise its supported MIME types. Office Home should discover and delegate to those native handlers; it must not load arbitrary remote JavaScript or append session credentials/document URLs to arbitrary websites. The current three family screens remain Docs, Sheets and Slides; a generic administrator-created app/family management UI is a future extension, not a completed feature.
+To add an editor or a new file family, install/register its supported OpenCloud Web app or app-provider integration and advertise its supported MIME types. Office Home delegates opening to the host’s ordered native file handlers; it must not load arbitrary remote JavaScript or append session credentials/document URLs to arbitrary websites. The current three family screens remain Docs, Sheets and Slides; a generic administrator-created app/family management UI is a future extension, not a completed feature.
 
 ## Microsoft creation formats
 
