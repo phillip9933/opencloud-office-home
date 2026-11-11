@@ -50,13 +50,16 @@ function choose(tag: string, checked: boolean) {
       ref="toggle"
       type="button"
       :aria-expanded="open"
+      :aria-label="filter.tags.length ? `Tags (${filter.tags.length})` : 'Tags'"
+      title="Filter by tags"
+      class="office-icon-button"
       aria-controls="office-tag-filter"
       @click="show"
     >
-      <OcIcon name="price-tag-3" fill-type="line" class="office-icon" /> Tags<span
+      <OcIcon name="price-tag-3" fill-type="line" class="office-icon" /><span
         v-if="filter.tags.length"
       >
-        ({{ filter.tags.length }})</span
+        {{ filter.tags.length }}</span
       >
     </button>
     <div v-if="open" id="office-tag-filter" ref="panel" class="office-popover-panel">

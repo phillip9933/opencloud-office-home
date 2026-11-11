@@ -26,6 +26,9 @@ describe('view preferences', () => {
     saved.band = 'compact'
     saved.layout = 'grid'
     saved.pinned.docs = ['t2', 't1']
+    saved.columns = ['owner', 'created', 'tags']
+    saved.lastKind = 'sheets'
+    saved.templateFolder = { spaceId: 'templates', itemId: 'approved-folder' }
     alice.save(saved)
     expect(alice.load()).toEqual(saved)
     expect(createViewPreferenceStore({ instance: 'a', user: 'bob' }, storage).load()).toEqual(
@@ -37,10 +40,14 @@ describe('view preferences', () => {
       parseViewPreferences({
         sort: 'drop table',
         band: 'huge',
+        lastKind: 'external-app',
+        columns: ['owner', 'owner', 'unknown', 42],
+        templateFolder: { spaceId: '', itemId: 'x' },
         pinned: { docs: ['ok', 42, 'ok', 'x'.repeat(2000), ...Array(40).fill('n')], slides: 'x' }
       })
     ).toEqual({
       ...defaultViewPreferences(),
+      columns: ['owner'],
       pinned: { docs: ['ok', 'n'], sheets: [], slides: [] }
     })
     const storage = memory()

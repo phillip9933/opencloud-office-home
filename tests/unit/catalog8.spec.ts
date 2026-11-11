@@ -99,6 +99,27 @@ function setup() {
 const noFilter = { favorites: false, tags: [] }
 
 describe('8.x SDK catalog candidate', () => {
+  it('keeps creation date independent from modification and exposes only supplied owner metadata', () => {
+    const dated = normalizeReadMetadata(
+      's',
+      file('t', {
+        mdate: '2026-11-10',
+        extraProps: { 'd:creationdate': '2025-01-02T03:04:05Z' },
+        owner: { displayName: 'Synthetic owner' }
+      })
+    )
+    expect(dated).toMatchObject({
+      ok: true,
+      value: {
+        owner: 'Synthetic owner',
+        createdAt: Date.parse('2025-01-02T03:04:05Z'),
+        modifiedAt: Date.parse('2026-11-10')
+      }
+    })
+    const unknown = normalizeReadMetadata('s', file('t', { mdate: '2026-11-10' }))
+    expect(unknown.ok && unknown.value.createdAt).toBeUndefined()
+    expect(unknown.ok && unknown.value.owner).toBeUndefined()
+  })
   it('rejects path syntax in opaque references before sending any SDK request', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)
@@ -169,7 +190,7 @@ describe('8.x SDK catalog candidate', () => {
     expect(test.port.webdav.listFiles).toHaveBeenCalledWith(
       test.personal,
       { path: '/' },
-      { depth: 1, signal: test.query.signal }
+      { depth: 1, signal: test.query.signal, extraProps: ['d:creationdate'] }
     )
   })
   it('does not substitute an incomplete folder listing for unsupported pagination', async () => {

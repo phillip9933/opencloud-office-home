@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import FileList from './FileList.vue'
-import { OcIcon } from '@opencloud-eu/design-system/components'
 import InfoTip from './InfoTip.vue'
-import TagFilter from './TagFilter.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, OfficeKind } from '../contracts/office'
 import { groupRecents, lastActivity, type RecentEntry } from '../services/recentView'
@@ -41,50 +39,6 @@ const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAY
         <h2 id="recent-heading">Recent</h2>
         <InfoTip label="About Recent" :text="about" />
       </div>
-      <div class="office-toolbar-actions">
-        <button
-          v-if="context.services.filters.favorites"
-          type="button"
-          :aria-pressed="filter.favorites"
-          @click="filter.favorites = !filter.favorites"
-        >
-          <OcIcon name="star" :fill-type="filter.favorites ? 'fill' : 'line'" class="office-icon" />
-          Favorites
-        </button>
-        <TagFilter
-          v-if="context.services.filters.tags"
-          :catalog="context.services.catalog"
-          :filter="filter"
-          @change="(tags) => (filter.tags = tags)"
-        />
-        <label class="office-inline-label"
-          >Sort by
-          <select v-model="preferences.sort">
-            <option value="activity">Most recent</option>
-            <option value="name">Name</option>
-          </select>
-        </label>
-        <div class="office-segmented" role="group" aria-label="Layout">
-          <button
-            type="button"
-            :aria-pressed="preferences.layout === 'list'"
-            aria-label="List view"
-            title="List view"
-            @click="preferences.layout = 'list'"
-          >
-            <OcIcon name="list-unordered" fill-type="none" class="office-icon" />
-          </button>
-          <button
-            type="button"
-            :aria-pressed="preferences.layout === 'grid'"
-            aria-label="Grid view"
-            title="Grid view"
-            @click="preferences.layout = 'grid'"
-          >
-            <OcIcon name="gallery-view-2" fill-type="none" class="office-icon" />
-          </button>
-        </div>
-      </div>
     </div>
     <p v-if="note" class="office-muted" role="status">{{ note }}</p>
     <p v-if="!entries.length && filtered" class="office-empty">
@@ -112,6 +66,8 @@ const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAY
         :kind="kind"
         :services="context.services"
         :opening="opening"
+        :columns="preferences.columns"
+        :details="context.details"
         @action="(action, file) => emit('action', action, file)"
       />
     </section>

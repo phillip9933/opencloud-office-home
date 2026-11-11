@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import FileList from './FileList.vue'
+import FileToolbar from './FileToolbar.vue'
+import RecentFiles from './RecentFiles.vue'
+import type { RecentEntry } from '../services/recentView'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, HomeLocation, OfficeKind } from '../contracts/office'
 import { attempt, errorText, type FileMenuAction } from '../services/home'
@@ -12,32 +15,48 @@ const props = defineProps<{
   folderPartial: boolean
   ready: boolean
   opening: boolean
+  entries?: RecentEntry[]
+  note?: string
 }>()
 const emit = defineEmits<{
   search: [search: HomeLocation['search']]
   action: [action: FileMenuAction, file: FileRecord]
 }>()
-const term = ref('')
-const scope = ref<'all' | 'folder'>('all')
 const results = ref<FileRecord[]>([])
 const loading = ref(false)
 const partial = ref(false)
 const error = ref('')
 let abort = new AbortController()
 let revision = 0
+const filteredResults = computed(() =>
+  results.value
+    .filter(
+      (file) =>
+        (!props.context.recentFilter.favorites || file.favorite) &&
+        (!props.context.recentFilter.tags.length ||
+          props.context.recentFilter.tags.some((tag) => file.tags?.includes(tag)))
+    )
+    .sort((a, b) =>
+      props.context.preferences.sort === 'name'
+        ? a.name.localeCompare(b.name)
+        : (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)
+    )
+)
 const items = computed(() =>
-  results.value.map((file) => ({ file, meta: file.access.write ? 'Can edit' : 'Read only' }))
+  filteredResults.value.map((file) => ({
+    file,
+    meta: file.access.write ? 'Can edit' : 'Read only'
+  }))
 )
 watch(
-  () => props.search,
-  () => {
-    term.value = props.search?.term ?? ''
-    scope.value = props.search?.scope ?? 'all'
-  },
-  { immediate: true }
-)
-watch(
-  () => [props.search, props.ready, props.folderRows] as const,
+  () =>
+    [
+      props.search,
+      props.ready,
+      props.folderRows,
+      props.context.recentFilter.favorites,
+      ...props.context.recentFilter.tags
+    ] as const,
   async () => {
     const request = ++revision
     abort.abort()
@@ -57,7 +76,10 @@ watch(
     }
     loading.value = true
     const result = await attempt(() =>
-      props.context.services.catalog.search(props.kind, props.search!.term, abort.signal)
+      props.context.services.catalog.search(props.kind, props.search!.term, abort.signal, {
+        favorites: props.context.recentFilter.favorites,
+        tags: [...props.context.recentFilter.tags]
+      })
     )
     if (request !== revision) return
     loading.value = false
@@ -77,32 +99,12 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <section class="office-search" aria-label="Find office files">
-    <form
-      class="office-toolbar"
-      role="search"
-      @submit.prevent="emit('search', term.trim() ? { term: term.trim(), scope } : undefined)"
-    >
-      <label class="office-inline-label"
-        >Search files<input
-          v-model="term"
-          type="search"
-          maxlength="200"
-          :placeholder="`Find ${kind} by name`"
-      /></label>
-      <label class="office-inline-label"
-        >Search scope<select v-model="scope">
-          <option value="all">All reachable spaces</option>
-          <option value="folder">This folder</option>
-        </select></label
-      >
-      <button type="submit">Search</button>
-      <button v-if="search" type="button" @click="emit('search', undefined)">Clear search</button>
-    </form>
+    <FileToolbar :context="context" :search="search" @search="(value) => emit('search', value)" />
     <div v-if="search" :aria-busy="loading">
       <h2>Search results for “{{ search.term }}”</h2>
       <p v-if="loading" role="status">Searching…</p>
       <p v-else-if="error" role="alert">{{ error }}</p>
-      <p v-else-if="!results.length" role="status">No matching files.</p>
+      <p v-else-if="!items.length" role="status">No matching files.</p>
       <FileList
         v-else
         :items="items"
@@ -111,11 +113,22 @@ onBeforeUnmount(() => {
         :kind="kind"
         :services="context.services"
         :opening="opening"
+        :columns="context.preferences.columns"
+        :details="context.details"
         @action="(action, file) => emit('action', action, file)"
       />
       <p v-if="partial" role="status">
         Partial search results. More files may be available in Files.
       </p>
     </div>
+    <RecentFiles
+      v-else
+      :context="context"
+      :kind="kind"
+      :entries="entries ?? []"
+      :note="note ?? ''"
+      :opening="opening"
+      @action="(action, file) => emit('action', action, file)"
+    />
   </section>
 </template>

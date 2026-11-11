@@ -56,8 +56,9 @@ The aggregate check does not claim real OpenCloud, editor fidelity, authenticati
 
 ## Repository map
 
-- `src/index.ts`: native application registration and app-switcher entries.
-- `src/views/OfficeHome.vue` and `src/components/`: shared Docs/Sheets/Slides home, template gallery, create dialog, recent list/grid and folder browser.
+- `src/index.ts`: native application registration and the single Office app-switcher entry.
+- `src/views/OfficeHome.vue` and `src/components/`: shared Docs/Sheets/Slides home, template gallery, inline creation, recent list/grid and folder browser.
+- `src/views/OfficeSettings.vue`: template-folder preferences, start-section display and optional file columns.
 - `src/app/`: shared catalog and session navigation state.
 - `src/services/`: asynchronous home workflow, cancellation, mutation recovery, template-folder reading and recent-file sorting.
 - `src/contracts/`: application-owned service contracts.

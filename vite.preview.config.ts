@@ -7,6 +7,10 @@ import vue from '@vitejs/plugin-vue'
 // this app uses, from the installed design-system package.
 const ICONS = [
   'gallery-view-2',
+  'search-line',
+  'close-line',
+  'layout-column-line',
+  'file-text-line',
   'group-line',
   'information-line',
   'list-unordered',

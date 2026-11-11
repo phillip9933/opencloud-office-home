@@ -2,11 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, ref, toRaw, watch } from 'vue'
 import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
-import CreateDialog from '../components/CreateDialog.vue'
+import CreatePanel from '../components/CreatePanel.vue'
 import FileBrowser from '../components/FileBrowser.vue'
-import RecentFiles from '../components/RecentFiles.vue'
 import SearchFiles from '../components/SearchFiles.vue'
-import SettingsDialog from '../components/SettingsDialog.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
 import type { OfficeContext } from '../app/context'
@@ -15,6 +13,7 @@ import { defaultLocation, type FileMenuAction, type HomeModel } from '../service
 
 const props = defineProps<{ kind: OfficeKind; context: OfficeContext }>()
 const router = useRouter()
+const preferences = props.context.preferences
 const route = router.currentRoute
 const descriptor = computed(() => officeApps.find((app) => app.id === props.kind)!)
 const model = computed(() => props.context.model(props.kind))
@@ -25,11 +24,11 @@ const nouns: Record<OfficeKind, string> = {
   slides: 'presentation'
 }
 const browseOpen = ref(false)
-const createDialog = ref<InstanceType<typeof CreateDialog>>()
+const createPanel = ref<InstanceType<typeof CreatePanel>>()
 const browser = ref<InstanceType<typeof FileBrowser>>()
 const viewport = ref<HTMLElement>()
-const settings = ref<InstanceType<typeof SettingsDialog>>()
 const heading = ref<HTMLHeadingElement>()
+const openCreated = ref<HTMLButtonElement>()
 let activeModel: HomeModel | undefined
 let navigation = 0
 let rememberedView: string | undefined
@@ -52,8 +51,10 @@ async function navigate(location: HomeLocation) {
   const id = props.context.saveView(location)
   await router.push({ path: `/office/${props.kind}`, query: { view: id } })
 }
-function remember(extension: string, folder: FileRef) {
+async function remember(extension: string, folder: FileRef) {
   props.context.rememberCreation(props.kind, extension, folder)
+  await nextTick()
+  openCreated.value?.focus()
 }
 function act(action: FileMenuAction, file: FileRecord) {
   // Opening keeps the existing view-state persistence before the editor takes over.
@@ -108,16 +109,12 @@ const destination = computed(() =>
   ].join(' / ')
 )
 function start(template: Template | undefined, opener: HTMLElement) {
-  void createDialog.value?.open(template, opener)
-}
-async function showBrowser() {
-  browseOpen.value = true
-  await nextTick()
-  browser.value?.focus()
+  void createPanel.value?.open(template, opener)
 }
 watch(
   () => route.value.fullPath,
   async () => {
+    preferences.lastKind = props.kind
     const revision = ++navigation
     const focusAtStart = document.activeElement
     activeModel?.deactivate()
@@ -167,7 +164,7 @@ watch(
   },
   { immediate: true }
 )
-// Filters narrow Recent only, so a change reloads that section and leaves the folder view alone.
+// Refresh Recent without changing the browse folder; search applies these filters independently.
 watch(
   () => [props.context.recentFilter.favorites, ...props.context.recentFilter.tags],
   () => void model.value.refreshRecent()
@@ -180,7 +177,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="office" :data-kind="kind">
-    <AppSidebar :kind="kind" :context="context" @settings="(opener) => settings?.open(opener)">
+    <AppSidebar :kind="kind" :context="context">
       <h1 ref="heading" tabindex="-1">{{ descriptor.label }}</h1>
     </AppSidebar>
     <main ref="viewport" class="office-main" @scroll="persist">
@@ -197,6 +194,16 @@ onBeforeUnmount(() => {
       </TemplateStrip>
 
       <div class="office-inner">
+        <CreatePanel
+          :key="kind"
+          ref="createPanel"
+          :noun="nouns[kind]"
+          :model="model"
+          :services="context.services"
+          :destination="destination"
+          :preferred="context.preferences.lastFormat[kind]"
+          @created="remember"
+        />
         <SearchFiles
           :key="kind"
           :context="context"
@@ -206,16 +213,9 @@ onBeforeUnmount(() => {
           :folder-partial="state.partial"
           :ready="!state.loading && !!state.location.folder && !state.error"
           :opening="state.opening"
-          @search="(search) => navigate({ ...snapshot(), search, scroll: 0 })"
-          @action="act"
-        />
-        <RecentFiles
-          v-if="!state.location.search"
-          :kind="kind"
-          :context="context"
           :entries="state.recent"
           :note="state.recentNote"
-          :opening="state.opening"
+          @search="(search) => navigate({ ...snapshot(), search, scroll: 0 })"
           @action="act"
         />
         <FileBrowser
@@ -234,21 +234,12 @@ onBeforeUnmount(() => {
         />
       </div>
     </main>
-    <CreateDialog
-      ref="createDialog"
-      :noun="nouns[kind]"
-      :model="model"
-      :destination="destination"
-      :preferred="context.preferences.lastFormat[kind]"
-      @created="remember"
-      @choose-folder="showBrowser"
-    />
-    <SettingsDialog ref="settings" :context="context" @clear-history="model.clearRecents" />
     <div class="office-toast-region" role="status">
-      <p v-if="state.notice" class="office-toast">
+      <p v-if="state.notice && !createPanel?.isOpen" class="office-toast">
         <span>{{ state.notice }}</span>
         <button
           v-if="state.created"
+          ref="openCreated"
           type="button"
           class="office-link"
           :disabled="state.opening || state.mutation"

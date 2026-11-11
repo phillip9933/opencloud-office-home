@@ -114,9 +114,7 @@ export function useNativeOffice8(applicationConfig: unknown) {
           storage,
           templateFolder: templates,
           filters: {
-            favorites:
-              'favorites' in capabilities.capabilities.files &&
-              capabilities.capabilities.files.favorites === true,
+            favorites: router.hasRoute('files-favorites'),
             tags: capabilities.filesTags === true
           }
         }

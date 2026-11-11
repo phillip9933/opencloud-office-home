@@ -6,7 +6,9 @@ const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Office app
 const toast = (page: Page) => page.locator('.office-toast')
 const file = (name: string) => ({ name, exact: true })
 
-test('create, conflict recovery, launch, folder history and settings history', async ({ page }) => {
+test('create, conflict recovery, launch, folder history and full-page settings', async ({
+  page
+}) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
@@ -17,7 +19,7 @@ test('create, conflict recovery, launch, folder history and settings history', a
   await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
 
   await page.getByRole('button', { name: 'Blank document' }).click()
-  const dialog = page.getByRole('dialog', { name: 'New blank document' })
+  const dialog = page.getByRole('region', { name: 'New document', exact: true })
   await expect(dialog).toContainText('Save in Personal files')
   await dialog.getByRole('textbox', file('Name')).fill('My report')
   await dialog.getByRole('button', file('Create')).click()
@@ -40,18 +42,22 @@ test('create, conflict recovery, launch, folder history and settings history', a
   await page.goForward()
   await expect(browse(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
 
-  // Clearing lives in Settings: opened-only entries go, OpenCloud changes stay.
+  // Settings is a page, preserves navigation, and does not expose a history-clear action.
   await expect(recents(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
-  const settingsButton = page.getByRole('button', { name: 'Settings' })
-  await settingsButton.click()
-  const settings = page.getByRole('dialog', { name: 'Settings' })
-  await settings.getByRole('button', { name: "Clear this browser's history" }).click()
-  await expect(settings.getByRole('status')).toContainText('History cleared')
-  await settings.getByRole('button', { name: 'Done' }).click()
-  await expect(settingsButton).toBeFocused()
-  await expect(recents(page).getByRole('button', file('Shared Docs.docx'))).toHaveCount(0)
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Clear.*history/ })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'Owner', exact: true }).check()
+  await page.getByRole('checkbox', { name: 'Date created', exact: true }).check()
+  await page.getByRole('checkbox', { name: 'Tags', exact: true }).check()
+  await page.getByRole('link', { name: 'Back to Docs' }).click()
+  await expect(recents(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
+  await expect(
+    recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
+  ).toBeVisible()
   await expect(recents(page).getByRole('row', { name: /Team handbook\.docx/ })).toContainText(
-    'Changed'
+    'Synthetic owner'
   )
   expect(errors).toEqual([])
 })
@@ -102,8 +108,8 @@ test('template gallery categories, previews, grid layout and name sorting', asyn
   await expect(page.getByRole('button', file('Invoice')).locator('img')).toHaveCount(1)
 
   await page.getByRole('button', file('Household budget')).click()
-  const dialog = page.getByRole('dialog', { name: 'New from Household budget' })
-  await expect(dialog).toContainText('Format: ODS')
+  const dialog = page.getByRole('region', { name: 'New from Household budget', exact: true })
+  await expect(dialog).toContainText('ODS file')
   await dialog.getByRole('button', file('Create')).click()
   await expect(toast(page)).toContainText('Created Household budget.ods')
 
@@ -125,7 +131,9 @@ test('template gallery categories, previews, grid layout and name sorting', asyn
   )
 })
 
-test('dialog focus, mobile width, and safe text rendering', async ({ page }) => {
+test('inline creation focus, cancellation, mobile width, and safe text rendering', async ({
+  page
+}) => {
   const alerts: string[] = []
   page.on('dialog', (alert) => {
     alerts.push(alert.message())
@@ -134,7 +142,7 @@ test('dialog focus, mobile width, and safe text rendering', async ({ page }) => 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
   await expect(sidebar(page).getByRole('link', { name: 'Sheets' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible()
   const blank = page.getByRole('button', { name: 'Blank document' })
   await expect(blank).toBeEnabled()
   await blank.focus()
@@ -143,6 +151,7 @@ test('dialog focus, mobile width, and safe text rendering', async ({ page }) => 
   await expect(name).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(blank).toBeFocused()
+  await expect(toast(page)).toHaveCount(0)
 
   await blank.click()
   await name.fill('<img src=x onerror=alert(1)>')
@@ -150,9 +159,26 @@ test('dialog focus, mobile width, and safe text rendering', async ({ page }) => 
   await expect(toast(page)).toContainText('<img src=x onerror=alert(1)>.odt')
   expect(await page.locator('main img[src="x"]').count()).toBe(0)
   expect(alerts).toEqual([])
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true
-  )
+  const overflow = await page.evaluate(() => ({
+    width: innerWidth,
+    scroll: document.documentElement.scrollWidth,
+    elements: [
+      ...document.querySelectorAll(
+        '.office, .office-main, .office-inner, .office-sidebar, .office-file-toolbar, .office-table-scroll, .office-toast-region, .office-start'
+      )
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.right > innerWidth && !el.closest('.office-cards, table')
+      })
+      .map((el) => ({
+        tag: el.tagName,
+        cls: el.className,
+        right: el.getBoundingClientRect().right
+      }))
+      .slice(0, 15)
+  }))
+  expect(overflow.scroll <= overflow.width, JSON.stringify(overflow)).toBe(true)
 })
 
 test('recent filters, template pinning and order, and the compact band', async ({ page }) => {
@@ -179,12 +205,12 @@ test('recent filters, template pinning and order, and the compact band', async (
   const row = await page.locator('.office-cards-row .office-card-name').allTextContents()
   expect(row.slice(0, 3)).toEqual(['Blank spreadsheet', 'Gradebook', 'Invoice'])
 
-  await page.getByRole('button', { name: 'Compact' }).click()
+  await page.getByRole('button', { name: 'Collapse new document section' }).click()
   await expect(page.getByRole('button', file('Blank spreadsheet'))).toHaveCount(0)
   await expect(page.getByRole('button', { name: '+ Blank spreadsheet' })).toBeEnabled()
   await sidebar(page).getByRole('link', { name: 'Docs' }).click()
   await expect(page.getByRole('button', { name: '+ Blank document' })).toBeVisible()
-  await page.getByRole('button', { name: 'Compact' }).click()
+  await page.getByRole('button', { name: 'Expand new document section' }).click()
   await expect(page.getByRole('button', file('Blank document'))).toBeVisible()
 })
 
@@ -220,7 +246,7 @@ test('remembers the save folder across reloads and compacts the band after a few
   await page.getByRole('button', { name: 'Browse folders' }).click()
   await browse(page).getByRole('button', file('Reports')).click()
   await expect(browse(page).getByRole('button', file('Shared Sheets.xlsx'))).toBeVisible()
-  const dialog = page.getByRole('dialog')
+  const dialog = page.getByRole('region', { name: 'New spreadsheet', exact: true })
   for (const name of ['Plan A', 'Plan B', 'Plan C']) {
     await page.getByRole('button', file('Blank spreadsheet')).click()
     await expect(dialog).toContainText('Save in Personal files / Reports')
@@ -236,9 +262,9 @@ test('remembers the save folder across reloads and compacts the band after a few
   await expect(dialog).toContainText('Save in Personal files / Reports')
   await dialog.getByRole('button', { name: 'Cancel' }).click()
 
-  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('radio', { name: 'Always show template cards' }).check()
-  await page.getByRole('button', { name: 'Done' }).click()
+  await page.getByRole('link', { name: 'Back to Sheets' }).click()
   await expect(page.getByRole('button', file('Blank spreadsheet'))).toBeVisible()
 })
 
@@ -253,9 +279,30 @@ test('dark theme tokens and right-to-left layout', async ({ page }) => {
   expect(colors).toEqual({ background: 'rgb(25, 28, 29)', color: 'rgb(225, 227, 228)' })
   await page.evaluate(() => (document.documentElement.dir = 'rtl'))
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true
-  )
+  await page.screenshot({
+    path: test.info().outputPath('mobile-before-reflow.png'),
+    fullPage: true
+  })
+  const overflow = await page.evaluate(() => ({
+    width: innerWidth,
+    scroll: document.documentElement.scrollWidth,
+    elements: [
+      ...document.querySelectorAll(
+        '.office, .office-main, .office-inner, .office-sidebar, .office-file-toolbar, .office-table-scroll, .office-toast-region, .office-start'
+      )
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.right > innerWidth && !el.closest('.office-cards, table')
+      })
+      .map((el) => ({
+        tag: el.tagName,
+        cls: el.className,
+        right: el.getBoundingClientRect().right
+      }))
+      .slice(0, 15)
+  }))
+  expect(overflow.scroll <= overflow.width, JSON.stringify(overflow)).toBe(true)
 })
 
 test('name search spans spaces, restores Back state and filters the current folder', async ({
@@ -292,13 +339,98 @@ test('visual inspection artifacts for desktop light and mobile dark', async ({ p
   await page.screenshot({ path: test.info().outputPath('desktop-light.png'), fullPage: true })
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true
-  )
-  await expect(page.getByRole('button', { name: 'Settings' }).locator('svg')).toBeVisible()
-  const settings = await page.getByRole('button', { name: 'Settings' }).boundingBox()
+  await page.screenshot({
+    path: test.info().outputPath('mobile-before-reflow.png'),
+    fullPage: true
+  })
+  await page.screenshot({
+    path: test.info().outputPath('mobile-before-reflow.png'),
+    fullPage: true
+  })
+  const overflow = await page.evaluate(() => ({
+    width: innerWidth,
+    scroll: document.documentElement.scrollWidth,
+    elements: [
+      ...document.querySelectorAll(
+        '.office, .office-main, .office-inner, .office-sidebar, .office-file-toolbar, .office-table-scroll, .office-toast-region, .office-start'
+      )
+    ]
+      .filter((el) => {
+        const r = el.getBoundingClientRect()
+        return r.right > innerWidth && !el.closest('.office-cards, table')
+      })
+      .map((el) => ({
+        tag: el.tagName,
+        cls: el.className,
+        right: el.getBoundingClientRect().right
+      }))
+      .slice(0, 15)
+  }))
+  expect(overflow.scroll <= overflow.width, JSON.stringify(overflow)).toBe(true)
+  await expect(page.getByRole('link', { name: 'Settings' }).locator('svg')).toBeVisible()
+  const settings = await page.getByRole('link', { name: 'Settings' }).boundingBox()
   expect(settings).not.toBeNull()
   expect(settings!.x).toBeGreaterThanOrEqual(0)
   expect(settings!.x + settings!.width).toBeLessThanOrEqual(390)
   await page.screenshot({ path: test.info().outputPath('mobile-dark.png'), fullPage: true })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole('button', file('Blank document')).click()
+  const panel = page.getByRole('region', { name: 'New document', exact: true })
+  await expect(panel.getByRole('textbox', file('Name'))).toBeFocused()
+  await page.screenshot({
+    path: test.info().outputPath('creation-desktop-light.png'),
+    fullPage: true
+  })
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(panel.getByRole('button', file('Create'))).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: test.info().outputPath('creation-mobile-dark.png'),
+    fullPage: true
+  })
+  await panel.getByRole('button', file('Cancel')).click()
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeFocused()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: test.info().outputPath('settings-mobile-dark.png'),
+    fullPage: true
+  })
+  await page.emulateMedia({ colorScheme: 'light' })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.screenshot({
+    path: test.info().outputPath('settings-desktop-light.png'),
+    fullPage: true
+  })
+  await page.evaluate(() => (document.documentElement.style.fontSize = '200%'))
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('choose a save folder inline, cancel safely, and configure a personal template folder', async ({
+  page
+}) => {
+  await page.goto('/')
+  await page.getByRole('button', file('Blank document')).click()
+  const panel = page.getByRole('region', { name: 'New document', exact: true })
+  await expect(panel.getByRole('combobox', { name: 'Format' })).toHaveCount(0)
+  await panel.getByRole('textbox', file('Name')).fill('Chosen destination')
+  await panel.getByRole('button', { name: 'Choose another folder' }).click()
+  const picker = page.getByRole('region', { name: 'Choose save folder', exact: true })
+  await picker.getByRole('button', file('Reports')).click()
+  await picker.getByRole('button', { name: 'Use this folder' }).click()
+  await expect(panel).toContainText('Save in Personal files / Reports')
+  await expect(panel.getByRole('textbox', file('Name'))).toHaveValue('Chosen destination')
+  await panel.getByRole('button', file('Cancel')).click()
+  await expect(page.getByRole('button', file('Chosen destination.odt'))).toHaveCount(0)
+  await expect(toast(page)).toHaveCount(0)
+  await page.getByRole('link', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'Choose template folder' }).click()
+  const templates = page.getByRole('region', { name: 'Choose template folder', exact: true })
+  await templates.getByRole('combobox', { name: 'Space' }).selectOption('fixture-templates')
+  await templates.getByRole('button', { name: 'Use this folder' }).click()
+  await expect(page.getByText('Your template folder:', { exact: false })).toBeVisible()
+  await page.getByRole('link', { name: 'Back to Docs' }).click()
+  await expect(page.getByRole('button', file('Letterhead'))).toBeVisible()
 })

@@ -7,12 +7,11 @@ import { officeApps, type AppDescriptor } from '../app/registry'
 import type { OfficeContext } from '../app/context'
 import type { OfficeKind } from '../contracts/office'
 
-const props = defineProps<{ kind: OfficeKind; context: OfficeContext }>()
+const props = defineProps<{ kind: OfficeKind | 'settings'; context: OfficeContext }>()
 const versionLabel = computed(
   () => `Office ${version}${props.context.services.mode === 'native' ? ' · Test' : ''}`
 )
-const emit = defineEmits<{ settings: [opener: HTMLElement] }>()
-const descriptor = officeApps.find((app) => app.id === props.kind)!
+const descriptor = computed(() => officeApps.find((app) => app.id === props.kind))
 function destination(app: AppDescriptor) {
   const officeApp = officeApps.find((officeApp) => officeApp.id === app.id)
   const view = officeApp ? props.context.lastView.get(officeApp.id) : undefined
@@ -24,8 +23,9 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
 <template>
   <aside class="office-sidebar">
     <div class="office-sidebar-title" :data-kind="kind">
-      <FamilyIcon :kind="kind" />
-      <slot>{{ descriptor.label }}</slot>
+      <FamilyIcon v-if="kind !== 'settings'" :kind="kind" />
+      <OcIcon v-else name="file-text" fill-type="line" class="office-icon" />
+      <slot>{{ descriptor?.label ?? 'Office' }}</slot>
     </div>
     <nav aria-label="Office applications">
       <ul class="office-nav">
@@ -39,27 +39,17 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
             <span>{{ app.label }}</span>
           </RouterLink>
         </li>
-        <li>
-          <RouterLink v-if="context.services.mode !== 'fixture'" to="/files">
-            <FamilyIcon kind="folder" />
-            <span>Files</span>
-          </RouterLink>
-          <a v-else aria-disabled="true" title="Opens OpenCloud Files in the installed app">
-            <FamilyIcon kind="folder" />
-            <span>Files</span>
-          </a>
-        </li>
       </ul>
     </nav>
     <div class="office-sidebar-footer">
-      <button
-        type="button"
+      <RouterLink
+        :to="{ name: 'office-settings' }"
         class="office-quiet office-settings-button"
-        @click="emit('settings', $event.currentTarget as HTMLElement)"
+        :aria-current="kind === 'settings' ? 'page' : undefined"
       >
         <OcIcon name="settings-4" fill-type="line" class="office-icon" />
         <span>Settings</span>
-      </button>
+      </RouterLink>
       <p class="office-muted office-version">{{ versionLabel }}</p>
     </div>
   </aside>

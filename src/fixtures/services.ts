@@ -82,7 +82,19 @@ export function fixtureServices(
   }
   function file(ref: FileRef, name: string, path: string, parent: FileRef, rights = access) {
     const extension = name.slice(name.lastIndexOf('.') + 1)
-    return add({ ref, name, kind: 'file', path, mimeType: mime[extension], access: rights }, parent)
+    return add(
+      {
+        ref,
+        name,
+        kind: 'file',
+        path,
+        mimeType: mime[extension],
+        access: rights,
+        owner: 'Synthetic owner',
+        createdAt: now() - 60 * 86400000
+      },
+      parent
+    )
   }
   add({ ref: root, name: 'Personal files', kind: 'folder', path: '/Personal files', access })
   add({ ref: team, name: 'Team space', kind: 'folder', path: '/Team space', access })
@@ -317,10 +329,11 @@ export function fixtureServices(
       },
       now
     ),
-    templates(kind) {
+    templateFolderDefault: templatesRoot,
+    templates(kind, folder) {
       // The template folder is a separate source, so it does not share the browse catalog object.
       const source = { ...services.catalog, list: listChildren }
-      return folderTemplates(source, templatesRoot, kind, new AbortController().signal)
+      return folderTemplates(source, folder ?? templatesRoot, kind, new AbortController().signal)
     },
     filters: { favorites: true, tags: true },
     viewPreferences: createViewPreferenceStore(

@@ -12,7 +12,7 @@ vi.mock('../../src/adapters/opencloud/host8', () => ({
 import application from '../../src/index'
 
 describe('Office application registration', () => {
-  it('registers three authenticated destinations and the matching native menu entries', () => {
+  it('registers one Office menu entry and authenticated family/settings destinations', () => {
     const definition = application.setup({ applicationConfig: {} })
     expect(definition.appInfo?.id).toBe('office')
     const routes = definition.routes
@@ -20,14 +20,11 @@ describe('Office application registration', () => {
     expect(
       routes.slice(1).map((route) => [route.name, route.path, route.meta?.authContext])
     ).toEqual([
+      ['settings', '/settings', 'user'],
       ['docs', '/docs', 'user'],
       ['sheets', '/sheets', 'user'],
       ['slides', '/slides', 'user']
     ])
-    expect(definition.extensions?.value.map((entry) => entry.id)).toEqual([
-      'office.menu.docs',
-      'office.menu.sheets',
-      'office.menu.slides'
-    ])
+    expect(definition.extensions?.value.map((entry) => entry.id)).toEqual(['office.menu.home'])
   })
 })

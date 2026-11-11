@@ -43,3 +43,5 @@ office-home:
 ```
 
 Remote template URLs are deliberately not supported: templates must be OpenCloud files so that authorization, sharing and auditing stay in OpenCloud.
+
+Users can select a personal template folder in Office Settings. The selection is a scoped browser preference containing only canonical IDs; it overrides the installation `templateFolder` default for all three family galleries in that browser. Use installation default removes the override. Selection does not upload, copy or modify any templates, and the catalog rechecks access when the gallery loads.

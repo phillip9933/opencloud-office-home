@@ -26,6 +26,7 @@ watch(
 )
 const compact = computed(() => compactBand(preferences) && !expanded.value)
 const creatable = (template?: Template) =>
+  !props.state.loading &&
   !props.state.mutation &&
   !props.state.uncertain &&
   (template
@@ -103,11 +104,12 @@ function setBand(band: TemplateBand) {
           <button
             type="button"
             class="office-quiet"
-            :aria-pressed="compactBand(preferences)"
+            :aria-expanded="!compact"
+            :aria-label="compact ? 'Expand new document section' : 'Collapse new document section'"
             :title="compact ? 'Show template cards' : 'Show a single line'"
             @click="setBand(compactBand(preferences) ? 'row' : 'compact')"
           >
-            Compact
+            <span aria-hidden="true" class="office-mirror">{{ compact ? '▸' : '▾' }}</span>
           </button>
         </div>
       </div>
@@ -213,7 +215,7 @@ function setBand(band: TemplateBand) {
       <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
       <p v-if="state.templateError" class="office-muted">Templates: {{ state.templateError }}</p>
       <p v-else-if="!state.loading && !state.templates.length" class="office-muted">
-        No templates are available. An administrator can add them to the template folder.
+        No templates are available. Choose a template folder in Settings.
       </p>
       <slot />
     </div>

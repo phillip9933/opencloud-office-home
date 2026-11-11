@@ -6,6 +6,7 @@ import {
   refKey,
   type AppError,
   type FileRecord,
+  type FileRef,
   type Format,
   type HomeLocation,
   type OfficeKind,
@@ -65,7 +66,8 @@ function matchesFilter(file: FileRecord, filter: RecentFilter): boolean {
 export function createHomeModel(
   services: OfficeServices,
   kind: OfficeKind,
-  filter: RecentFilter = { favorites: false, tags: [] }
+  filter: RecentFilter = { favorites: false, tags: [] },
+  templateFolder: () => FileRef | undefined = () => undefined
 ) {
   const state = reactive({
     location: defaultLocation(kind),
@@ -192,7 +194,7 @@ export function createHomeModel(
         )
       : []
     const templates = spaces.ok
-      ? await attempt(() => services.templates(kind))
+      ? await attempt(() => services.templates(kind, templateFolder()))
       : fail('unauthenticated')
     if (!current()) return
     state.templates = templates.ok ? templates.value.filter((t) => t.kind === kind) : []
@@ -321,8 +323,9 @@ export function createHomeModel(
     state.opening = false
   }
 
-  async function create(name: string, extension: string, template?: Template) {
-    if (state.mutation || state.opening || state.uncertain || !state.location.folder) return
+  async function create(name: string, extension: string, template?: Template, target?: FileRef) {
+    const selected = target ?? state.location.folder
+    if (state.mutation || state.opening || state.uncertain || !selected) return
     const format = state.formats.find((f) => f.extension === extension)
     const stem = name.trim()
     if (
@@ -341,7 +344,7 @@ export function createHomeModel(
     state.mutation = true
     state.notice = ''
     state.created = null
-    const destination = { ...state.location.folder }
+    const destination = { ...selected }
     const resolved = await attempt(() => services.catalog.resolve(destination))
     const capabilities = await attempt(() => services.capabilities.creationFormats(kind))
     if (

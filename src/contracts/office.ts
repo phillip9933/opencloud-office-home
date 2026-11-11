@@ -31,6 +31,8 @@ export interface FileRecord {
   path?: string
   // Last content change in OpenCloud (epoch milliseconds), by anyone with access.
   modifiedAt?: number
+  createdAt?: number
+  owner?: string
   favorite?: boolean
   tags?: string[]
   shared?: boolean
@@ -44,7 +46,7 @@ export interface Activity {
   text: string
   at?: number
 }
-// Narrows Recent. Tags match when a file has any of them.
+// Narrows Recent and search. Tags match when a file has any of them.
 export interface RecentFilter {
   favorites: boolean
   tags: string[]
@@ -77,7 +79,12 @@ export interface FileCatalog {
     filter: RecentFilter
   ): Promise<Result<Page<FileRecord>>>
   // Tags the user can filter by; only offered when the server advertises tags.
-  search(kind: OfficeKind, term: string, signal: AbortSignal): Promise<Result<Page<FileRecord>>>
+  search(
+    kind: OfficeKind,
+    term: string,
+    signal: AbortSignal,
+    filter?: RecentFilter
+  ): Promise<Result<Page<FileRecord>>>
   listTags(signal: AbortSignal): Promise<Result<string[]>>
   // The newest activity-log entry for a file, as plain text; null when none is recorded.
   latestActivity(ref: FileRef, signal: AbortSignal): Promise<Result<Activity | null>>
@@ -157,9 +164,10 @@ export interface OfficeServices {
   capabilities: OfficeCapabilities
   editor: EditorGateway
   recents: RecentStore
-  templates(kind: OfficeKind): Promise<Result<Template[]>>
+  templateFolderDefault?: FileRef
+  templates(kind: OfficeKind, folder?: FileRef): Promise<Result<Template[]>>
   preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
-  // Server capabilities that decide which Recent filters exist (files.favorites, files.tags).
+  // Host feature availability decides which filters are offered.
   filters: { favorites: boolean; tags: boolean }
   viewPreferences: ViewPreferenceStore
 }

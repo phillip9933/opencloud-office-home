@@ -1,4 +1,5 @@
 import type { FileRef, OfficeKind } from '../contracts/office'
+import { defaultColumns, fileColumns, type FileColumn } from '../services/columns'
 import type { RecentSort } from '../services/recentView'
 
 // 'auto' shows cards until AUTO_COMPACT_AFTER files were created here, then a single line.
@@ -6,6 +7,9 @@ export type TemplateBand = 'auto' | 'row' | 'compact'
 export const AUTO_COMPACT_AFTER = 3
 const MAX_COUNT = 1000
 export interface ViewPreferences {
+  lastKind: OfficeKind
+  columns: FileColumn[]
+  templateFolder?: FileRef
   sort: RecentSort
   layout: 'list' | 'grid'
   band: TemplateBand
@@ -29,6 +33,8 @@ const KINDS: OfficeKind[] = ['docs', 'sheets', 'slides']
 
 export function defaultViewPreferences(): ViewPreferences {
   return {
+    lastKind: 'docs',
+    columns: [...defaultColumns],
     sort: 'activity',
     layout: 'list',
     band: 'auto',
@@ -51,6 +57,30 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
   const result = defaultViewPreferences()
   if (!raw || typeof raw !== 'object') return result
   const value = raw as Record<string, unknown>
+  if (KINDS.includes(value.lastKind as OfficeKind)) result.lastKind = value.lastKind as OfficeKind
+  if (Array.isArray(value.columns))
+    result.columns = [
+      ...new Set(
+        value.columns.filter((id): id is FileColumn =>
+          fileColumns.some((column) => column.id === id)
+        )
+      )
+    ]
+  const template = value.templateFolder
+  if (
+    template &&
+    typeof template === 'object' &&
+    'spaceId' in template &&
+    'itemId' in template &&
+    typeof template.spaceId === 'string' &&
+    typeof template.itemId === 'string' &&
+    template.spaceId.length > 0 &&
+    template.itemId.length > 0 &&
+    template.spaceId.length <= MAX_ID_LENGTH &&
+    template.itemId.length <= MAX_ID_LENGTH
+  )
+    result.templateFolder = { spaceId: template.spaceId, itemId: template.itemId }
+
   if (value.sort === 'activity' || value.sort === 'name') result.sort = value.sort
   if (value.layout === 'list' || value.layout === 'grid') result.layout = value.layout
   if (value.band === 'auto' || value.band === 'row' || value.band === 'compact')

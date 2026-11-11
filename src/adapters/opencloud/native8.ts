@@ -87,7 +87,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       const resource = await port.webdav.getFileInfo(
         space,
         { fileId: ref.itemId },
-        { signal: abort.signal }
+        { signal: abort.signal, extraProps: ['d:creationdate'] }
       )
       if (!session()) return fail('unauthenticated')
       const result = normalizeReadMetadata(space.id, resource)
@@ -194,6 +194,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
 
   const services: OfficeServices = {
     mode: 'native',
+    templateFolderDefault: options.templateFolder,
     catalog,
     capabilities,
     filters: options.filters,
@@ -203,9 +204,10 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       blank: (input) => create(input),
       fromTemplate: (input) => create(input, input.template.source)
     },
-    templates(kind) {
-      if (!options.templateFolder) return Promise.resolve(ok([]))
-      return folderTemplates(catalog, options.templateFolder, kind, abort.signal)
+    templates(kind, selectedFolder) {
+      const folder = selectedFolder ?? options.templateFolder
+      if (!folder) return Promise.resolve(ok([]))
+      return folderTemplates(catalog, folder, kind, abort.signal)
     },
     editor: {
       async open(input) {

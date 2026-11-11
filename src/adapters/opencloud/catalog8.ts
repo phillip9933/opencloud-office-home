@@ -150,6 +150,12 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
     path: resource.path,
     ...(typeof resource.mimeType === 'string' ? { mimeType: resource.mimeType } : {}),
     ...(modifiedAt(resource.mdate) !== undefined ? { modifiedAt: modifiedAt(resource.mdate) } : {}),
+    ...(modifiedAt(resource.extraProps?.['d:creationdate']) !== undefined
+      ? { createdAt: modifiedAt(resource.extraProps?.['d:creationdate']) }
+      : {}),
+    ...(typeof resource.owner?.displayName === 'string' && resource.owner.displayName.trim()
+      ? { owner: resource.owner.displayName.trim().slice(0, 200) }
+      : {}),
     ...(resource.starred === true ? { favorite: true } : {}),
     ...(resource.shareTypes?.length ? { shared: true } : {}),
     ...(resource.locked === true
@@ -303,7 +309,7 @@ export function createCatalog8(
         const page = await port.webdav.listFiles(
           space,
           query.folder.itemId === space.root?.id ? { path: '/' } : { fileId: query.folder.itemId },
-          { depth: 1, signal: query.signal }
+          { depth: 1, signal: query.signal, extraProps: ['d:creationdate'] }
         )
         const stopped = interrupted(key, query.signal)
         if (stopped) return fail(stopped)
@@ -350,11 +356,17 @@ export function createCatalog8(
         return fail(interrupted(key, signal) ?? catalogError(error))
       }
     },
-    search(kind, term, signal) {
+    search(kind, term, signal, filter = { favorites: false, tags: [] }) {
       const phrase = term.trim()
       if (!phrase || phrase.length > 200 || /["\\*?\u0000-\u001f]/.test(phrase))
         return Promise.resolve(fail('invalidSearch'))
-      return searchHits(`name:"*${phrase}*" AND mediatype:("${MEDIA_TYPE[kind]}")`, kind, signal)
+      return searchHits(
+        [`name:"*${phrase}*"`, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
+          ' AND '
+        ),
+        kind,
+        signal
+      )
     },
     recentlyChanged(kind, signal, filter) {
       return searchHits(recentQuery(kind, filter), kind, signal)
@@ -384,9 +396,11 @@ export function createCatalog8(
       const space = spaces.get(ref.spaceId)
       if (!space) return fail('forbiddenOrMissing')
       try {
-        const resource = await port.webdav.getFileInfo(space, {
-          fileId: ref.itemId
-        })
+        const resource = await port.webdav.getFileInfo(
+          space,
+          { fileId: ref.itemId },
+          { extraProps: ['d:creationdate'] }
+        )
         const stopped = interrupted(key)
         if (stopped) return fail(stopped)
         const item = normalize(space.id, resource)

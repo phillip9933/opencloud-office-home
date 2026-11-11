@@ -8,12 +8,14 @@ import type {
   RecentFilter
 } from '../contracts/office'
 import { createHomeModel, type HomeModel } from '../services/home'
+import { createDetailLoader } from '../services/details'
 
 export function createOfficeContext(
   services: OfficeServices,
   menuEntries: readonly AppDescriptor[] = officeApps,
   installedRoutes: ReadonlySet<string> = new Set(officeApps.map((app) => app.route))
 ) {
+  const details = createDetailLoader(services.catalog)
   const menu = validateMenu(menuEntries, installedRoutes)
   const models = new Map<OfficeKind, HomeModel>()
   const views = new Map<string, HomeLocation>()
@@ -35,19 +37,25 @@ export function createOfficeContext(
     id: session,
     dispose() {
       stopPreferences()
+      details.dispose()
       for (const model of models.values()) model.dispose()
       models.clear()
       views.clear()
       lastView.clear()
     },
     services,
+    details,
     menu,
     preferences,
     recentFilter,
     views,
     lastView,
     model(kind: OfficeKind) {
-      if (!models.has(kind)) models.set(kind, createHomeModel(services, kind, recentFilter))
+      if (!models.has(kind))
+        models.set(
+          kind,
+          createHomeModel(services, kind, recentFilter, () => preferences.templateFolder)
+        )
       return models.get(kind)!
     },
     rememberCreation(kind: OfficeKind, extension: string, folder: FileRef) {

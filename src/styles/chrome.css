@@ -1,4 +1,4 @@
-/* Shell and sidebar, family icons, dialogs and direction rules. */
+/* Shell and sidebar, family icons and direction rules. */
 /* Shell: OpenCloud's own top bar frames the app; the sidebar holds app navigation. */
 .office {
   display: grid;
@@ -154,38 +154,6 @@
   fill: #fff;
 }
 
-/* Create dialog */
-.office-dialog {
-  width: min(28rem, calc(100% - 2rem));
-  border: 1px solid var(--office-line);
-  border-radius: 0.75rem;
-  padding: 1.5rem;
-  color: var(--office-ink);
-  background: var(--office-surface);
-  box-shadow: 0 16px 48px #0d2a2240;
-}
-.office-dialog::backdrop {
-  background: #0d2a2259;
-}
-.office-dialog form {
-  display: grid;
-  gap: 1rem;
-}
-.office-dialog-location {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.office-dialog-location p {
-  margin: 0;
-}
-.office-dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
 .office .office-primary {
   background: var(--office-primary);
   color: var(--office-on-primary);
