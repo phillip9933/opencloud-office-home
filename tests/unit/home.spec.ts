@@ -6,10 +6,8 @@ import {
   ok,
   type FileRecord,
   type OfficeServices,
-  type Page,
   type Result
 } from '../../src/contracts/office'
-import { unconfiguredServices } from '../../src/adapters/opencloud/unconfigured'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -28,49 +26,58 @@ describe('home workflow', () => {
     const home = createHomeModel(services, 'docs')
     await home.load({ ...defaultLocation('docs'), spaceId: 'revoked-space' })
     expect(home.state.error).toContain('no longer have access')
-    expect(home.state.rows).toEqual([])
     expect(home.state.destinationWritable).toBe(false)
   })
   it('does not expose a fake live integration', async () => {
-    const home = createHomeModel(unconfiguredServices(), 'docs')
+    vi.spyOn(services.catalog, 'listSpaces').mockResolvedValue(fail('editorUnavailable'))
+    vi.spyOn(services.capabilities, 'creationFormats').mockResolvedValue(fail('editorUnavailable'))
+    const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
     expect(home.state.formats).toEqual([])
     expect(home.state.destinationWritable).toBe(false)
     expect(home.state.error).toContain('not been verified')
   })
-  it('filters by family, keeps folders visible, and clears metadata on deactivation', async () => {
+  it('loads no unused folder listing and clears recent metadata on deactivation', async () => {
+    const list = vi.spyOn(services.catalog, 'list').mockResolvedValue(fail('network'))
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
-    expect(home.state.rows.map((f) => f.name)).toEqual(['Reports', 'Project Docs.odt'])
+    expect(list).not.toHaveBeenCalled()
+    expect(home.state.error).toBe('')
+    expect(home.state.destinationWritable).toBe(true)
     home.deactivate()
-    expect(home.state.rows).toEqual([])
     expect(home.state.recent).toEqual([])
   })
-  it('ignores late folder results even when the source ignores cancellation', async () => {
-    const first = deferred<Result<Page<FileRecord>>>()
-    const second = deferred<Result<Page<FileRecord>>>()
-    const list = vi
-      .spyOn(services.catalog, 'list')
+  it('ignores late destination results even when the source ignores cancellation', async () => {
+    const first = deferred<Result<FileRecord>>()
+    const second = deferred<Result<FileRecord>>()
+    const resolve = vi
+      .spyOn(services.catalog, 'resolve')
       .mockImplementationOnce(() => first.promise)
       .mockImplementationOnce(() => second.promise)
     const home = createHomeModel(services, 'docs')
     const reports = { spaceId: 'fixture-personal', itemId: 'reports' }
     const stale = home.load(defaultLocation('docs'))
-    await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(resolve).toHaveBeenCalledTimes(1))
     const fresh = home.load({
       ...defaultLocation('docs'),
       spaceId: reports.spaceId,
       folder: reports
     })
-    await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2))
-    second.resolve(ok({ items: [], partial: true, next: 'opaque-cursor' }))
+    await vi.waitFor(() => expect(resolve).toHaveBeenCalledTimes(2))
+    second.resolve(
+      ok({
+        ref: reports,
+        name: 'Reports',
+        kind: 'folder',
+        access: { read: true, write: true, createChild: true }
+      })
+    )
     await fresh
     first.resolve(fail('network'))
     await stale
     expect(home.state.location.folder).toEqual(reports)
     expect(home.state.error).toBe('')
-    expect(home.state.partial).toBe(true)
-    expect(list.mock.calls[0]![0].signal.aborted).toBe(true)
+    expect(home.state.destinationWritable).toBe(true)
   })
   it('locks repeated creates and retains the one created resource after editor failure', async () => {
     const home = createHomeModel(services, 'docs')
@@ -131,7 +138,7 @@ describe('home workflow', () => {
     expect(home.state.recent).toEqual([])
     expect(services.recents.list('docs')).toEqual([])
   })
-  it('merges files changed in OpenCloud with browser opens, and clearing keeps server changes', async () => {
+  it('merges files changed in OpenCloud with browser opens, retaining separate timestamps', async () => {
     services = fixtureServices({ seedHistory: true })
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
@@ -145,12 +152,6 @@ describe('home workflow', () => {
     })
     // Opened only: an old change date is not shown as recent.
     expect(byName.get('Shared Docs.docx')).not.toHaveProperty('modifiedAt')
-    home.clearRecents()
-    expect(home.state.recent.map((entry) => entry.file.name).sort()).toEqual([
-      'Project Docs.odt',
-      'Team handbook.docx'
-    ])
-    expect(home.state.recent.every((entry) => entry.openedAt === undefined)).toBe(true)
   })
   it('applies Recent filters to both sources and refreshes only Recent', async () => {
     services = fixtureServices({ seedHistory: true })
@@ -175,7 +176,9 @@ describe('home workflow', () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
     const launch = vi.spyOn(services.editor, 'open')
-    const editable = home.state.rows.find((f) => f.name === 'Project Docs.odt')!
+    const resolved = await services.catalog.resolve({ spaceId: 'fixture-personal', itemId: 'docs' })
+    if (!resolved.ok) throw new Error('Fixture missing')
+    const editable = resolved.value
     await home.runAction('openReadOnly', editable)
     expect(launch.mock.calls[0]![0].mode).toBe('view')
     await home.runAction('share', editable)
@@ -184,11 +187,11 @@ describe('home workflow', () => {
     await home.runAction('download', editable)
     expect(home.state.notice).toContain('no longer have access')
   })
-  it('names a remembered folder from live metadata when it has no trail', async () => {
+  it('names a remembered folder from live metadata without inventing ancestors', async () => {
     const home = createHomeModel(services, 'docs')
     const reports = { spaceId: 'fixture-personal', itemId: 'reports' }
     await home.load({ ...defaultLocation('docs'), spaceId: reports.spaceId, folder: reports })
-    expect(home.state.location.trail).toEqual([{ name: 'Reports', ref: reports }])
+    expect(home.state.location.folderName).toBe('Reports')
     expect(home.state.destinationWritable).toBe(true)
   })
   it('keeps browser history and explains when recent changes cannot be loaded', async () => {
@@ -199,7 +202,7 @@ describe('home workflow', () => {
     expect(home.state.recent.map((entry) => entry.file.name)).toEqual(['Project Docs.odt'])
     expect(home.state.recentNote).toContain('Changes from other devices are unavailable')
   })
-  it('retains a completed mutation when navigating away without inserting into a different folder', async () => {
+  it('retains a completed mutation when navigating to a different destination', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
     const pending = deferred<Result<FileRecord>>()
@@ -222,8 +225,7 @@ describe('home workflow', () => {
     )
     await creating
     expect(home.state.created?.name).toBe('Pending.odt')
-    expect(home.state.rows.length).toBeGreaterThan(0)
-    expect(home.state.rows.map((row) => row.name)).not.toContain('Pending.odt')
+    expect(home.state.location.folder).toEqual({ spaceId: 'fixture-team', itemId: 'root' })
   })
 })
 
@@ -246,4 +248,102 @@ it('keeps recent references after a transient open failure instead of treating t
   expect(home.state.recent.some((r) => r.file.ref.itemId === entry.file.ref.itemId)).toBe(true)
   expect(source.recents.list('docs')).toEqual(before)
   expect(home.state.notice).toContain('could not be reached')
+})
+
+it('reconciles an uncertain creation through read-only checks without resubmission', async () => {
+  const services = fixtureServices()
+  const home = createHomeModel(services, 'docs')
+  await home.load(defaultLocation('docs'))
+  const original = services.creation.blank
+  const create = vi.spyOn(services.creation, 'blank').mockImplementation(async (input) => {
+    await original(input)
+    return fail('timeout')
+  })
+  await home.create('Lost acknowledgement', 'odt')
+  expect(home.state.uncertain).toBe(true)
+  const listed = vi.spyOn(services.catalog, 'list')
+  await Promise.all([home.reconcileCreation(), home.reconcileCreation()])
+  expect(listed).toHaveBeenCalledTimes(1)
+  expect(create).toHaveBeenCalledTimes(1)
+  expect(home.state.uncertain).toBe(false)
+  expect(home.state.created?.name).toBe('Lost acknowledgement.odt')
+  expect(home.state.notice).toContain('Open it to verify')
+})
+
+it('keeps ambiguous creation locked when a partial listing finds no file or access is revoked', async () => {
+  const services = fixtureServices()
+  const home = createHomeModel(services, 'docs')
+  await home.load(defaultLocation('docs'))
+  const create = vi.spyOn(services.creation, 'blank').mockResolvedValue(fail('timeout'))
+  await home.create('Unconfirmed', 'odt')
+  vi.spyOn(services.catalog, 'list').mockResolvedValue(ok({ items: [], partial: true }))
+  await home.reconcileCreation()
+  expect(home.state.uncertain).toBe(true)
+  expect(home.state.notice).toContain('No matching file was confirmed')
+  vi.spyOn(services.catalog, 'list').mockResolvedValue(fail('forbiddenOrMissing'))
+  await home.reconcileCreation()
+  expect(home.state.uncertain).toBe(true)
+  await home.create('Unconfirmed', 'odt')
+  expect(create).toHaveBeenCalledTimes(1)
+})
+
+it('does not lock creation when a read fails before the mutation is submitted', async () => {
+  const services = fixtureServices()
+  const home = createHomeModel(services, 'docs')
+  await home.load(defaultLocation('docs'))
+  const create = vi.spyOn(services.creation, 'blank')
+  vi.spyOn(services.catalog, 'resolve').mockResolvedValue(fail('network'))
+  await home.create('Draft', 'odt')
+  expect(create).not.toHaveBeenCalled()
+  expect(home.state.uncertain).toBe(false)
+  expect(home.state.notice).toContain('could not be reached')
+})
+
+it('rejects a stale reconciliation result after navigating away even if listing ignores cancellation', async () => {
+  const services = fixtureServices()
+  const home = createHomeModel(services, 'docs')
+  await home.load(defaultLocation('docs'))
+  const original = services.creation.blank
+  let created!: FileRecord
+  vi.spyOn(services.creation, 'blank').mockImplementation(async (input) => {
+    const result = await original(input)
+    if (result.ok) created = result.value
+    return fail('timeout')
+  })
+  await home.create('Pending reconciliation', 'odt')
+  const listing = deferred<Result<{ items: FileRecord[]; partial: boolean }>>()
+  const list = vi.spyOn(services.catalog, 'list').mockImplementation(() => listing.promise)
+  const checking = home.reconcileCreation()
+  home.deactivate()
+  expect(list.mock.calls[0]![0].signal.aborted).toBe(true)
+  listing.resolve(ok({ items: [created], partial: true }))
+  await checking
+  expect(home.state.uncertain).toBe(true)
+  expect(home.state.created).toBeNull()
+})
+
+it('requires fresh file access before unlocking an uncertain creation', async () => {
+  const services = fixtureServices()
+  const home = createHomeModel(services, 'docs')
+  await home.load(defaultLocation('docs'))
+  vi.spyOn(services.creation, 'blank').mockResolvedValue(fail('timeout'))
+  await home.create('Unconfirmed', 'odt')
+  vi.spyOn(services.catalog, 'list').mockResolvedValue(
+    ok({
+      items: [
+        {
+          ref: { spaceId: 'fixture-personal', itemId: 'revoked' },
+          name: 'Unconfirmed.odt',
+          kind: 'file',
+          mimeType: home.state.formats[0]!.mimeType,
+          access: { read: true, write: true, createChild: false }
+        }
+      ],
+      partial: true
+    })
+  )
+  await home.reconcileCreation()
+  expect(home.state.uncertain).toBe(true)
+  expect(home.state.created).toBeNull()
+  expect(home.state.notice).toContain('no longer have access')
 })

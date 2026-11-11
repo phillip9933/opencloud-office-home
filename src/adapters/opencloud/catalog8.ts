@@ -1,11 +1,13 @@
+import { sdkRecord } from './metadata8'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import type { Graph } from '@opencloud-eu/web-client/graph'
 import type { WebDAV } from '@opencloud-eu/web-client/webdav'
-import { belongsTo, officeApps, type AppDescriptor } from '../../app/registry'
+import { belongsTo } from '../../app/registry'
 import {
   fail,
   ok,
   refKey,
+  RECENT_CHANGE_DAYS,
   type AppError,
   type FileCatalog,
   type FileRecord,
@@ -26,7 +28,7 @@ export interface ReadPort8 {
 
 // OpenCloud 9.0.0 KQL: the natural-language date matches RECENT_CHANGE_DAYS, and the media
 // types are the server's own groups (they also contain non-office types, filtered afterwards).
-const RECENT_CHANGE_QUERY = 'mtime:"last 30 days"'
+const RECENT_CHANGE_QUERY = `mtime:"last ${RECENT_CHANGE_DAYS} days"`
 const MEDIA_TYPE: Record<OfficeKind, string> = {
   docs: 'document',
   sheets: 'spreadsheet',
@@ -67,10 +69,10 @@ export function activityText(activity: {
 }): Activity | null {
   const message = activity.template?.message
   if (typeof message !== 'string' || !message) return null
-  const variables = record(activity.template?.variables) ?? {}
+  const variables = sdkRecord(activity.template?.variables) ?? {}
   const text = message
     .replace(/\{(\w+)\}/g, (_match, name: string) => {
-      const value = record(variables[name])
+      const value = sdkRecord(variables[name])
       const label = value?.displayName ?? value?.name
       return typeof label === 'string' ? label : ''
     })
@@ -80,13 +82,6 @@ export function activityText(activity: {
   const at =
     typeof activity.times?.recordedTime === 'string' ? Date.parse(activity.times.recordedTime) : NaN
   return text ? { text, ...(Number.isFinite(at) ? { at } : {}) } : null
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  // The object check establishes the boundary before optional SDK error fields are inspected.
-  return value !== null && typeof value === 'object'
-    ? (value as Record<string, unknown>)
-    : undefined
 }
 
 export function opaqueSegment(value: unknown): value is string {
@@ -103,9 +98,9 @@ export function opaqueSegment(value: unknown): value is string {
 }
 
 export function catalogError(error: unknown): AppError {
-  const details = record(error)
+  const details = sdkRecord(error)
   if (details?.name === 'AbortError' || details?.code === 'ERR_CANCELED') return 'cancelled'
-  const status = record(details?.response)?.status ?? details?.statusCode ?? details?.status
+  const status = sdkRecord(details?.response)?.status ?? details?.statusCode ?? details?.status
   if (status === 401) return 'unauthenticated'
   if (status === 403 || status === 404) return 'forbiddenOrMissing'
   if (status === 409 || status === 412) return 'conflict'
@@ -185,8 +180,7 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
 export function createCatalog8(
   port: ReadPort8,
   getSessionKey: () => string | undefined,
-  access?: (resource: Resource) => FileRecord['access'],
-  apps: readonly AppDescriptor[] = officeApps
+  access?: (resource: Resource) => FileRecord['access']
 ): FileCatalog & { dispose(): void; space(id: string): SpaceResource | undefined } {
   function normalize(spaceId: string, resource: Resource) {
     const result = normalizeReadMetadata(spaceId, resource)
@@ -235,7 +229,7 @@ export function createCatalog8(
           continue
         }
         // The server's media groups include non-office types such as plain text.
-        if (item.value.kind === 'file' && belongsTo(item.value, kind, apps))
+        if (item.value.kind === 'file' && belongsTo(item.value, kind))
           items.set(refKey(item.value.ref), item.value)
       }
       return ok({
@@ -307,8 +301,6 @@ export function createCatalog8(
       if (query.signal.aborted) return fail('cancelled')
       if (!opaqueSegment(query.folder.itemId) || !opaqueSegment(query.folder.spaceId))
         return fail('forbiddenOrMissing')
-      // Never convert an unsupported cursor into a misleading successful folder subset.
-      if (query.cursor !== undefined) return fail('paginationUnavailable')
       const space = spaces.get(query.folder.spaceId)
       if (!space) return fail('forbiddenOrMissing')
       try {
@@ -329,25 +321,8 @@ export function createCatalog8(
         const items = new Map<string, FileRecord>()
         for (const resource of page.children ?? []) {
           const item = normalize(space.id, resource)
-          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind, apps)))
+          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
             items.set(refKey(item.value.ref), item.value)
-        }
-        if (access) {
-          // Counts diagnose SDK/metadata incompatibilities without exposing names, IDs or URLs.
-          const children = page.children ?? []
-          console.info(
-            'Office catalog listing',
-            JSON.stringify({
-              received: children.length,
-              classified: items.size,
-              readable: [...items.values()].filter((item) => item.access.read).length,
-              folders: children.filter((item) => item.isFolder).length,
-              aliases: children.filter((item) => item.remoteItemId || item.remoteItemPath).length,
-              missingPermissions: children.filter((item) => !item.permissions).length,
-              downloadMethods: children.filter((item) => typeof item.canDownload === 'function')
-                .length
-            })
-          )
         }
         // This SDK result has no verified cursor/total/truncation contract. Keep the limit visible.
         return ok({ items: [...items.values()], partial: true })
@@ -366,16 +341,6 @@ export function createCatalog8(
       } catch (error) {
         return fail(interrupted(key, signal) ?? catalogError(error))
       }
-    },
-    search(kind, term, signal, filter = { favorites: false, tags: [] }) {
-      const phrase = term.trim()
-      if (!phrase || phrase.length > 200 || /["\\*?\u0000-\u001f]/.test(phrase))
-        return Promise.resolve(fail('invalidSearch'))
-      return searchHits(
-        [`name:"*${phrase}*"`, familyQuery(kind), ...filterClauses(filter)].join(' AND '),
-        kind,
-        signal
-      )
     },
     recentlyChanged(kind, signal, filter) {
       return searchHits(recentQuery(kind, filter), kind, signal)
@@ -413,21 +378,6 @@ export function createCatalog8(
         const stopped = interrupted(key)
         if (stopped) return fail(stopped)
         const item = normalize(space.id, resource)
-        if (access)
-          console.info(
-            'Office catalog resolution',
-            JSON.stringify({
-              normalized: item.ok,
-              identityMatches: item.ok && refKey(item.value.ref) === refKey(ref),
-              isFolder: resource.isFolder === true,
-              alias: !!(resource.remoteItemId || resource.remoteItemPath),
-              hasPermissions: !!resource.permissions,
-              readable: item.ok && item.value.access.read,
-              downloadable: resource.canDownload?.() === true,
-              creatable: resource.canCreate?.() === true,
-              inVault: resource.isInVault === true
-            })
-          )
         if (!item.ok) return item.error === 'forbiddenOrMissing' ? fail('unsupportedType') : item
         return refKey(item.value.ref) === refKey(ref) ? item : fail('unknown')
       } catch (error) {

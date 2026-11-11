@@ -7,7 +7,7 @@ import './styles/templates.css'
 import './styles/files.css'
 import './styles/forms.css'
 import './styles/folders.css'
-import { officeApps } from './app/registry'
+import { officeApps, officeRoute } from './app/registry'
 import { useNativeOffice8 } from './adapters/opencloud/host8'
 const OfficeHome = defineAsyncComponent(() => import('./views/OfficeHome.vue'))
 const OfficeSettings = defineAsyncComponent(() => import('./views/OfficeSettings.vue'))
@@ -55,7 +55,7 @@ export default defineWebApplication({
           handler: async () => {
             const kind = context.value?.preferences.lastKind ?? 'docs'
             const view = context.value?.lastView.get(kind)
-            await router.push({ name: `office-${kind}`, query: view ? { view } : {} })
+            await router.push({ name: officeRoute(kind), query: view ? { view } : {} })
           },
           priority: 40
         }

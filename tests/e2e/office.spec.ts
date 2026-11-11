@@ -512,3 +512,52 @@ test('personal settings keeps the folder chooser and no administration console',
   await expect(opener).toBeFocused()
   await page.screenshot({ path: test.info().outputPath('settings-mobile.png'), fullPage: true })
 })
+
+for (const colorScheme of ['light', 'dark'] as const) {
+  for (const width of [1280, 390]) {
+    test(`uncertain creation recovery at ${width}px in ${colorScheme}`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: 900 })
+      await page.emulateMedia({ colorScheme })
+      const errors: string[] = []
+      page.on('pageerror', (error) => errors.push(error.message))
+      page.on('response', (response) => {
+        if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`)
+      })
+      await page.goto('/tests/e2e/recovery.html')
+      await expect(page.getByRole('heading', file('Docs')))
+        .toBeVisible()
+        .catch((error: unknown) => {
+          throw new Error(`${String(error)}; browser errors: ${JSON.stringify(errors)}`)
+        })
+      await page.getByRole('button', { name: 'Blank document' }).click()
+      const panel = page.getByRole('region', file('New document'))
+      await panel.getByRole('textbox', file('Name')).fill('Lost acknowledgement')
+      await panel.getByRole('button', file('Create')).click()
+      await expect(panel).toBeHidden()
+      await expect(page.getByRole('alert')).toContainText('Creation is paused')
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true
+      )
+      await expect(page.getByRole('button', file('Favorites')).locator('svg')).toBeVisible()
+      await page.screenshot({ path: info.outputPath('recovery-paused.png'), fullPage: true })
+      const check = page.getByRole('button', file('Check destination'))
+      await check.focus()
+      await page.keyboard.press('Enter')
+      await expect(page.getByRole('alert')).toHaveCount(0)
+      await expect(toast(page)).toContainText('Found a matching file')
+      await expect(page.getByRole('button', file('Open created file'))).toBeFocused()
+      await page.getByRole('button', file('Open created file')).click()
+      await expect(toast(page)).toContainText('Simulated launch accepted')
+      await page.getByRole('button', { name: 'Blank document' }).click()
+      await panel.getByRole('textbox', file('Name')).fill('Unconfirmed')
+      await panel.getByRole('button', file('Create')).click()
+      await check.click()
+      await expect(toast(page)).toContainText('No matching file was confirmed')
+      await expect(page.getByRole('alert')).toBeVisible()
+      await sidebar(page).getByRole('link', file('Sheets')).click()
+      await page.goBack()
+      await expect(page.getByRole('alert')).toBeVisible()
+      expect(errors).toEqual([])
+    })
+  }
+}

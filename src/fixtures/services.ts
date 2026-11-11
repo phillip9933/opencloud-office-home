@@ -1,9 +1,11 @@
+import { DAY_MS } from '../contracts/files'
 import { belongsTo, officeApps } from '../app/registry'
 import {
   fail,
   ok,
   RECENT_CHANGE_DAYS,
   refKey,
+  type ActionFeedback,
   type CatalogQuery,
   type CreationRequest,
   type FileRecord,
@@ -18,7 +20,6 @@ import { createViewPreferenceStore } from '../preferences/view'
 import { folderTemplates } from '../services/templates'
 import { syntheticPreview } from './previews'
 
-const DAY = 86_400_000
 const access = { read: true, write: true, createChild: true }
 const readOnly = { read: true, write: false, createChild: false }
 const mime: Record<string, string> = {
@@ -57,6 +58,7 @@ const templateFiles: [category: string, file: string, preview: boolean][] = [
 
 export function fixtureServices(
   options: {
+    delayMs?: number
     now?: () => number
     seedHistory?: boolean
     // Where view preferences live; the preview passes sessionStorage so they survive a reload.
@@ -91,7 +93,7 @@ export function fixtureServices(
         mimeType: mime[extension],
         access: rights,
         owner: 'Synthetic owner',
-        createdAt: now() - 60 * 86400000
+        createdAt: now() - 60 * DAY_MS
       },
       parent
     )
@@ -165,23 +167,23 @@ export function fixtureServices(
   // Seeded browser history so the date groups are visible in the preview.
   const seeded: [FileRef, OfficeKind, number][] = [
     [{ ...root, itemId: 'docs' }, 'docs', 2 * 3600_000],
-    [{ ...team, itemId: 'notes' }, 'docs', 3 * DAY],
-    [{ ...team, itemId: 'handbook' }, 'docs', 12 * DAY],
-    [{ ...root, itemId: 'read-docs' }, 'docs', 45 * DAY],
-    [{ ...root, itemId: 'sheets' }, 'sheets', 1 * DAY],
-    [{ ...team, itemId: 'expenses' }, 'sheets', 9 * DAY],
-    [{ ...team, itemId: 'inventory' }, 'sheets', 40 * DAY],
-    [{ ...team, itemId: 'kickoff' }, 'slides', 5 * DAY],
-    [{ ...root, itemId: 'slides' }, 'slides', 20 * DAY]
+    [{ ...team, itemId: 'notes' }, 'docs', 3 * DAY_MS],
+    [{ ...team, itemId: 'handbook' }, 'docs', 12 * DAY_MS],
+    [{ ...root, itemId: 'read-docs' }, 'docs', 45 * DAY_MS],
+    [{ ...root, itemId: 'sheets' }, 'sheets', 1 * DAY_MS],
+    [{ ...team, itemId: 'expenses' }, 'sheets', 9 * DAY_MS],
+    [{ ...team, itemId: 'inventory' }, 'sheets', 40 * DAY_MS],
+    [{ ...team, itemId: 'kickoff' }, 'slides', 5 * DAY_MS],
+    [{ ...root, itemId: 'slides' }, 'slides', 20 * DAY_MS]
   ]
   // Synthetic changes made in OpenCloud, for example by a colleague on another device.
   const changes: [FileRef, number][] = [
-    [{ ...team, itemId: 'handbook' }, 1 * DAY],
-    [{ ...team, itemId: 'expenses' }, 2 * DAY],
-    [{ ...team, itemId: 'training' }, 4 * DAY],
-    [{ ...team, itemId: 'kickoff' }, 3 * DAY],
-    [{ ...team, itemId: 'inventory' }, 50 * DAY],
-    [{ ...root, itemId: 'docs' }, 6 * DAY]
+    [{ ...team, itemId: 'handbook' }, 1 * DAY_MS],
+    [{ ...team, itemId: 'expenses' }, 2 * DAY_MS],
+    [{ ...team, itemId: 'training' }, 4 * DAY_MS],
+    [{ ...team, itemId: 'kickoff' }, 3 * DAY_MS],
+    [{ ...team, itemId: 'inventory' }, 50 * DAY_MS],
+    [{ ...root, itemId: 'docs' }, 6 * DAY_MS]
   ]
   if (options.seedHistory)
     for (const [ref, age] of changes) {
@@ -219,7 +221,7 @@ export function fixtureServices(
 
   async function listChildren(query: CatalogQuery): Promise<Result<Page<FileRecord>>> {
     // Delay deliberately makes cancellation and fast route switching visible in the preview.
-    await new Promise((resolve) => setTimeout(resolve, 80))
+    if (options.delayMs) await new Promise((resolve) => setTimeout(resolve, options.delayMs))
     if (query.signal.aborted) return fail('cancelled')
     const items = records.filter(
       (r) =>
@@ -246,6 +248,11 @@ export function fixtureServices(
   }
   const services: OfficeServices = {
     mode: 'fixture',
+    configuration: {
+      templateFolder: templatesRoot,
+      allowPersonalTemplates: true,
+      creationFormats: {}
+    },
     catalog: {
       listSpaces() {
         return Promise.resolve(
@@ -261,21 +268,8 @@ export function fixtureServices(
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },
       list: listChildren,
-      search(kind, term) {
-        return Promise.resolve(
-          ok({
-            items: records.filter(
-              (r) =>
-                r.kind === 'file' &&
-                belongsTo(r, kind) &&
-                r.name.toLowerCase().includes(term.toLowerCase())
-            ),
-            partial: false
-          })
-        )
-      },
       recentlyChanged(kind, _signal, filter) {
-        const since = now() - RECENT_CHANGE_DAYS * DAY
+        const since = now() - RECENT_CHANGE_DAYS * DAY_MS
         const items = records
           .filter(
             (r) =>
@@ -310,26 +304,38 @@ export function fixtureServices(
       }
     },
     actions: {
-      showInFiles: () => Promise.resolve(ok(undefined)),
-      share: () => Promise.resolve(ok(undefined)),
-      download: () => Promise.resolve(ok(undefined))
+      showInFiles: () =>
+        Promise.resolve(
+          ok<ActionFeedback>({ message: 'Simulated: OpenCloud Files would open at this file.' })
+        ),
+      share: () =>
+        Promise.resolve(
+          ok<ActionFeedback>({ message: 'Simulated: OpenCloud sharing would open for this file.' })
+        ),
+      download: () =>
+        Promise.resolve(
+          ok<ActionFeedback>({ message: 'Simulated: the file would download through OpenCloud.' })
+        )
     },
     creation: { blank: create, fromTemplate: create },
     editor: {
       open() {
-        return Promise.resolve(ok({ status: 'launchAccepted' }))
+        return Promise.resolve(
+          ok({
+            status: 'launchAccepted',
+            message: 'Simulated launch accepted. No editor was opened and no file was saved.'
+          })
+        )
       }
     },
     recents: createRecentStore(
       { instance: 'fixture', user: 'synthetic-preview' },
       {
         getItem: (key) => history.get(key) ?? null,
-        setItem: (key, value) => void history.set(key, value),
-        removeItem: (key) => void history.delete(key)
+        setItem: (key, value) => void history.set(key, value)
       },
       now
     ),
-    templateFolderDefault: templatesRoot,
     templates(kind, folder) {
       // The template folder is a separate source, so it does not share the browse catalog object.
       const source = { ...services.catalog, list: listChildren }

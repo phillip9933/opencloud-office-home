@@ -1,16 +1,8 @@
 import type { FileRecord } from '../contracts/office'
 
-export const fileColumns = [
-  { id: 'activity', label: 'Last activity' },
-  { id: 'location', label: 'Location' },
-  { id: 'owner', label: 'Owner' },
-  { id: 'created', label: 'Date created' },
-  { id: 'modified', label: 'Date modified' },
-  { id: 'tags', label: 'Tags' },
-  { id: 'type', label: 'File type' }
-] as const
-export type FileColumn = (typeof fileColumns)[number]['id']
-export const defaultColumns: FileColumn[] = ['location', 'activity']
+import type { FileColumn } from '../contracts/preferences'
+export { defaultColumns, fileColumns } from '../contracts/preferences'
+export type { FileColumn } from '../contracts/preferences'
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 function date(value?: number) {
   return value !== undefined && Number.isFinite(value) && Math.abs(value) < 8.64e15

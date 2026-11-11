@@ -1,26 +1,15 @@
-import type { FileRef, OfficeKind } from '../contracts/office'
-import { defaultColumns, fileColumns, type FileColumn } from '../services/columns'
-import type { RecentSort } from '../services/recentView'
+import { isFileRef, officeKinds, type OfficeKind } from '../contracts/files'
+import {
+  AUTO_COMPACT_AFTER,
+  defaultColumns,
+  fileColumns,
+  type FileColumn,
+  type ViewPreferences
+} from '../contracts/preferences'
+export { AUTO_COMPACT_AFTER } from '../contracts/preferences'
+export type { ViewPreferences, ViewPreferenceStore, TemplateBand } from '../contracts/preferences'
 
-// 'auto' shows cards until AUTO_COMPACT_AFTER files were created here, then a single line.
-export type TemplateBand = 'auto' | 'row' | 'compact'
-export const AUTO_COMPACT_AFTER = 3
 const MAX_COUNT = 1000
-export interface ViewPreferences {
-  lastKind: OfficeKind
-  columns: FileColumn[]
-  templateFolder?: FileRef
-  sort: RecentSort
-  layout: 'list' | 'grid'
-  band: TemplateBand
-  // Template IDs in the user's order; IDs are opaque and revalidated against the live gallery.
-  pinned: Record<OfficeKind, string[]>
-  // Last successful creation choices; the folder is revalidated before it is used again.
-  lastFormat: Partial<Record<OfficeKind, string>>
-  lastFolder: Partial<Record<OfficeKind, FileRef>>
-  // Files created through this app in this browser; only drives the automatic band.
-  createdCount: number
-}
 interface StoragePort {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
@@ -29,7 +18,6 @@ interface StoragePort {
 // Bounds keep a corrupt or hostile stored value from growing without limit.
 const MAX_PINS = 24
 const MAX_ID_LENGTH = 1024
-const KINDS: OfficeKind[] = ['docs', 'sheets', 'slides']
 
 export function defaultViewPreferences(): ViewPreferences {
   return {
@@ -57,7 +45,8 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
   const result = defaultViewPreferences()
   if (!raw || typeof raw !== 'object') return result
   const value = raw as Record<string, unknown>
-  if (KINDS.includes(value.lastKind as OfficeKind)) result.lastKind = value.lastKind as OfficeKind
+  if (officeKinds.includes(value.lastKind as OfficeKind))
+    result.lastKind = value.lastKind as OfficeKind
   if (Array.isArray(value.columns))
     result.columns = [
       ...new Set(
@@ -67,18 +56,7 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
       )
     ]
   const template = value.templateFolder
-  if (
-    template &&
-    typeof template === 'object' &&
-    'spaceId' in template &&
-    'itemId' in template &&
-    typeof template.spaceId === 'string' &&
-    typeof template.itemId === 'string' &&
-    template.spaceId.length > 0 &&
-    template.itemId.length > 0 &&
-    template.spaceId.length <= MAX_ID_LENGTH &&
-    template.itemId.length <= MAX_ID_LENGTH
-  )
+  if (isFileRef(template))
     result.templateFolder = { spaceId: template.spaceId, itemId: template.itemId }
 
   if (value.sort === 'activity' || value.sort === 'name') result.sort = value.sort
@@ -86,24 +64,16 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
   if (value.band === 'auto' || value.band === 'row' || value.band === 'compact')
     result.band = value.band
   const pinned = value.pinned && typeof value.pinned === 'object' ? value.pinned : {}
-  for (const kind of KINDS) result.pinned[kind] = pins((pinned as Record<string, unknown>)[kind])
+  for (const kind of officeKinds)
+    result.pinned[kind] = pins((pinned as Record<string, unknown>)[kind])
   const formats = (value.lastFormat ?? {}) as Record<string, unknown>
   const folders = (value.lastFolder ?? {}) as Record<string, unknown>
-  for (const kind of KINDS) {
+  for (const kind of officeKinds) {
     const format = formats[kind]
     if (typeof format === 'string' && /^[a-z0-9]{1,8}$/.test(format))
       result.lastFormat[kind] = format
-    const folder = folders[kind] as Record<string, unknown> | undefined
-    if (
-      folder &&
-      typeof folder === 'object' &&
-      typeof folder.spaceId === 'string' &&
-      typeof folder.itemId === 'string' &&
-      folder.spaceId.length > 0 &&
-      folder.itemId.length > 0 &&
-      folder.spaceId.length <= MAX_ID_LENGTH &&
-      folder.itemId.length <= MAX_ID_LENGTH
-    )
+    const folder = folders[kind]
+    if (isFileRef(folder))
       result.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
   }
   if (Number.isInteger(value.createdCount) && (value.createdCount as number) >= 0)
@@ -139,7 +109,6 @@ export function createViewPreferenceStore(
     }
   }
 }
-export type ViewPreferenceStore = ReturnType<typeof createViewPreferenceStore>
 
 export function compactBand(preferences: Pick<ViewPreferences, 'band' | 'createdCount'>) {
   return (

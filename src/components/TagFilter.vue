@@ -2,7 +2,7 @@
 import { nextTick, ref } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { FileCatalog, RecentFilter } from '../contracts/office'
-import { errorText } from '../services/home'
+import { errorText } from '../services/errors'
 
 const props = defineProps<{ catalog: FileCatalog; filter: RecentFilter }>()
 const emit = defineEmits<{ change: [tags: string[]] }>()

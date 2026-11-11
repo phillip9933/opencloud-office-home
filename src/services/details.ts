@@ -5,7 +5,7 @@ import {
   type FileRef,
   type Result
 } from '../contracts/office'
-import { attempt } from './home'
+import { attempt } from './errors'
 
 // Optional columns share one session-owned queue instead of fetching every row at once.
 const MAX_IN_FLIGHT = 4

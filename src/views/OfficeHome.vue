@@ -57,9 +57,17 @@ const destination = computed(() =>
   [
     state.value.spaces.find((space) => space.id === state.value.location.spaceId)?.name ??
       'Not available',
-    ...state.value.location.trail.map((part) => part.name)
-  ].join(' / ')
+    state.value.location.folderName
+  ]
+    .filter(Boolean)
+    .join(' / ')
 )
+async function reconcile() {
+  const current = model.value
+  await current.reconcileCreation()
+  await nextTick()
+  if (current === model.value && current.state.created) openCreated.value?.focus()
+}
 function start(template: Template | undefined, opener: HTMLElement) {
   void createPanel.value?.open(template, opener)
 }
@@ -140,7 +148,10 @@ onBeforeUnmount(() => {
         @start="start"
       >
         <p v-if="state.uncertain" role="alert">
-          Creation is paused until its outcome is reconciled in Files. Do not submit another copy.
+          Creation is paused until its outcome is reconciled. Do not submit another copy.
+          <button type="button" class="office-link" :disabled="state.mutation" @click="reconcile">
+            {{ state.mutation ? 'Checking destination…' : 'Check destination' }}
+          </button>
         </p>
       </TemplateStrip>
 

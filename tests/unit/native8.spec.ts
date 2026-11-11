@@ -345,8 +345,7 @@ describe('native SDK integration boundaries', () => {
     await t.init()
     const launch = {
       file: { spaceId: 'space', itemId: 'file' },
-      mode: 'view' as const,
-      returnTo: { kind: 'docs' as const, spaceId: 'space', folder: rootRef, trail: [], scroll: 0 }
+      mode: 'view' as const
     }
     expect((await t.native.services.editor.open(launch)).ok).toBe(true)
     expect(t.port.open.mock.calls[0]![1]).toBe('view')
@@ -370,8 +369,7 @@ describe('native SDK integration boundaries', () => {
     })
     const result = await t.native.services.editor.open({
       file: { spaceId: 'space', itemId: 'file' },
-      mode: 'edit',
-      returnTo: { kind: 'docs', spaceId: 'space', folder: rootRef, trail: [], scroll: 0 }
+      mode: 'edit'
     })
     expect(result).toEqual({ ok: false, error: 'unauthenticated' })
     expect(t.port.open).not.toHaveBeenCalled()

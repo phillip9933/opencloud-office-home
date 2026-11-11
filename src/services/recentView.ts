@@ -1,18 +1,19 @@
 import type { FileRecord } from '../contracts/office'
 
+import { DAY_MS } from '../contracts/files'
+import type { RecentSort } from '../contracts/preferences'
+export type { RecentSort } from '../contracts/preferences'
+
 // A file is recent because it was opened in this browser, changed in OpenCloud, or both.
 export interface RecentEntry {
   file: FileRecord
   openedAt?: number
   modifiedAt?: number
 }
-export type RecentSort = 'activity' | 'name'
 export interface RecentGroup {
   label: string
   entries: RecentEntry[]
 }
-
-const DAY = 86_400_000
 
 export function lastActivity(entry: RecentEntry): { at: number; kind: 'opened' | 'changed' } {
   const opened = entry.openedAt ?? -Infinity
@@ -54,7 +55,7 @@ export function groupRecents(
   ]
   for (const entry of sorted) {
     const at = lastActivity(entry).at
-    const index = at >= today ? 0 : at >= today - 7 * DAY ? 1 : at >= today - 30 * DAY ? 2 : 3
+    const index = at >= today ? 0 : at >= today - 7 * DAY_MS ? 1 : at >= today - 30 * DAY_MS ? 2 : 3
     buckets[index]!.entries.push(entry)
   }
   return buckets.filter((group) => group.entries.length)

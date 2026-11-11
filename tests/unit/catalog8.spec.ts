@@ -202,15 +202,6 @@ describe('8.x SDK catalog candidate', () => {
       { depth: 1, signal: test.query.signal, extraProps: ['d:creationdate'] }
     )
   })
-  it('does not substitute an incomplete folder listing for unsupported pagination', async () => {
-    const test = setup()
-    await test.catalog.listSpaces(test.query.signal)
-    expect(await test.catalog.list({ ...test.query, cursor: 'opaque-cursor' })).toEqual({
-      ok: false,
-      error: 'paginationUnavailable'
-    })
-    expect(test.port.webdav.listFiles).not.toHaveBeenCalled()
-  })
   it('discards in-flight metadata after account change and clears previously discovered roots', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)
@@ -435,19 +426,4 @@ describe('8.x SDK catalog candidate', () => {
   ])('maps SDK failure categories without raw responses', (error, expected) => {
     expect(catalogError(error)).toBe(expected)
   })
-})
-
-it('uses bounded literal filename search and refuses KQL metacharacters', async () => {
-  const test = setup()
-  await test.catalog.listSpaces(test.query.signal)
-  for (const term of ['" OR name:*', 'a\\b', '*', 'a'.repeat(201)])
-    expect(await test.catalog.search('docs', term, test.query.signal)).toEqual({
-      ok: false,
-      error: 'invalidSearch'
-    })
-  expect(test.port.webdav.search).not.toHaveBeenCalled()
-  await test.catalog.search('docs', 'Quarterly report', test.query.signal)
-  expect(test.port.webdav.search.mock.calls[0]![0]).toBe(
-    'name:"*Quarterly report*" AND mediatype:("document")'
-  )
 })

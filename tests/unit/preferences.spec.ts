@@ -86,3 +86,12 @@ describe('view preferences', () => {
     expect(movePin(['a', 'b'], 'missing', 0)).toEqual(['a', 'b'])
   })
 })
+
+it('stores only canonical reference fields from browser preferences', () => {
+  const preferences = parseViewPreferences({
+    templateFolder: { spaceId: 'space', itemId: 'templates', unexpected: 'Discarded label' },
+    lastFolder: { docs: { spaceId: 'space', itemId: 'destination', unexpected: 'Discarded label' } }
+  })
+  expect(preferences.templateFolder).toEqual({ spaceId: 'space', itemId: 'templates' })
+  expect(preferences.lastFolder.docs).toEqual({ spaceId: 'space', itemId: 'destination' })
+})

@@ -4,7 +4,7 @@ import AppSidebar from '../components/AppSidebar.vue'
 import FolderPicker from '../components/FolderPicker.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord } from '../contracts/office'
-import { errorText } from '../services/home'
+import { errorText } from '../services/errors'
 import { describeFolder as describeFolderLabel } from '../services/folderLabel'
 const props = defineProps<{ context: OfficeContext }>()
 const preferences = props.context.preferences
@@ -26,8 +26,8 @@ async function describeFolder() {
   folderLabel.value = ''
   const selected =
     props.context.services.configuration?.allowPersonalTemplates === false
-      ? props.context.services.templateFolderDefault
-      : (preferences.templateFolder ?? props.context.services.templateFolderDefault)
+      ? props.context.services.configuration?.templateFolder
+      : (preferences.templateFolder ?? props.context.services.configuration?.templateFolder)
   if (!selected) return
   const result = await describeFolderLabel(
     props.context.services.catalog,
@@ -111,7 +111,7 @@ onMounted(async () => {
             "
             :catalog="context.services.catalog"
             title="Choose template folder"
-            :start="preferences.templateFolder ?? context.services.templateFolderDefault"
+            :start="preferences.templateFolder ?? context.services.configuration?.templateFolder"
             @choose="chooseTemplateFolder"
             @cancel="choosingFolder = false"
           />

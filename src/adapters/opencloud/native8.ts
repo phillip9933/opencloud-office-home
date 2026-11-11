@@ -5,6 +5,7 @@ import {
   ok,
   refKey,
   type CreationRequest,
+  type ActionFeedback,
   type FileRecord,
   type FileRef,
   type OfficeServices,
@@ -24,8 +25,8 @@ import {
 import { createProviderCapabilities8, type ProviderPort8 } from './providers8'
 import { nativeAccess8 } from './access8'
 import { canonicalRootDrives8 } from './roots8'
+import { HttpStatusError } from './errors8'
 import { defaultConfiguration, type OfficeConfiguration } from '../../configuration'
-import { officeApps } from '../../app/registry'
 
 export interface NativeResource8 {
   space: SpaceResource
@@ -53,10 +54,6 @@ interface NativeOptions {
 function mutationError(error: unknown) {
   const known = catalogError(error)
   if (known !== 'unknown') return known
-  const status =
-    typeof error === 'object' && error !== null && 'status' in error ? error.status : undefined
-  if (status === 409 || status === 412) return 'conflict'
-  if (status === 507) return 'quotaExceeded'
   // An unclassified failure after dispatch might still have created the file. Never retry it.
   return 'timeout'
 }
@@ -71,18 +68,12 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
   const configuration = options.configuration ?? defaultConfiguration()
-  const applications = officeApps
   const catalog = createCatalog8(
     { ...port, drives: canonicalRootDrives8(port) },
     session,
-    nativeAccess8,
-    applications
+    nativeAccess8
   )
-  const capabilities = createProviderCapabilities8(
-    port,
-    applications,
-    configuration.creationFormats
-  )
+  const capabilities = createProviderCapabilities8(port, configuration.creationFormats)
   const pendingNames = new Set<string>()
   const previewUrls = new Set<string>()
   const abort = new AbortController()
@@ -206,34 +197,19 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
         endpoint.searchParams.set('filename', input.name)
         dispatched = true
         const response = await port.requestNew(endpoint.href)
-        console.info('Office creation response', JSON.stringify({ status: response.status }))
-        if (response.status !== 200) throw { status: response.status }
+        if (response.status !== 200) throw new HttpStatusError(response.status)
       }
       acknowledged = true
       if (!session()) return fail('unauthenticated')
       const resource = await port.webdav.getFileInfo(destination.value.space, { path })
       if (!session()) return fail('unauthenticated')
       const result = normalizeReadMetadata(destination.value.space.id, resource)
-      console.info(
-        'Office creation resolution',
-        JSON.stringify({
-          normalized: result.ok,
-          nameMatches: result.ok && result.value.name === input.name,
-          mimeMatches: result.ok && result.value.mimeType === input.format.mimeType,
-          mimePresent: !!resource.mimeType,
-          empty: String(resource.size) === '0'
-        })
-      )
       if (!result.ok) return fail('timeout')
       if (result.value.name !== input.name || result.value.mimeType !== input.format.mimeType)
         return fail('timeout')
       result.value.access = nativeAccess8(resource)
       return result
     } catch (error) {
-      console.info(
-        'Office creation failure',
-        JSON.stringify({ acknowledged, dispatched, category: catalogError(error) })
-      )
       return fail(
         acknowledged ? 'timeout' : dispatched ? mutationError(error) : catalogError(error)
       )
@@ -245,8 +221,6 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   const services: OfficeServices = {
     mode: 'native',
     configuration,
-    applications,
-    templateFolderDefault: configuration.templateFolder,
     catalog,
     capabilities,
     filters: options.filters,
@@ -259,7 +233,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     templates(kind, selectedFolder) {
       const folder = selectedFolder ?? configuration.templateFolder
       if (!folder) return Promise.resolve(ok([]))
-      return folderTemplates(catalog, folder, kind, abort.signal, applications)
+      return folderTemplates(catalog, folder, kind, abort.signal)
     },
     editor: {
       async open(input) {
@@ -286,7 +260,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
         try {
           if (!session()) return fail('unauthenticated')
           await port.download(item.value)
-          return session() ? ok(undefined) : fail('unauthenticated')
+          return session() ? ok({}) : fail('unauthenticated')
         } catch (error) {
           return fail(catalogError(error))
         }
@@ -317,12 +291,12 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       }
     }
   }
-  async function files(ref: FileRef, sharing: boolean): Promise<Result<void>> {
+  async function files(ref: FileRef, sharing: boolean): Promise<Result<ActionFeedback>> {
     const item = await read(ref)
     if (!item.ok) return item
     try {
       if (!session()) return fail('unauthenticated')
-      return (await port.files(item.value, sharing)) ? ok(undefined) : fail('editorUnavailable')
+      return (await port.files(item.value, sharing)) ? ok({}) : fail('editorUnavailable')
     } catch (error) {
       return fail(catalogError(error))
     }

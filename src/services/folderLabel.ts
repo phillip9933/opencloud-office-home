@@ -1,5 +1,5 @@
 import { fail, ok, type FileCatalog, type FileRef, type Result } from '../contracts/office'
-import { attempt } from './home'
+import { attempt } from './errors'
 
 /** ID-addressed DAV paths may be `/` for a nested folder; its name remains authoritative. */
 export async function describeFolder(

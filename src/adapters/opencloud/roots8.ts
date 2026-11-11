@@ -1,5 +1,6 @@
 import type { ReadPort8 } from './catalog8'
 import { normalizeReadMetadata } from './catalog8'
+import { HttpStatusError } from './errors8'
 
 /** Graph's root DriveItem ID is not necessarily the DAV file ID used by id-based URLs. */
 export function canonicalRootDrives8(port: ReadPort8): ReadPort8['drives'] {
@@ -16,7 +17,7 @@ export function canonicalRootDrives8(port: ReadPort8): ReadPort8['drives'] {
         )
         const root = normalizeReadMetadata(drive.id, resource)
         if (!root.ok || root.value.kind !== 'folder' || root.value.path !== '/')
-          throw { statusCode: 404 }
+          throw new HttpStatusError(404)
         // Preserve the opaque server-returned ID; never construct one from drive ID fragments.
         result.push({ ...drive, root: { ...drive.root, id: root.value.ref.itemId } })
       }

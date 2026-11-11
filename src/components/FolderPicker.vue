@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { FileCatalog, FileRecord, FileRef, Space } from '../contracts/office'
-import { attempt, errorText } from '../services/home'
+import { attempt, errorText } from '../services/errors'
 const props = defineProps<{
   catalog: FileCatalog
   title: string

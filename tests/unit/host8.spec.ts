@@ -37,7 +37,7 @@ it.each([true, false])(
   }
 )
 
-it('loads static configuration without a shared-file read or settings-management ability', async () => {
+it('loads static configuration without a shared-file read or settings-management ability', () => {
   const scope = effectScope()
   const configuration = {
     allowPersonalTemplates: false,
@@ -46,7 +46,9 @@ it('loads static configuration without a shared-file read or settings-management
   }
   const { context } = scope.run(() => useNativeOffice8(configuration))!
   expect(context.value?.services.configuration).toEqual(configuration)
-  expect(context.value?.services.templateFolderDefault).toEqual(configuration.templateFolder)
+  expect(context.value?.services.configuration?.templateFolder).toEqual(
+    configuration.templateFolder
+  )
   expect(context.value?.services).not.toHaveProperty('administration')
   context.value?.dispose()
   scope.stop()

@@ -11,11 +11,15 @@ import './preview.css'
 import OfficeHome from './views/OfficeHome.vue'
 import OfficeSettings from './views/OfficeSettings.vue'
 import { OcSpinner } from '@opencloud-eu/design-system/components'
-import { officeApps } from './app/registry'
+import { officeApps, officeRoute } from './app/registry'
 import { createOfficeContext } from './app/context'
 import { fixtureServices } from './fixtures/services'
 
-const services = fixtureServices({ seedHistory: true, preferenceStorage: window.sessionStorage })
+const services = fixtureServices({
+  delayMs: 80,
+  seedHistory: true,
+  preferenceStorage: window.sessionStorage
+})
 const context = createOfficeContext(services)
 const router = createRouter({
   history: createWebHashHistory(),
@@ -28,7 +32,7 @@ const router = createRouter({
     },
     ...officeApps.map((app) => ({
       path: `/office/${app.id}`,
-      name: app.route,
+      name: officeRoute(app.id),
       component: OfficeHome,
       props: { kind: app.id, context }
     })),

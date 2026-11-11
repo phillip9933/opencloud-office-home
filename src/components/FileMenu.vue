@@ -2,7 +2,8 @@
 import { nextTick, onBeforeUnmount, ref } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { Activity, FileRecord, OfficeServices } from '../contracts/office'
-import { errorText, type FileMenuAction } from '../services/home'
+import { errorText } from '../services/errors'
+import type { FileMenuAction } from '../services/home'
 
 const props = defineProps<{ file: FileRecord; services: OfficeServices; disabled: boolean }>()
 const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord] }>()

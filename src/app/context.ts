@@ -1,5 +1,5 @@
 import { reactive, toRaw, watch } from 'vue'
-import { officeApps, validateMenu, type AppDescriptor } from './registry'
+import { officeApps } from './registry'
 import type {
   FileRef,
   HomeLocation,
@@ -10,13 +10,8 @@ import type {
 import { createHomeModel, type HomeModel } from '../services/home'
 import { createDetailLoader } from '../services/details'
 
-export function createOfficeContext(
-  services: OfficeServices,
-  menuEntries: readonly AppDescriptor[] = services.applications ?? officeApps,
-  installedRoutes: ReadonlySet<string> = new Set(officeApps.map((app) => app.route))
-) {
+export function createOfficeContext(services: OfficeServices) {
   const details = createDetailLoader(services.catalog)
-  const menu = validateMenu(menuEntries, installedRoutes)
   const models = new Map<OfficeKind, HomeModel>()
   const views = new Map<string, HomeLocation>()
   const lastView = new Map<OfficeKind, string>()
@@ -45,7 +40,7 @@ export function createOfficeContext(
     },
     services,
     details,
-    menu,
+    menu: officeApps,
     preferences,
     recentFilter,
     views,

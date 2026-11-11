@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createRecentStore } from '../../src/preferences/recents'
 
 describe('browser-local recents', () => {
-  it('isolates users and instances, stores only references and clears on request', () => {
+  it('isolates users and instances, stores only references and removes revoked entries', () => {
     const map = new Map<string, string>()
     const storage = {
       getItem: (k: string) => map.get(k) ?? null,
@@ -21,7 +21,7 @@ describe('browser-local recents', () => {
       createRecentStore({ ...scope, instance: 'https://other.example' }, storage).list('docs')
     ).toEqual([])
     expect([...map.values()][0]).not.toMatch(/filename|path|token|content/i)
-    store.clear()
+    store.remove({ spaceId: 'opaque:space', itemId: 'opaque:id' })
     expect(createRecentStore(scope, storage).list('docs')).toEqual([])
   })
   it('deduplicates, bounds history, expires it, and tolerates denied browser storage', () => {
@@ -49,7 +49,7 @@ describe('browser-local recents', () => {
     const fallback = createRecentStore({ instance: 'a', user: 'a' }, broken)
     expect(() => {
       fallback.record({ spaceId: 's', itemId: '1' }, 'docs')
-      fallback.clear()
+      fallback.remove({ spaceId: 's', itemId: '1' })
     }).not.toThrow()
   })
   it('rejects unscoped history and removes corrupted or future data', () => {

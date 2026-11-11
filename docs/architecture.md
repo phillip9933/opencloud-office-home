@@ -1,13 +1,17 @@
 # Architecture
 
-The intended product is one native OpenCloud Web package with three home routes and one declarative app menu. The native test adapter binds those workflows to the host Web 8.2.1 composables. Full deployment acceptance is still pending. The project tier and eventual audience/distribution are unconfirmed. Apply the web application profile; use OWASP ASVS 5.0 as a security review reference, without claiming conformance.
+The intended product is one native OpenCloud Web package with three home routes and one declarative
+app menu. The native test adapter binds those workflows to the host Web 8.2.1 composables. Full
+deployment acceptance is still pending. The project tier and eventual audience/distribution are
+unconfirmed. Apply the web application profile; use OWASP ASVS 5.0 as a security review reference,
+without claiming conformance.
 
 ## System and feature map
 
 | Feature               | Entry point                                                    | Responsibility                                                                                                       |
 | --------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Native registration   | `src/index.ts`                                                 | Three authenticated family routes, a settings route and one native Office menu entry                                 |
-| Shared menu           | `src/app/registry.ts`, `src/components/AppSidebar.vue`         | Validate reviewed descriptors against installed route names; reject executable/remote fields                         |
+| Shared menu           | `src/app/registry.ts`, `src/components/AppSidebar.vue`         | Compile-time office descriptors and one shared native route-name helper                                              |
 | Session navigation    | `src/app/context.ts`                                           | Per-family models and at most 100 session view snapshots, referenced by opaque URL keys                              |
 | Home screens          | `src/views/OfficeHome.vue`                                     | Composes start band, filters/view toolbar, recents and inline creation                                               |
 | Home components       | `src/components/`                                              | Template strip/gallery, inline creation panel, recent list/grid, creation/template folder picker, preview thumbnails |
@@ -16,77 +20,216 @@ The intended product is one native OpenCloud Web package with three home routes 
 | View preferences      | `src/preferences/view.ts`                                      | Scoped, validated view choices, template pins, last format/folder                                                    |
 | File presentation     | `src/components/FileList.vue`, `FileMenu.vue`, `FileMarks.vue` | Shared list/grid, per-file actions menu with lazy latest activity, status marks                                      |
 | Column preferences    | `src/components/ColumnMenu.vue`, `ColumnChoices.vue`           | In-place column selection and ordering without leaving the home                                                      |
-| Workflow              | `src/services/home.ts`                                         | Request generations, cancellation, permission refresh, create/open guards and recovery                               |
+| Workflow              | `src/services/home.ts`, `creation.ts`, `loadRecent.ts`         | Home lifecycle, isolated creation/reconciliation and recent merging                                                  |
 | Integration contracts | `src/contracts/office.ts`                                      | Typed, app-owned catalog, capability, creation and gateway boundaries                                                |
 | Native adapter        | `src/adapters/opencloud/host8.ts`, `native8.ts`, `catalog8.ts` | Host binding (`host8.ts`), session-scoped catalog and permission-aware operations (`native8.ts`, `access8.ts`)       |
 | Provider capabilities | `src/adapters/opencloud/providers8.ts`                         | Creation formats from the app registry and app-provider capability                                                   |
 | Recent history        | `src/preferences/recents.ts`                                   | References only, instance/user scope, 100 entries and 90-day retention                                               |
 | Preview               | `src/preview.ts`, `src/fixtures/services.ts`                   | Explicit synthetic, session-only testing without OpenCloud calls                                                     |
 
-Dependency direction is views → workflow → typed ports → release-specific adapter. Only native registration and the native adapter depend on Web APIs; provider names do not appear in UI workflows. Vue and OpenCloud packages are mandatory for the native package. Fixture and unavailable adapters exist to test the boundary without requiring a live host.
+Dependency direction is views → workflow → typed ports → release-specific adapter. Only native
+registration and the native adapter depend on Web APIs; provider names do not appear in UI
+workflows. Vue and OpenCloud packages are mandatory for the native package. The separate fixture
+adapter tests the boundary without a live host. Unavailable native services fail closed at host
+startup; there is no second unavailable adapter.
 
-The larger home loading function intentionally keeps one request generation across spaces, capabilities, destination, catalog and recents. This makes late-response rejection visible in one lifecycle. Mutation and editor workflows are separate functions; further decomposition should follow behavior, not line counts alone.
+The home model owns request generations and one cancellation lifecycle across space discovery,
+capabilities, templates, destination metadata and recents. It never lists the current folder for an
+invisible file view. Folder listing is reserved for destination/template pickers, template reading
+and explicit creation reconciliation. The loading function keeps this shared lifecycle in one place
+so late-response rejection remains visible.
 
-The `createCatalog8` adapter accepts the installed SDK's normal-user space discovery and metadata methods. Its session key includes instance, user and authentication generation; changes clear roots and discard pending responses. Metadata normalization denies writes by default; the native binding supplies explicit DAV permission checks. Received-share aliases and pagination remain unsupported, and folder completeness is labeled partial (DL-003).
+`services/loadRecent.ts` merges revalidated browser references with backend changes.
+`services/creation.ts` validates the requested name and refreshes destination/template access and
+creation capabilities. The native adapter independently checks current permissions, capabilities,
+canonical destination paths and collisions before dispatch; these checks are intentional trust
+boundaries. `services/errors.ts` owns safe messages and exception conversion. Contracts depend only
+on other contracts; preference parsing and column rendering depend on leaf preference types.
 
-The `createProviderCapabilities8` adapter reads the host's app-provider registry and capability on every call, so a provider removed after a screen loaded blocks creation at submit time. The registry is server-wide metadata loaded without authentication; it describes which editors exist, not what the user may do. Creation formats are the intersection of explicitly enabled creation, `allow_creation` from a named provider and the family descriptor. "No provider for this family" and "provider cannot create this family" are separate states. See DL-005 and the observed deployment in [compatibility](compatibility.md).
+An ambiguous creation retains its exact request and blocks retries. Check destination performs only
+a listing and an identity/access revalidation. One matching name and MIME exposes the existing
+resource for inspection and releases the pause, without another mutation or a claim about who
+created it or whether content saved. Missing, partial, denied or failed results never prove absence
+and keep creation paused. Logout disposes the pending request. Preview feedback comes from operation
+results; production workflows do not branch on fixture mode.
+
+The `createCatalog8` adapter accepts the installed SDK's normal-user space discovery and metadata
+methods. Its session key includes instance, user and authentication generation; changes clear roots
+and discard pending responses. Metadata normalization denies writes by default; the native binding
+supplies explicit DAV permission checks. Received-share aliases and pagination remain unsupported,
+and folder completeness is labeled partial (DL-003).
+
+The `createProviderCapabilities8` adapter reads the host's app-provider registry and capability on
+every call, so a provider removed after a screen loaded blocks creation at submit time. The registry
+is server-wide metadata loaded without authentication; it describes which editors exist, not what
+the user may do. Creation formats are the intersection of explicitly enabled creation,
+`allow_creation` from a named provider and the family descriptor. "No provider for this family" and
+"provider cannot create this family" are separate states. See DL-005 and the observed deployment in
+[compatibility](compatibility.md).
 
 ## Data flows and trust boundaries
 
-Live resource reads, copy/create and editor launches use the host's authenticated services, with upstream authorization on every operation. The native entry uses `useClientService`, the user/auth stores, the app-provider registry, native file-action routes and the preview service. It does not read credential values. Scope changes dispose the old context, abort the adapter and reject late results; the next account receives a fresh context. Server responses must be normalized and validated in the release adapter. File names and labels are rendered as text, not HTML. IDs remain opaque tuples rather than parsed paths.
+Live resource reads, copy/create and editor launches use the host's authenticated services, with
+upstream authorization on every operation. The native entry uses `useClientService`, the user/auth
+stores, the app-provider registry, native file-action routes and the preview service. It does not
+read credential values. Scope changes dispose the old context, abort the adapter and reject late
+results; the next account receives a fresh context. Server responses must be normalized and
+validated in the release adapter. File names and labels are rendered as text, not HTML. IDs remain
+opaque tuples rather than parsed paths.
 
-The native host owns authentication, tokens, sharing, resource lifecycle, editor credentials and save state. This app must not introduce an identity system, WOPI protocol, private document store or token storage. Native editor launch acceptance is distinct from durable saving. The current fixture gateway only simulates acceptance.
+The native host owns authentication, tokens, sharing, resource lifecycle, editor credentials and
+save state. This app must not introduce an identity system, WOPI protocol, private document store or
+token storage. Native editor launch acceptance is distinct from durable saving. The current fixture
+gateway only simulates acceptance.
 
-Search and folder changes abort previous requests and reject late responses even when cancellation is ignored. Loading and failed refreshes remove previous private metadata. A selected space that becomes unavailable is an error; the workflow does not silently switch to another space.
+Search and folder changes abort previous requests and reject late responses even when cancellation
+is ignored. Loading and failed refreshes remove previous private metadata. A selected space that
+becomes unavailable is an error; the workflow does not silently switch to another space.
 
-Templates come from a personal preference override or one administrator-maintained OpenCloud folder, read through the same catalog port as browsing ([templates](templates.md)). `folderTemplates` lists the root and one level of subfolders with an unfiltered listing so it can pair templates with same-name preview images; it never copies, uploads or edits that folder. Remote template URLs are not accepted. Card previews come only from the `preview` port, which must use the host's authorized preview endpoint and returns a releasable URL; there is no client-side document parsing or external image service. OpenCloud 9.0.0 previews images, plain text, audio and GeoGebra files only, so office documents fall back to format cards.
+Templates come from a personal preference override or one administrator-maintained OpenCloud folder,
+read through the same catalog port as browsing ([templates](templates.md)). `folderTemplates` lists
+the root and one level of subfolders with an unfiltered listing so it can pair templates with
+same-name preview images; it never copies, uploads or edits that folder. Remote template URLs are
+not accepted. Card previews come only from the `preview` port, which must use the host's authorized
+preview endpoint and returns a releasable URL; there is no client-side document parsing or external
+image service. OpenCloud 9.0.0 previews images, plain text, audio and GeoGebra files only, so office
+documents fall back to format cards.
 
-Creation resolves destination permissions and capabilities immediately before mutation; template operations also resolve source access. Repeated submissions are locked. An uncertain mutation outcome blocks retries pending reconciliation. A successful created resource remains recoverable even when open fails or the user navigates away; it is not inserted into an unrelated folder's list. Real template revision, overwrite and copied-share behavior remain unverified.
+Creation resolves destination permissions and capabilities immediately before mutation; template
+operations also resolve source access. Repeated submissions are locked. An uncertain mutation
+outcome blocks retries pending reconciliation. A successful created resource remains recoverable
+even when open fails or the user navigates away; it is not inserted into an unrelated folder's list.
+Real template revision, overwrite and copied-share behavior remain unverified.
 
-Opening re-resolves the resource, selects view mode for read-only access, guards repeated launches, and records history only after gateway acceptance. This does not prove editor readiness or saving. A late resolution after navigation does not launch an obsolete file.
+Opening re-resolves the resource, selects view mode for read-only access, guards repeated launches,
+and records history only after gateway acceptance. This does not prove editor readiness or saving. A
+late resolution after navigation does not launch an obsolete file.
 
 ## Storage, privacy and deletion
 
-The optional browser recent store contains only resource IDs, family and opened timestamp. Its key includes instance and authenticated user; data is pruned to 100 entries/90 days. Entries are resolved again before display. Browser site-data removal clears them; the Settings page has no history-clear control. The native adapter keys browser preferences by instance and user, and disposes in-memory metadata and preference watchers at account or auth-context changes. Browser ID references remain scoped in local storage until browser site data is removed or references are pruned; no filenames or content are stored there. Cross-device recents are not implemented.
+The optional browser recent store contains only resource IDs, family and opened timestamp. Its key
+includes instance and authenticated user; data is pruned to 100 entries/90 days. Entries are
+resolved again before display. Browser site-data removal clears them; the Settings page has no
+history-clear control. The native adapter keys browser preferences by instance and user, and
+disposes in-memory metadata and preference watchers at account or auth-context changes. Browser ID
+references remain scoped in local storage until browser site data is removed or references are
+pruned; no filenames or content are stored there. Cross-device recents are not implemented.
 
-The Recent list merges two sources by resource identity. `FileCatalog.recentlyChanged` asks the host's authorized search for the family's media type changed in the last 30 days (`mtime:"last 30 days" AND mediatype:(…)`); the server ranks by score and caps results, so the adapter sorts by modification time and marks truncated or unmapped results as partial. Hits are mapped to spaces by storage ID, as Web does; received shares mounted elsewhere are skipped until share resolution is verified. Changes may be by anyone with access, because the verified API exposes no modifier filter. Browser-opened references come from the scoped local store and are re-resolved before display. OpenCloud exposes no per-user file-open record, so opens on other devices cannot be shown.
+The Recent list merges two sources by resource identity. `FileCatalog.recentlyChanged` asks the
+host's authorized search for the family's media type changed in the last 30 days (`mtime:"last 30
+days" AND mediatype:(…)`); the server ranks by score and caps results, so the adapter sorts by
+modification time and marks truncated or unmapped results as partial. Hits are mapped to spaces by
+storage ID, as Web does; received shares mounted elsewhere are skipped until share resolution is
+verified. Changes may be by anyone with access, because the verified API exposes no modifier filter.
+Browser-opened references come from the scoped local store and are re-resolved before display.
+OpenCloud exposes no per-user file-open record, so opens on other devices cannot be shown.
 
-General folder browsing is owned by native OpenCloud Files. Office Home retains folder pickers for creation destinations and template preferences.
+General folder browsing is owned by native OpenCloud Files. Office Home retains folder pickers for
+creation destinations and template preferences.
 
-Search is owned by the native host header. Office Home has no duplicate search UI or scope selector. The catalog’s bounded filename-search adapter remains independently tested as an integration contract; it does not render a second search screen. File actions (Show in Files, Download, Share) are a `FileActions` port the native adapter fulfils through OpenCloud Web; the app never builds download or editor URLs itself. Copy link uses the resource's private link, only when it is https. The latest-activity line comes from the Graph activities endpoint with the Files panel's query shape (`itemid:… AND limit:1 AND sort:desc`), rendered as plain text and requested only when a menu opens. Status marks come from resource metadata (favorite, share types, lock and lock owner).
+Search is owned by the native host header. Office Home has no duplicate search UI or scope selector.
+No standalone filename-search contract remains in the app. File actions (Show in Files, Download, Share)
+are a `FileActions` port the native adapter fulfils through OpenCloud Web; the app never builds
+download or editor URLs itself. Copy link uses the resource's private link, only when it is https.
+The latest-activity line comes from the Graph activities endpoint with the Files panel's query shape
+(`itemid:… AND limit:1 AND sort:desc`), rendered as plain text and requested only when a menu opens.
+Status marks come from resource metadata (favorite, share types, lock and lock owner).
 
-View preferences (sort, layout, compact band, ordered pinned template IDs per family, last format and last save folder ID per family) live in a versioned browser store keyed by instance and user, validated and bounded on load (`src/preferences/view.ts`). Pins only reorder templates the user can already see; IDs no longer in the gallery are ignored. OpenCloud's settings service is not used because no app-preference contract has been verified, so preferences do not follow the user to other browsers. Recent filters (favorites, tags) are session state. Favorites and tags are offered only when the host capability (native `read Favorite` ability and `files.tags`) allows; the filter is sent as `is:favorite` and `tag:(…)` and also applied to browser-opened entries from their resolved metadata. Tag text with quote or escape characters is never placed in the query; such filters apply locally only. The tag list comes from the Graph tags endpoint. Session navigation snapshots contain query/folder/scroll state in memory, at most 100 entries. URLs carry only a session key, not search strings or names. Reloading loses this state and safely returns to the app root. Native editor return and real logout/account-switch behavior still need live acceptance; isolated tests cover disposal and stale-response rejection.
+View preferences (sort, layout, compact band, ordered pinned template IDs per family, last format
+and last save folder ID per family) live in a versioned browser store keyed by instance and user,
+validated and bounded on load (`src/preferences/view.ts`). Pins only reorder templates the user can
+already see; IDs no longer in the gallery are ignored. OpenCloud's settings service is not used
+because no app-preference contract has been verified, so preferences do not follow the user to other
+browsers. Recent filters (favorites, tags) are session state. Favorites and tags are offered only
+when the host capability (native `read Favorite` ability and `files.tags`) allows; the filter is
+sent as `is:favorite` and `tag:(…)` and also applied to browser-opened entries from their resolved
+metadata. Tag text with quote or escape characters is never placed in the query; such filters apply
+locally only. The tag list comes from the Graph tags endpoint. Session navigation snapshots contain
+destination/scroll state in memory, at most 100 entries. URLs carry only a session key, not search
+strings or names. Reloading loses this state and safely returns to the app root. Native editor
+return and real logout/account-switch behavior still need live acceptance; isolated tests cover
+disposal and stale-response rejection.
 
-No telemetry, analytics, external image proxy, document contents, credentials or real user data are sent by the preview. Dependency tooling contacts the public npm registry with package metadata during authorized setup/advisory checks; this is separate from product behavior.
+No telemetry, analytics, external image proxy, document contents, credentials or real user data are
+sent by the preview. Dependency tooling contacts the public npm registry with package metadata
+during authorized setup/advisory checks; this is separate from product behavior.
 
 ## Extension boundary
 
-Installation configuration is validated in `src/configuration.ts` and read directly from the host-provided application configuration by `host8.ts`. It supplies the installation template folder, personal-override permission and optional backend creation restrictions. The deployment administrator controls the actual app-local `config.json` or equivalent `apps.yaml` entry. It contains no credentials; malformed or unknown fields fail closed. Defaults require no configuration file.
+Installation configuration is validated in `src/configuration.ts` and read directly from the
+host-provided application configuration by `host8.ts`. It supplies the installation template folder,
+personal-override permission and optional backend creation restrictions. The deployment
+administrator controls the actual app-local `config.json` or equivalent `apps.yaml` entry. It
+contains no credentials; malformed or unknown fields fail closed. Defaults require no configuration
+file.
 
-There is no Administration route, shared policy-file dependency or configuration-write service. Office does not read the server filesystem, discover host mount paths or update server configuration. Configuration changes use the deployment's normal administrator workflow, then a host/browser reload. See [configuration](configuration.md), including migration from the retired shared-file console. Template-folder access remains enforced by OpenCloud; a folder reference grants no access.
+There is no Administration route, shared policy-file dependency or configuration-write service.
+Office does not read the server filesystem, discover host mount paths or update server
+configuration. Configuration changes use the deployment's normal administrator workflow, then a
+host/browser reload. See [configuration](configuration.md), including migration from the retired
+shared-file console. Template-folder access remains enforced by OpenCloud; a folder reference grants
+no access.
 
 ## Native operation boundaries
 
-`host8.ts` is the only module that calls host composables; `native8.ts` accepts typed ports so permission, account-change and uncertain-mutation behavior can be tested without credentials. Its creation pipeline stays sequential to keep permission checks, name preflight, dispatch and result reconciliation together. It never retries a dispatched request. Blank files use the host app-provider new endpoint, then resolve the resulting DAV identity. Ordinary document templates use native DAV COPY with overwrite disabled; template containers require editor conversion and are refused before dispatch (DL-006). No zero-byte office files are uploaded.
+`host8.ts` is the only module that calls host composables; `native8.ts` accepts typed ports so
+permission, account-change and uncertain-mutation behavior can be tested without credentials. Its
+creation pipeline stays sequential to keep permission checks, name preflight, dispatch and result
+reconciliation together. It never retries a dispatched request. Blank files use the host
+app-provider new endpoint, then resolve the resulting DAV identity. Ordinary document templates use
+native DAV COPY with overwrite disabled; template containers require editor conversion and are
+refused before dispatch (DL-006). No zero-byte office files are uploaded.
 
-Editor routes are chosen from the host’s ordered installed file handlers (`editorRoute8.ts`), preserving native context. The external-editor bridge supports explicit read-only mode. For another native handler, an explicit read-only request on an otherwise writable file is refused until that handler’s read-only contract is verified. Explicit read-only opening adds the verified `view_mode=read` query. Files and Share route to the native parent folder with `scrollTo` and, for Share, `details=sharing`; native Files owns selection and permission checks. Downloads use the host download composable; its host error notifications remain authoritative. Previews use uncached host-authorized blob URLs, revoked on release or session disposal.
+Editor routes are chosen from the host’s ordered installed file handlers (`editorRoute8.ts`),
+preserving native context. The external-editor bridge supports explicit read-only mode. For another
+native handler, an explicit read-only request on an otherwise writable file is refused until that
+handler’s read-only contract is verified. Explicit read-only opening adds the verified
+`view_mode=read` query. Files and Share route to the native parent folder with `scrollTo` and, for
+Share, `details=sharing`; native Files owns selection and permission checks. Downloads use the host
+download composable; its host error notifications remain authoritative. Previews use uncached
+host-authorized blob URLs, revoked on release or session disposal.
 
-The catalog currently includes personal/project spaces only. Received-share aliases are rejected rather than guessing canonical identities; Files remains available for them. Folder completeness is marked partial, and bounded name/recent searches mark truncation. No completeness or cross-device open-history claim is made.
+The catalog currently includes personal/project spaces only. Received-share aliases are rejected
+rather than guessing canonical identities; Files remains available for them. Folder completeness is
+marked partial, and bounded recent searches mark truncation. No completeness or cross-device
+open-history claim is made.
 
-Routing also goes through the host's `useRouter` composable (the `$router` service), avoiding a second Vue Router injection key across module-federation bundles. The isolated preview provides that same service explicitly. Native menu links and editor return context therefore use the host router instance.
+Routing also goes through the host's `useRouter` composable (the `$router` service), avoiding a
+second Vue Router injection key across module-federation bundles. The isolated preview provides that
+same service explicitly. Native menu links and editor return context therefore use the host router
+instance.
 
-The native drive-discovery wrapper (`roots8.ts`) resolves each authorized root by its space-relative DAV path before publishing a canonical root reference. Graph DriveItem IDs and DAV file IDs are different contracts. Returned IDs are kept opaque; host drive objects are not mutated. Root identity checks on later reads remain strict.
+The native drive-discovery wrapper (`roots8.ts`) resolves each authorized root by its space-relative
+DAV path before publishing a canonical root reference. Graph DriveItem IDs and DAV file IDs are
+different contracts. Returned IDs are kept opaque; host drive objects are not mutated. Root identity
+checks on later reads remain strict.
 
-Root folder listings use the SDK's space-relative `/` path, then validate that the response has the expected canonical file ID. Child folders continue to use opaque IDs. Native listing diagnostics report counts only (received, classified, readable, folders, share aliases and missing permission metadata); no names, IDs, URLs, credentials or content are logged or sent elsewhere.
+Root folder listings use the SDK's space-relative `/` path, then validate that the response has the
+expected canonical file ID. Child folders continue to use opaque IDs. Temporary catalog and creation
+diagnostics have been removed; no resource metadata is logged.
 
-The settings view (`src/views/OfficeSettings.vue`) owns template-folder/display preferences. `ColumnMenu.vue` edits scoped column preferences in place. `CreatePanel.vue` keeps naming inline; `FolderPicker.vue` opens a native HTML dialog with locations, breadcrumbs, local filtering and folder rows. It traps focus through native modal behavior, restores the caller on cancellation, and aborts stale navigation reads. A resumed folder without known ancestors shows an ellipsis rather than fabricated breadcrumbs. No automatic mutation occurs. The selected destination is re-resolved at submission, independent from the home browsing folder. Personal template overrides contain canonical references only and never alter the administrator default or source documents.
+The settings view (`src/views/OfficeSettings.vue`) owns template-folder/display preferences.
+`ColumnMenu.vue` edits scoped column preferences in place. `CreatePanel.vue` keeps naming inline;
+`FolderPicker.vue` opens a native HTML dialog with locations, breadcrumbs, local filtering and
+folder rows. It traps focus through native modal behavior, restores the caller on cancellation, and
+aborts stale navigation reads. A resumed folder without known ancestors shows an ellipsis rather
+than fabricated breadcrumbs. No automatic mutation occurs. The selected destination is re-resolved
+at submission, independent from the home browsing folder. Personal template overrides contain
+canonical references only and never alter the administrator default or source documents.
 
-Optional owner/creation-date columns use per-call DAV metadata (`d:creationdate`) and the SDK owner display name. Search hits missing these fields are resolved only when the corresponding columns are enabled, through a context-owned queue with at most four concurrent requests (`src/services/details.ts`). Results are held only in the mounted file list and discarded on navigation/context disposal; they are not cached in browser storage. Failed metadata reads remain unavailable. The creation date is never inferred from modification time.
+Optional owner/creation-date columns use per-call DAV metadata (`d:creationdate`) and the SDK owner
+display name. Search hits missing these fields are resolved only when the corresponding columns are
+enabled, through a context-owned queue with at most four concurrent requests
+(`src/services/details.ts`). Results are held only in the mounted file list and discarded on
+navigation/context disposal; they are not cached in browser storage. Failed metadata reads remain
+unavailable. The creation date is never inferred from modification time.
 
-Native catalog diagnostics serialize only primitive counts and booleans, so inspection tools can read them without expanding runtime objects. They exclude resource identities, names, paths, links, content and credentials.
+DAV `Z` is a permission-management capability (DenyGrant), not an access-denied marker. The adapter
+must not reject owner/manager resources for carrying it. Authenticated SDK access helpers, explicit
+edit flags, vault exclusion, identity validation and server checks retain their separate roles.
 
-DAV `Z` is a permission-management capability (DenyGrant), not an access-denied marker. The adapter must not reject owner/manager resources for carrying it. Authenticated SDK access helpers, explicit edit flags, vault exclusion, identity validation and server checks retain their separate roles.
-
-Creation reconciliation diagnostics contain only status, stage flags and equality checks. They identify whether an accepted creation failed its metadata confirmation without exposing filenames, identities, paths or document contents.
-
-Backend creation capability discovery remains in `providers8.ts` and is checked on home load and immediately before creation. The console-only capability inventory, refresh port, policy writer and synthetic policy store have been removed. Static configuration can restrict the fixed office family formats; it cannot enable an unsupported backend operation. Native editor selection uses the host's default ordering.
+Backend creation capability discovery remains in `providers8.ts` and is checked on home load and
+immediately before creation. The console-only capability inventory, refresh port, policy writer and
+synthetic policy store have been removed. Static configuration can restrict the fixed office family
+formats; it cannot enable an unsupported backend operation. Native editor selection uses the host's
+default ordering.

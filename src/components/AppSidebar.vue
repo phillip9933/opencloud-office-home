@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import { version } from '../../package.json'
 import FamilyIcon from './FamilyIcon.vue'
-import { officeApps, type AppDescriptor } from '../app/registry'
+import { officeApps, officeRoute, type AppDescriptor } from '../app/registry'
 import type { OfficeContext } from '../app/context'
 import type { OfficeKind } from '../contracts/office'
 
@@ -13,11 +13,9 @@ const versionLabel = computed(
 )
 const descriptor = computed(() => officeApps.find((app) => app.id === props.kind))
 function destination(app: AppDescriptor) {
-  const officeApp = officeApps.find((officeApp) => officeApp.id === app.id)
-  const view = officeApp ? props.context.lastView.get(officeApp.id) : undefined
-  return { name: app.route, query: view ? { view } : {} }
+  const view = props.context.lastView.get(app.id)
+  return { name: officeRoute(app.id), query: view ? { view } : {} }
 }
-const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.id === id)
 </script>
 
 <template>
@@ -35,7 +33,7 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
             :aria-current="app.id === kind ? 'page' : undefined"
             :data-kind="app.id"
           >
-            <FamilyIcon v-if="isOffice(app.id)" :kind="app.id" />
+            <FamilyIcon :kind="app.id" />
             <span>{{ app.label }}</span>
           </RouterLink>
         </li>

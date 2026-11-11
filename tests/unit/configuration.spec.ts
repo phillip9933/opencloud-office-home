@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TemplateStrip from '../../src/components/TemplateStrip.vue'
 import { defaultConfiguration, parseConfiguration } from '../../src/configuration'
-import { officeApps } from '../../src/app/registry'
 import { createProviderCapabilities8 } from '../../src/adapters/opencloud/providers8'
 import { createOfficeContext } from '../../src/app/context'
 import { fixtureServices } from '../../src/fixtures/services'
@@ -31,9 +30,7 @@ describe('static installation configuration', () => {
     const templates = vi.spyOn(services, 'templates')
     const context = createOfficeContext(services)
     context.preferences.templateFolder = { spaceId: 'personal', itemId: 'override' }
-    await context
-      .model('docs')
-      .load({ kind: 'docs', spaceId: '', folder: null, trail: [], scroll: 0 })
+    await context.model('docs').load({ kind: 'docs', spaceId: '', folder: null, scroll: 0 })
     expect(templates).toHaveBeenCalledWith('docs', undefined)
     context.dispose()
   })
@@ -55,7 +52,6 @@ describe('static installation configuration', () => {
         appProviders: { mimeTypes: registry },
         capabilities: { filesAppProviders: [{ enabled: true, new_url: '/app/new' }] }
       },
-      officeApps,
       policy.creationFormats
     )
     expect(await capabilities.creationFormats('docs')).toEqual({ ok: true, value: [] })

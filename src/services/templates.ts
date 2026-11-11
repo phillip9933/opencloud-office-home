@@ -1,4 +1,4 @@
-import { resultFormat, officeApps, type AppDescriptor } from '../app/registry'
+import { resultFormat } from '../app/registry'
 import {
   fail,
   ok,
@@ -26,17 +26,12 @@ function isPreviewImage(file: FileRecord): boolean {
   return file.kind === 'file' && PREVIEW_TYPES.includes(file.mimeType?.toLowerCase() ?? '')
 }
 
-function templatesIn(
-  items: FileRecord[],
-  kind: OfficeKind,
-  category: string,
-  apps: readonly AppDescriptor[]
-): Template[] {
+function templatesIn(items: FileRecord[], kind: OfficeKind, category: string): Template[] {
   const previews = new Map(
     items.filter(isPreviewImage).map((image) => [stem(image.name).toLowerCase(), image.ref])
   )
   return items.flatMap((file) => {
-    const format = resultFormat(file, kind, apps)
+    const format = resultFormat(file, kind)
     if (!format || !file.access.read) return []
     const name = stem(file.name)
     const preview: FileRef | undefined = previews.get(name.toLowerCase())
@@ -63,12 +58,11 @@ export async function folderTemplates(
   catalog: FileCatalog,
   folder: FileRef,
   kind: OfficeKind,
-  signal: AbortSignal,
-  apps: readonly AppDescriptor[] = officeApps
+  signal: AbortSignal
 ): Promise<Result<Template[]>> {
   const root = await catalog.list({ folder, kind: 'any', signal })
   if (!root.ok) return root
-  const templates = templatesIn(root.value.items, kind, GENERAL_CATEGORY, apps)
+  const templates = templatesIn(root.value.items, kind, GENERAL_CATEGORY)
   const categories = root.value.items
     .filter((item) => item.kind === 'folder' && item.access.read)
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -76,7 +70,7 @@ export async function folderTemplates(
   for (const category of categories) {
     const listed = await catalog.list({ folder: category.ref, kind: 'any', signal })
     if (!listed.ok) return fail(listed.error)
-    templates.push(...templatesIn(listed.value.items, kind, category.name, apps))
+    templates.push(...templatesIn(listed.value.items, kind, category.name))
   }
   return ok(
     templates

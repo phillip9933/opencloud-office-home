@@ -6,7 +6,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 
 - **Type:** placeholder
 - **Purpose:** Establish typed workflows and registration without inventing deployed APIs or credentials.
-- **Location:** `src/adapters/opencloud/native8.ts`, `vite.config.ts`. The unavailable adapter remains test-only.
+- **Location:** `src/adapters/opencloud/native8.ts`, `vite.config.ts`. The unused unavailable adapter has been removed.
 - **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview, file-action (Show in Files, share, download) and native editor services, plus the administrator `templateFolder` setting, tested against a pinned deployment.
 - **Resolution:** Verify the connected native adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
 - **Verification:** Default `pnpm build` must fail. `build:spike` writes `dist-spike/`; `build:test-instance` writes `dist-native-test/`. Neither enables the default release build.
@@ -40,9 +40,9 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Type:** functional / placeholder
 - **Purpose:** Develop metadata discovery against the pinned SDK without assuming a live deployment or assuming permissions.
 - **Location:** `src/adapters/opencloud/catalog8.ts`; connected by the native test adapter.
-- **Release behaviour:** Verified native catalog with authorized search (recent changes, all-spaces name search, favorite/tag filters and the tag list), latest-activity lookup, personal/project/received-share identity handling, honest completeness and lifecycle integration.
+- **Release behaviour:** Verified native catalog with authorized search (recent changes, favorite/tag filters and the tag list; general name search stays in the host), latest-activity lookup, personal/project/received-share identity handling, honest completeness and lifecycle integration.
 - **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before a full release.
-- **Verification:** The candidate must deny mutation access, refuse unsupported query characters/cursors, discard responses on logout/account changes and reject path-shaped IDs. Its read port exposes no mutations. The native test adapter supplies explicit DAV permission normalization; the default normalizer still denies writes. Received shares remain in Files.
+- **Verification:** The candidate must deny mutation access, discard responses on logout/account changes and reject path-shaped IDs. Its read port exposes no mutations; standalone filename search and cursor contracts are absent. The native test adapter supplies explicit DAV permission normalization; the default normalizer still denies writes. Received shares remain in Files.
 - **Tested build and result:** SDK-shaped isolated tests and strict compilation; authenticated catalog acceptance is pending.
 - **Status:** open
 

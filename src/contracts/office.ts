@@ -1,9 +1,12 @@
-import type { ViewPreferenceStore } from '../preferences/view'
-import type { OfficeConfiguration } from '../configuration'
-import type { AppDescriptor } from '../app/registry'
+import type { ViewPreferenceStore } from './preferences'
+import type { FileRef, OfficeKind } from './files'
+export type { FileRef, OfficeKind } from './files'
 
-export type OfficeKind = 'docs' | 'sheets' | 'slides'
-export type FileRef = Readonly<{ spaceId: string; itemId: string }>
+export interface OfficeConfiguration {
+  templateFolder?: FileRef
+  allowPersonalTemplates: boolean
+  creationFormats: Partial<Record<OfficeKind, string[]>>
+}
 export type AppError =
   | 'unauthenticated'
   | 'forbiddenOrMissing'
@@ -13,12 +16,10 @@ export type AppError =
   | 'conflict'
   | 'quotaExceeded'
   | 'invalidName'
-  | 'invalidSearch'
   | 'timeout'
   | 'network'
   | 'unknown'
   | 'cancelled'
-  | 'paginationUnavailable'
 export type Result<T> = { ok: true; value: T } | { ok: false; error: AppError }
 export const ok = <T>(value: T): Result<T> => ({ ok: true, value })
 export const fail = <T = never>(error: AppError): Result<T> => ({
@@ -48,7 +49,7 @@ export interface Activity {
   text: string
   at?: number
 }
-// Narrows Recent and search. Tags match when a file has any of them.
+// Narrows Recent. Tags match when a file has any of them.
 export interface RecentFilter {
   favorites: boolean
   tags: string[]
@@ -60,14 +61,12 @@ export interface Space {
 }
 export interface Page<T> {
   items: T[]
-  next?: string
   partial: boolean
 }
 export interface CatalogQuery {
   folder: FileRef
   // 'any' lists every child, for template folders that hold companion preview images.
   kind: OfficeKind | 'any'
-  cursor?: string
   signal: AbortSignal
 }
 export interface FileCatalog {
@@ -81,21 +80,18 @@ export interface FileCatalog {
     filter: RecentFilter
   ): Promise<Result<Page<FileRecord>>>
   // Tags the user can filter by; only offered when the server advertises tags.
-  search(
-    kind: OfficeKind,
-    term: string,
-    signal: AbortSignal,
-    filter?: RecentFilter
-  ): Promise<Result<Page<FileRecord>>>
   listTags(signal: AbortSignal): Promise<Result<string[]>>
   // The newest activity-log entry for a file, as plain text; null when none is recorded.
   latestActivity(ref: FileRef, signal: AbortSignal): Promise<Result<Activity | null>>
 }
 // Native file actions owned by OpenCloud Web; the app only asks the host to perform them.
+export interface ActionFeedback {
+  message?: string
+}
 export interface FileActions {
-  showInFiles(file: FileRecord): Promise<Result<void>>
-  share(file: FileRecord): Promise<Result<void>>
-  download(file: FileRecord): Promise<Result<void>>
+  showInFiles(file: FileRecord): Promise<Result<ActionFeedback>>
+  share(file: FileRecord): Promise<Result<ActionFeedback>>
+  download(file: FileRecord): Promise<Result<ActionFeedback>>
 }
 export const RECENT_CHANGE_DAYS = 30
 export interface Format {
@@ -126,20 +122,19 @@ export interface FileCreation {
 export interface OfficeCapabilities {
   creationFormats(kind: OfficeKind): Promise<Result<Format[]>>
 }
-// App-owned route/state contract. The release adapter must translate through the native router.
+// Session-owned home state; the view persists it before native editor navigation.
 export interface HomeLocation {
   kind: OfficeKind
   spaceId: string
   folder: FileRef | null
-  trail: { name: string; ref: FileRef }[]
+  folderName?: string
   scroll: number
 }
 export interface EditorGateway {
   open(input: {
     file: FileRef
     mode: 'view' | 'edit'
-    returnTo: HomeLocation
-  }): Promise<Result<{ status: 'launchAccepted' }>>
+  }): Promise<Result<{ status: 'launchAccepted'; message?: string }>>
 }
 export interface RecentRef {
   ref: FileRef
@@ -155,19 +150,16 @@ export interface RecentStore {
   list(kind: OfficeKind): RecentRef[]
   record(ref: FileRef, kind: OfficeKind): void
   remove(ref: FileRef): void
-  clear(): void
 }
 export interface OfficeServices {
-  mode: 'unconfigured' | 'fixture' | 'native'
+  mode: 'fixture' | 'native'
   configuration?: OfficeConfiguration
-  applications?: readonly AppDescriptor[]
   catalog: FileCatalog
   actions: FileActions
   creation: FileCreation
   capabilities: OfficeCapabilities
   editor: EditorGateway
   recents: RecentStore
-  templateFolderDefault?: FileRef
   templates(kind: OfficeKind, folder?: FileRef): Promise<Result<Template[]>>
   preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
   // Host feature availability decides which filters are offered.

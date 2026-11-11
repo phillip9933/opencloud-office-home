@@ -1,6 +1,7 @@
+import { sdkRecord } from './metadata8'
 import type { AppProviderCapability } from '@opencloud-eu/web-client/ocs'
 import type { AppProviderService } from '@opencloud-eu/web-pkg'
-import { officeApps, type AppDescriptor } from '../../app/registry'
+import { officeApps } from '../../app/registry'
 import { fail, ok, type Format, type OfficeCapabilities } from '../../contracts/office'
 
 // These shapes come from the installed 8.x SDK. Web 8.2.1 loads `mimeTypes` from the
@@ -10,19 +11,12 @@ export interface ProviderPort8 {
   capabilities: { filesAppProviders: readonly AppProviderCapability[] }
 }
 
-function record(value: unknown): Record<string, unknown> | undefined {
-  // The object check establishes the boundary before optional registry fields are inspected.
-  return value !== null && typeof value === 'object'
-    ? (value as Record<string, unknown>)
-    : undefined
-}
-
 function hasNamedProvider(entry: Record<string, unknown>): boolean {
   // Providers are launched by name; the server already drops unnamed and desktop-only entries.
   return (
     Array.isArray(entry.app_providers) &&
     entry.app_providers.some((provider) => {
-      const name = record(provider)?.name
+      const name = sdkRecord(provider)?.name
       return typeof name === 'string' && name.trim() !== ''
     })
   )
@@ -40,13 +34,12 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
  */
 export function createProviderCapabilities8(
   port: ProviderPort8,
-  apps: readonly AppDescriptor[] = officeApps,
   allowed: Partial<Record<'docs' | 'sheets' | 'slides', string[]>> = {}
 ): OfficeCapabilities {
   return {
     creationFormats(kind) {
       // Native Web posts to the first app-provider capability. Unknown enablement is not consent.
-      const creation = record(port.capabilities.filesAppProviders[0])
+      const creation = sdkRecord(port.capabilities.filesAppProviders[0])
       if (
         creation?.enabled !== true ||
         typeof creation.new_url !== 'string' ||
@@ -57,10 +50,10 @@ export function createProviderCapabilities8(
       const registry: unknown = port.appProviders.mimeTypes
       if (!Array.isArray(registry)) return Promise.resolve(fail('unknown'))
       const entries = registry.flatMap((value: unknown) => {
-        const entry = record(value)
+        const entry = sdkRecord(value)
         return entry && hasNamedProvider(entry) ? [entry] : []
       })
-      const family = apps.find((app) => app.id === kind)!.formats
+      const family = officeApps.find((app) => app.id === kind)!.formats
       const supported = family.filter((format) => entries.some((entry) => matches(entry, format)))
       if (!supported.length) return Promise.resolve(fail('providerNotConfigured'))
       return Promise.resolve(
