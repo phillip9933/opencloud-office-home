@@ -15,7 +15,10 @@ export function createOfficeContext(
   const lastView = new Map<OfficeKind, string>()
   let sequence = 0
   // Session-only view choices shared by the three apps; nothing about files is stored here.
-  const preferences = reactive({ sort: 'opened' as RecentSort, layout: 'list' as 'list' | 'grid' })
+  const preferences = reactive({
+    sort: 'activity' as RecentSort,
+    layout: 'list' as 'list' | 'grid'
+  })
   return {
     services,
     menu,

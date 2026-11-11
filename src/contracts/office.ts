@@ -27,6 +27,8 @@ export interface FileRecord {
   kind: 'file' | 'folder'
   mimeType?: string
   path?: string
+  // Last content change in OpenCloud (epoch milliseconds), by anyone with access.
+  modifiedAt?: number
   access: { read: boolean; write: boolean; createChild: boolean }
 }
 export interface Space {
@@ -51,7 +53,10 @@ export interface FileCatalog {
   listSpaces(signal: AbortSignal): Promise<Result<Space[]>>
   list(query: CatalogQuery): Promise<Result<Page<FileRecord>>>
   resolve(ref: FileRef): Promise<Result<FileRecord>>
+  // Family files changed within RECENT_CHANGE_DAYS across the user's spaces, newest first.
+  recentlyChanged(kind: OfficeKind, signal: AbortSignal): Promise<Result<Page<FileRecord>>>
 }
+export const RECENT_CHANGE_DAYS = 30
 export interface Format {
   extension: string
   mimeType: string
@@ -70,6 +75,7 @@ export interface Template {
   // The editable format a new file gets; a template container such as .ott creates .odt.
   format: Format
   category: string
+  // Optional administrator image; without it the template file's own server preview is tried.
   preview?: FileRef
 }
 export interface FileCreation {

@@ -333,11 +333,6 @@
   background: var(--office-hover);
   border-color: var(--office-muted);
 }
-.office-icon-button {
-  display: inline-grid;
-  place-items: center;
-  min-width: 40px;
-}
 .office-recents-scope {
   display: flex;
   align-items: center;

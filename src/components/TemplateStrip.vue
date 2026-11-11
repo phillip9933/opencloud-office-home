@@ -79,7 +79,7 @@ function start(event: MouseEvent, template?: Template) {
                 <FileThumb
                   :services="services"
                   :kind="kind"
-                  :source="template.preview"
+                  :source="template.preview ?? template.source"
                   :label="template.format.extension.toUpperCase()"
                 />
                 <span class="office-card-name">{{ template.name }}</span>
@@ -105,7 +105,7 @@ function start(event: MouseEvent, template?: Template) {
                   <FileThumb
                     :services="services"
                     :kind="kind"
-                    :source="template.preview"
+                    :source="template.preview ?? template.source"
                     :label="template.format.extension.toUpperCase()"
                   />
                   <span class="office-card-name">{{ template.name }}</span>

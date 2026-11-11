@@ -29,7 +29,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Type:** functional / placeholder
 - **Purpose:** Develop metadata discovery against the pinned SDK without assuming a live deployment or enabling writes.
 - **Location:** `src/adapters/opencloud/catalog8.ts`; imported by its unit tests only.
-- **Release behaviour:** Verified native catalog with authorized search, personal/project/received-share identity handling, honest completeness and lifecycle integration.
+- **Release behaviour:** Verified native catalog with authorized search (including the recent-changes query), personal/project/received-share identity handling, honest completeness and lifecycle integration.
 - **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before connecting the native entry.
 - **Verification:** The candidate must deny mutation access, reject unsupported search/cursors, discard responses on logout/account changes and reject path-shaped IDs. Its port exposes no mutation methods. Native app and preview entrypoints must not import it while deployment checks are pending.
 - **Tested build and result:** SDK-shaped local tests and strict compilation; no live discovery has been performed.

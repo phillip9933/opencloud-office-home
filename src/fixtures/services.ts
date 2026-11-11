@@ -2,6 +2,7 @@ import { belongsTo, officeApps } from '../app/registry'
 import {
   fail,
   ok,
+  RECENT_CHANGE_DAYS,
   refKey,
   type CatalogQuery,
   type CreationRequest,
@@ -152,6 +153,19 @@ export function fixtureServices(
     [{ ...team, itemId: 'kickoff' }, 'slides', 5 * DAY],
     [{ ...root, itemId: 'slides' }, 'slides', 20 * DAY]
   ]
+  // Synthetic changes made in OpenCloud, for example by a colleague on another device.
+  const changes: [FileRef, number][] = [
+    [{ ...team, itemId: 'handbook' }, 1 * DAY],
+    [{ ...team, itemId: 'expenses' }, 2 * DAY],
+    [{ ...team, itemId: 'training' }, 4 * DAY],
+    [{ ...team, itemId: 'inventory' }, 50 * DAY],
+    [{ ...root, itemId: 'docs' }, 6 * DAY]
+  ]
+  if (options.seedHistory)
+    for (const [ref, age] of changes) {
+      const record = records.find((r) => refKey(r.ref) === refKey(ref))
+      if (record) record.modifiedAt = now() - age
+    }
   const history = new Map<string, string>()
   if (options.seedHistory)
     history.set(
@@ -203,7 +217,20 @@ export function fixtureServices(
         const record = records.find((r) => refKey(r.ref) === refKey(ref))
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },
-      list: listChildren
+      list: listChildren,
+      recentlyChanged(kind) {
+        const since = now() - RECENT_CHANGE_DAYS * DAY
+        const items = records
+          .filter(
+            (r) =>
+              r.kind === 'file' &&
+              r.modifiedAt !== undefined &&
+              r.modifiedAt >= since &&
+              belongsTo(r, kind)
+          )
+          .sort((a, b) => b.modifiedAt! - a.modifiedAt!)
+        return Promise.resolve(ok({ items, partial: false }))
+      }
     },
     capabilities: {
       creationFormats(kind) {

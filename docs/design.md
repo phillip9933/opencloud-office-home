@@ -8,8 +8,8 @@ Docs, Sheets and Slides share one quiet layout, top to bottom:
 
 1. **Header:** application menu, the family name with its icon (the page heading), and a search field whose placeholder names the folder it searches.
 2. **Start band:** a tinted strip titled "Start a new document/spreadsheet/presentation". A Blank card comes first, followed by up to five templates in one horizontally scrollable row. "Template gallery" expands the band to every template, grouped by category.
-3. **Recently opened in this browser:** history grouped as Today, Previous 7 days, Previous 30 days and Earlier, with a Sort by control (Last opened or Name), a list/grid layout toggle and a folder shortcut. Name order drops the date groups.
-4. **Browse folders:** a collapsed disclosure at the bottom with the space selector, breadcrumbs and folder listing. It opens automatically when the view is inside a subfolder or has a search, and the folder shortcut or "Choose another folder" opens and focuses it.
+3. **Recent:** family files changed in OpenCloud in the last 30 days (from any device, by the user or people they share with) merged with files opened in this browser. Entries are grouped as Today, Previous 7 days, Previous 30 days and Earlier by their latest activity, and each shows "Opened …" or "Changed …". Sort by offers Most recent or Name (Name drops the date groups), plus a list/grid layout toggle. "Clear this browser's history" removes only the opened entries; server changes stay. If the server query fails or is truncated, a note says so and browser history remains.
+4. **Browse folders:** a collapsed disclosure at the bottom with the space selector, breadcrumbs and folder listing. It opens automatically when the view is inside a subfolder or has a search, and "Choose another folder" in the create dialog opens and focuses it.
 
 Choosing Blank or a template opens a small dialog: name, format (fixed and shown for templates), and the save location with "Choose another folder". Nothing is created until Create is pressed, so the destination is always visible first. Create is disabled without a known writable destination or a supported format, and repeated activation is locked. Fixable problems such as a name conflict keep the dialog open with the message; once a file exists, the dialog closes and the start band shows the result with "Open created file". Uncertain outcomes close the dialog and pause creation until reconciliation.
 
@@ -23,7 +23,7 @@ The application menu and native switcher derive from one reviewed descriptor lis
 
 Templates come from one administrator-maintained OpenCloud folder (see [templates](templates.md)): files at its root are "General", and each direct subfolder is a category. Collabora/LibreOffice template containers (`.ott`, `.ots`, `.otp`) create the matching editable format; ordinary documents can serve as templates too.
 
-Card previews are images only. A template shows the image an administrator stored next to it with the same name; otherwise, and for every recent file, the card shows the family icon and format label. OpenCloud 9.0.0 does not generate previews for ODF or Microsoft Office documents, so recent files in grid view normally show format cards. The preview port accepts server previews where a deployment provides them; the app never downloads document content to draw one.
+Card previews come from the server's preview endpoint. A template first uses an optional image stored next to it with the same name, then the template file's own server preview; recent files use their server preview. When none exists the card shows the family icon and format label. OpenCloud 9.0.0 does not generate previews for ODF or Microsoft Office documents, so documents normally show format cards today; they gain real thumbnails automatically once the server provides them. The app never downloads document content to draw a preview.
 
 ## Visual system
 
@@ -43,6 +43,6 @@ The target remains WCAG 2.2 AA. Browser journeys test keyboard disclosure, dialo
 
 ## Privacy and flexibility
 
-History is labeled "Recently opened in this browser," distinct from modified files, and offers Clear history. Sort order and list/grid layout are session-only view choices shared by the three apps. No analytics or arbitrary provider URLs are offered. Formats and provider support are discovered through the native integration rather than implied by a file extension. Ownership and "last modified" columns are not shown because the verified catalog does not yet provide them. See [architecture](architecture.md) for data flow and trust boundaries and [development limits](dev-limits.md) for incomplete behavior.
+Recent states both of its sources and labels each entry as opened or changed; OpenCloud records content changes but not file opens, so "opened" history exists only in the browser that opened the file. Sort order and list/grid layout are session-only view choices shared by the three apps. No analytics or arbitrary provider URLs are offered. Formats and provider support are discovered through the native integration rather than implied by a file extension. Ownership and "last modified" columns are not shown because the verified catalog does not yet provide them. See [architecture](architecture.md) for data flow and trust boundaries and [development limits](dev-limits.md) for incomplete behavior.
 
 Update this document with reusable interaction changes. Verify screenshots at the chosen breakpoints/themes and record human review separately from agent visual inspection before claiming release quality.

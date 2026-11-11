@@ -211,10 +211,10 @@ onBeforeUnmount(() => {
         :kind="kind"
         :context="context"
         :entries="state.recent"
+        :note="state.recentNote"
         :opening="state.opening"
         @open="activate"
         @clear="model.clearRecents"
-        @browse="showBrowser"
       />
       <FileBrowser
         ref="browser"

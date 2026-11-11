@@ -1,8 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const browse = (page: Page) => page.getByRole('region', { name: 'Browse folders' })
-const recents = (page: Page) =>
-  page.getByRole('region', { name: 'Recently opened in this browser' })
+const recents = (page: Page) => page.getByRole('region', { name: 'Recent', exact: true })
 
 test('create, conflict recovery, launch, recents and folder history', async ({ page }) => {
   const errors: string[] = []
@@ -40,8 +39,14 @@ test('create, conflict recovery, launch, recents and folder history', async ({ p
   await expect(browse(page).getByRole('button', { name: 'Reports', exact: true })).toBeVisible()
   await page.goForward()
   await expect(browse(page).getByRole('button', { name: 'Shared Docs.docx' })).toBeVisible()
-  await recents(page).getByRole('button', { name: 'Clear history' }).click()
-  await expect(page.getByText('No recently opened files in this browser yet.')).toBeVisible()
+  // Opened-only history disappears; files changed in OpenCloud stay listed as changes.
+  await expect(recents(page).getByRole('button', { name: 'Shared Docs.docx' })).toBeVisible()
+  await recents(page).getByRole('button', { name: "Clear this browser's history" }).click()
+  await expect(recents(page).getByRole('button', { name: 'Shared Docs.docx' })).toHaveCount(0)
+  await expect(recents(page).getByRole('row', { name: /Team handbook\.docx/ })).toContainText(
+    'Changed'
+  )
+  await expect(recents(page).getByText(/^Opened /)).toHaveCount(0)
   expect(errors).toEqual([])
 })
 

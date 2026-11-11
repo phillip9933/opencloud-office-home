@@ -64,7 +64,10 @@ function setup() {
       listFiles: vi
         .fn<ReadPort8['webdav']['listFiles']>()
         .mockResolvedValue({ resource: root, children: [file()] }),
-      getFileInfo: vi.fn<ReadPort8['webdav']['getFileInfo']>().mockResolvedValue(file())
+      getFileInfo: vi.fn<ReadPort8['webdav']['getFileInfo']>().mockResolvedValue(file()),
+      search: vi
+        .fn<ReadPort8['webdav']['search']>()
+        .mockResolvedValue({ resources: [], totalResults: 0 })
     }
   }
   let session: string | undefined = 'instance-a/user-a/auth-1'
@@ -241,6 +244,67 @@ describe('8.x SDK catalog candidate', () => {
     expect(normalizeReadMetadata('space', file('id', { remoteItemPath: '/share-alias' })).ok).toBe(
       false
     )
+  })
+  it('finds family files changed in the last 30 days newest first, mapped by storage ID', async () => {
+    const test = setup()
+    const hit = (id: string, overrides: Partial<Resource>) =>
+      ({ ...file(id), storageId: test.personal.id, highlights: '', ...overrides }) as const
+    test.port.webdav.search.mockResolvedValue({
+      resources: [
+        hit('older', { name: 'Older.odt', mdate: 'Mon, 02 Nov 2026 09:00:00 GMT' }),
+        hit('newer', { name: 'Newer.docx', mimeType: undefined, mdate: '2026-11-10T08:00:00Z' }),
+        hit('notes', { name: 'notes.txt', mimeType: 'text/plain', mdate: '2026-11-10T09:00:00Z' })
+      ],
+      totalResults: 3
+    })
+    await test.catalog.listSpaces(test.query.signal)
+    const result = await test.catalog.recentlyChanged('docs', test.query.signal)
+    expect(result.ok && result.value.items.map((r) => [r.name, r.modifiedAt])).toEqual([
+      ['Newer.docx', Date.parse('2026-11-10T08:00:00Z')],
+      ['Older.odt', Date.parse('2026-11-02T09:00:00Z')]
+    ])
+    // Plain text is an expected exclusion from the server's "document" group, not partiality.
+    expect(result.ok && result.value.partial).toBe(false)
+    expect(result.ok && result.value.items.every((r) => !r.access.write)).toBe(true)
+    expect(test.port.webdav.search).toHaveBeenCalledWith(
+      'mtime:"last 30 days" AND mediatype:("document")',
+      { searchLimit: 200, signal: test.query.signal }
+    )
+  })
+  it('marks recent changes partial when hits are truncated or belong to an unmapped share', async () => {
+    const test = setup()
+    test.port.webdav.search.mockResolvedValue({
+      resources: [
+        { ...file('shared'), storageId: 'share-mount', highlights: '', mdate: '2026-11-10' },
+        { ...file('undated'), storageId: test.personal.id, highlights: '' }
+      ],
+      totalResults: 2
+    })
+    await test.catalog.listSpaces(test.query.signal)
+    expect(await test.catalog.recentlyChanged('docs', test.query.signal)).toEqual({
+      ok: true,
+      value: { items: [], partial: true }
+    })
+    test.port.webdav.search.mockResolvedValue({ resources: [], totalResults: 500 })
+    const truncated = await test.catalog.recentlyChanged('sheets', test.query.signal)
+    expect(truncated.ok && truncated.value.partial).toBe(true)
+  })
+  it('discards recent changes that arrive after an account change', async () => {
+    const test = setup()
+    await test.catalog.listSpaces(test.query.signal)
+    test.port.webdav.search.mockImplementation(() => {
+      test.setSession('instance-a/user-b/auth-2')
+      return Promise.resolve({
+        resources: [
+          { ...file(), storageId: test.personal.id, highlights: '', mdate: '2026-11-10' }
+        ],
+        totalResults: 1
+      })
+    })
+    expect(await test.catalog.recentlyChanged('docs', test.query.signal)).toEqual({
+      ok: false,
+      error: 'unauthenticated'
+    })
   })
   it.each([
     [{ statusCode: 401 }, 'unauthenticated'],

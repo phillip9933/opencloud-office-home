@@ -57,16 +57,17 @@ The disconnected catalog uses the SDK's normal-user listMyDrives, listFiles and 
 
 The disconnected provider candidate reads `AppProviderService.mimeTypes` and the app-provider capability. It offers a family format for creation only when the capability is explicitly enabled with a creation endpoint and a named provider allows creating that MIME type. An empty registry reports "not configured"; a provider that opens but cannot create a family reports no creatable format. Its tests include the captured empty registry from the observed deployment.
 
-| Seam           | Current evidence                                                                           | Required deployment evidence                                                    |
-| -------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Registration   | Authenticated routes and matching native menu entries compile and have a registration test | Host injection, switcher, base path, login and editor return                    |
-| Spaces         | Personal/project roots through normal-user discovery                                       | Real personal/team/received-share identities and access                         |
-| Folder listing | Depth-one requests with opaque IDs; explicit partial results                               | Completeness, limits and transport cancellation                                 |
-| Metadata       | Identity match and account-generation guard                                                | Real unauthorized/revoked access tests                                          |
-| Search/cursors | Explicitly unavailable; no recursive crawling or fabricated cursors                        | Authorized query grammar, scope, escaping and pagination                        |
-| Providers      | Creation-format candidate; captured empty registry reports not configured                  | A registered provider, its MIME/creation policy and launch results              |
-| Copy/create    | Unavailable                                                                                | ACLs, template copy/revision/share behavior and uncertain-result reconciliation |
-| Editor         | Unavailable                                                                                | Native launch, view/edit authorization, return state and file durability        |
+| Seam           | Current evidence                                                                                | Required deployment evidence                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Registration   | Authenticated routes and matching native menu entries compile and have a registration test      | Host injection, switcher, base path, login and editor return                    |
+| Spaces         | Personal/project roots through normal-user discovery                                            | Real personal/team/received-share identities and access                         |
+| Folder listing | Depth-one requests with opaque IDs; explicit partial results                                    | Completeness, limits and transport cancellation                                 |
+| Metadata       | Identity match and account-generation guard                                                     | Real unauthorized/revoked access tests                                          |
+| Recent changes | Candidate search `mtime:"last 30 days" AND mediatype:(…)`, grammar checked in v9.0.0 KQL source | Live results, ranking/truncation, share hits and modifier semantics             |
+| Search/cursors | Folder text search explicitly unavailable; no recursive crawling or fabricated cursors          | Authorized query grammar, scope, escaping and pagination                        |
+| Providers      | Creation-format candidate; captured empty registry reports not configured                       | A registered provider, its MIME/creation policy and launch results              |
+| Copy/create    | Unavailable                                                                                     | ACLs, template copy/revision/share behavior and uncertain-result reconciliation |
+| Editor         | Unavailable                                                                                     | Native launch, view/edit authorization, return state and file durability        |
 
 The catalog is imported only by tests. The native entry still uses the unavailable adapter; configuration cannot activate it. Candidate records deny write/child-create access. Metadata display does not authorize content access.
 

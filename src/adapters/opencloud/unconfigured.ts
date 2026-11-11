@@ -15,6 +15,9 @@ export function unconfiguredServices(): OfficeServices {
       },
       resolve() {
         return Promise.resolve(fail('editorUnavailable'))
+      },
+      recentlyChanged() {
+        return Promise.resolve(fail('editorUnavailable'))
       }
     },
     capabilities: {

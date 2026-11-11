@@ -18,7 +18,7 @@ Templates/                  shared space or folder, read-only for normal users
 
 - Docs uses `.odt`, `.docx` and `.ott`; Sheets uses `.ods`, `.xlsx` and `.ots`; Slides uses `.odp`, `.pptx` and `.otp`. A template container (`.ott`, `.ots`, `.otp`) creates the matching editable format (`.odt`, `.ods`, `.odp`). An ordinary document can also be a template.
 - Only the root and one level of subfolders are read. Deeper folders, other file types and items users cannot read are ignored. At most 20 categories and 200 templates are shown.
-- OpenCloud 9.0.0 does not generate previews for office documents, so a preview needs its own image file next to the template. Without one, the card shows the family icon and format.
+- Card previews use the server's preview of the template file. OpenCloud 9.0.0 does not generate previews for office documents, so until it does, a same-name image next to the template is the only way to show one; it also overrides a server preview. Without either, the card shows the family icon and format.
 
 ## Starting with Collabora templates
 

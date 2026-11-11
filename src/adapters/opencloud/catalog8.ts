@@ -9,14 +9,26 @@ import {
   type AppError,
   type FileCatalog,
   type FileRecord,
+  type OfficeKind,
   type Result
 } from '../../contracts/office'
 
 // These method types come from the installed 8.x SDK, not a proposed REST schema.
 export interface ReadPort8 {
   drives: Pick<Graph['drives'], 'listMyDrives'>
-  webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo'>
+  webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo' | 'search'>
 }
+
+// OpenCloud 9.0.0 KQL: the natural-language date matches RECENT_CHANGE_DAYS, and the media
+// types are the server's own groups (they also contain non-office types, filtered afterwards).
+const RECENT_CHANGE_QUERY = 'mtime:"last 30 days"'
+const MEDIA_TYPE: Record<OfficeKind, string> = {
+  docs: 'document',
+  sheets: 'spreadsheet',
+  slides: 'presentation'
+}
+// The server ranks matches by score, not date, and truncates at its page size.
+const RECENT_CHANGE_LIMIT = 200
 
 function record(value: unknown): Record<string, unknown> | undefined {
   // The object check establishes the boundary before optional SDK error fields are inspected.
@@ -49,6 +61,11 @@ export function catalogError(error: unknown): AppError {
   return 'unknown'
 }
 
+function modifiedAt(value: unknown): number | undefined {
+  const time = typeof value === 'string' ? Date.parse(value) : NaN
+  return Number.isFinite(time) ? time : undefined
+}
+
 export function normalizeReadMetadata(spaceId: string, resource: Resource): Result<FileRecord> {
   if (
     !resource ||
@@ -69,6 +86,7 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
     kind: resource.isFolder ? 'folder' : 'file',
     path: resource.path,
     ...(typeof resource.mimeType === 'string' ? { mimeType: resource.mimeType } : {}),
+    ...(modifiedAt(resource.mdate) !== undefined ? { modifiedAt: modifiedAt(resource.mdate) } : {}),
     // A successful authenticated metadata response permits metadata display only.
     // It cannot authorize content access, editing or creation; the gateway stays unavailable.
     access: { read: true, write: false, createChild: false }
@@ -183,6 +201,42 @@ export function createCatalog8(
         return ok({ items: [...items.values()], partial: true })
       } catch (error) {
         return fail(interrupted(key, query.signal) ?? catalogError(error))
+      }
+    },
+    async recentlyChanged(kind, signal) {
+      const key = currentSession()
+      if (!key) return fail('unauthenticated')
+      if (signal.aborted) return fail('cancelled')
+      try {
+        const found = await port.webdav.search(
+          `${RECENT_CHANGE_QUERY} AND mediatype:("${MEDIA_TYPE[kind]}")`,
+          { searchLimit: RECENT_CHANGE_LIMIT, signal }
+        )
+        const stopped = interrupted(key, signal)
+        if (stopped) return fail(stopped)
+        const items = new Map<string, FileRecord>()
+        let skipped = 0
+        for (const resource of found.resources) {
+          // Web maps a search hit to its space by storage ID; shares mounted elsewhere are skipped.
+          const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
+          const item = space ? normalizeReadMetadata(space.id, resource) : undefined
+          if (!item?.ok || item.value.modifiedAt === undefined) {
+            skipped++
+            continue
+          }
+          // The server's media groups include non-office types such as plain text.
+          if (item.value.kind === 'file' && belongsTo(item.value, kind))
+            items.set(refKey(item.value.ref), item.value)
+        }
+        return ok({
+          items: [...items.values()].sort((a, b) => b.modifiedAt! - a.modifiedAt!),
+          partial:
+            skipped > 0 ||
+            typeof found.totalResults !== 'number' ||
+            found.totalResults > found.resources.length
+        })
+      } catch (error) {
+        return fail(interrupted(key, signal) ?? catalogError(error))
       }
     },
     async resolve(ref) {

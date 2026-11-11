@@ -125,6 +125,35 @@ describe('home workflow', () => {
     expect(home.state.recent).toEqual([])
     expect(services.recents.list('docs')).toEqual([])
   })
+  it('merges files changed in OpenCloud with browser opens, and clearing keeps server changes', async () => {
+    services = fixtureServices({ seedHistory: true })
+    const home = createHomeModel(services, 'docs')
+    await home.load(defaultLocation('docs'))
+    const byName = new Map(home.state.recent.map((entry) => [entry.file.name, entry]))
+    // Changed by someone else and never opened here: listed from the server query.
+    expect(byName.get('Team handbook.docx')).toMatchObject({ modifiedAt: expect.any(Number) })
+    // Opened here and also changed in OpenCloud: one entry carrying both timestamps.
+    expect(byName.get('Project Docs.odt')).toMatchObject({
+      openedAt: expect.any(Number),
+      modifiedAt: expect.any(Number)
+    })
+    // Opened only: an old change date is not shown as recent.
+    expect(byName.get('Shared Docs.docx')).not.toHaveProperty('modifiedAt')
+    home.clearRecents()
+    expect(home.state.recent.map((entry) => entry.file.name).sort()).toEqual([
+      'Project Docs.odt',
+      'Team handbook.docx'
+    ])
+    expect(home.state.recent.every((entry) => entry.openedAt === undefined)).toBe(true)
+  })
+  it('keeps browser history and explains when recent changes cannot be loaded', async () => {
+    services.recents.record({ spaceId: 'fixture-personal', itemId: 'docs' }, 'docs')
+    vi.spyOn(services.catalog, 'recentlyChanged').mockResolvedValue(fail('network'))
+    const home = createHomeModel(services, 'docs')
+    await home.load(defaultLocation('docs'))
+    expect(home.state.recent.map((entry) => entry.file.name)).toEqual(['Project Docs.odt'])
+    expect(home.state.recentNote).toContain('Changes from other devices are unavailable')
+  })
   it('retains a completed mutation when navigating away without inserting into a different folder', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))

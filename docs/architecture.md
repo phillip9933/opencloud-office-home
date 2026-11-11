@@ -12,7 +12,7 @@ The intended product is one native OpenCloud Web package with three home routes 
 | Home screens          | `src/views/OfficeHome.vue`                              | Composes header search, start band, recents, folder browsing and the create dialog           |
 | Home components       | `src/components/`                                       | Template strip/gallery, create dialog, recent list/grid, folder browser, preview thumbnails  |
 | Template source       | `src/services/templates.ts`                             | Reads one administrator template folder: categories, result formats and preview images       |
-| Recent presentation   | `src/services/recentView.ts`                            | Sorting and local-day grouping of recently opened entries                                    |
+| Recent presentation   | `src/services/recentView.ts`                            | Latest-activity sorting and local-day grouping of opened and changed entries                 |
 | Workflow              | `src/services/home.ts`                                  | Request generations, cancellation, permission refresh, create/open guards and recovery       |
 | Integration contracts | `src/contracts/office.ts`                               | Typed, app-owned catalog, capability, creation and gateway boundaries                        |
 | Native adapter        | `src/adapters/opencloud/unconfigured.ts`, `catalog8.ts` | Fail-closed app entry plus a disconnected read-only SDK candidate                            |
@@ -45,6 +45,8 @@ Opening re-resolves the resource, selects view mode for read-only access, guards
 ## Storage, privacy and deletion
 
 The optional browser recent store contains only resource IDs, family and opened timestamp. Its key includes instance and authenticated user; data is pruned to 100 entries/90 days. Entries are resolved again before display. Clear history removes them. The native adapter must wire logout/account-change cleanup before enabling persistence. Until then only the synthetic preview uses session memory. Cross-device recents are not implemented.
+
+The Recent list merges two sources by resource identity. `FileCatalog.recentlyChanged` asks the host's authorized search for the family's media type changed in the last 30 days (`mtime:"last 30 days" AND mediatype:(…)`); the server ranks by score and caps results, so the adapter sorts by modification time and marks truncated or unmapped results as partial. Hits are mapped to spaces by storage ID, as Web does; received shares mounted elsewhere are skipped until share resolution is verified. Changes may be by anyone with access, because the verified API exposes no modifier filter. Browser-opened references come from the scoped local store and are re-resolved before display. OpenCloud exposes no per-user file-open record, so opens on other devices cannot be shown.
 
 Sort order and list/grid layout live in session memory on the shared context; they contain no file data. Session navigation snapshots contain query/folder/scroll state in memory, at most 100 entries. URLs carry only a session key, not search strings or names. Reloading loses this state and safely returns to the app root. Cross-user lifecycle cleanup and native editor return need real integration tests before release.
 

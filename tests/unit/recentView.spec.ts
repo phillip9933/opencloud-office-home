@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { groupRecents, sortRecents, type RecentEntry } from '../../src/services/recentView'
+import {
+  groupRecents,
+  lastActivity,
+  sortRecents,
+  type RecentEntry
+} from '../../src/services/recentView'
 
 const DAY = 86_400_000
 // Noon local time keeps the calendar-day boundaries deterministic.
@@ -25,7 +30,10 @@ const entries = [
 describe('recently opened presentation', () => {
   it('groups newest first by the local day the file was opened', () => {
     expect(
-      groupRecents(entries, 'opened', now).map((g) => [g.label, g.entries.map((e) => e.file.name)])
+      groupRecents(entries, 'activity', now).map((g) => [
+        g.label,
+        g.entries.map((e) => e.file.name)
+      ])
     ).toEqual([
       ['Today', ['Agenda.odt']],
       ['Previous 7 days', ['report 9.odt']],
@@ -38,7 +46,17 @@ describe('recently opened presentation', () => {
       ...entry('late.odt', 0),
       openedAt: new Date(2026, 10, 10, 23).getTime()
     }
-    expect(groupRecents([lateYesterday], 'opened', now)[0]!.label).toBe('Previous 7 days')
+    expect(groupRecents([lateYesterday], 'activity', now)[0]!.label).toBe('Previous 7 days')
+  })
+  it('orders by the later of opening and change, and reports which one it was', () => {
+    const changedLater = { ...entry('shared.odt', 5), modifiedAt: now - 1 * DAY }
+    const openedLater = { ...entry('mine.odt', 0.5), modifiedAt: now - 9 * DAY }
+    const changedOnly = { file: entry('colleague.odt', 0).file, modifiedAt: now - 2 * DAY }
+    expect(lastActivity(changedLater)).toEqual({ at: now - DAY, kind: 'changed' })
+    expect(lastActivity(openedLater).kind).toBe('opened')
+    expect(
+      sortRecents([openedLater, changedOnly, changedLater], 'activity').map((e) => e.file.name)
+    ).toEqual(['mine.odt', 'shared.odt', 'colleague.odt'])
   })
   it('sorts names case-insensitively with natural numbers and without date groups', () => {
     expect(sortRecents(entries, 'name').map((e) => e.file.name)).toEqual([
