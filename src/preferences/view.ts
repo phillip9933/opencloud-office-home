@@ -1,7 +1,10 @@
 import type { FileRef, OfficeKind } from '../contracts/office'
 import type { RecentSort } from '../services/recentView'
 
-export type TemplateBand = 'row' | 'compact'
+// 'auto' shows cards until AUTO_COMPACT_AFTER files were created here, then a single line.
+export type TemplateBand = 'auto' | 'row' | 'compact'
+export const AUTO_COMPACT_AFTER = 3
+const MAX_COUNT = 1000
 export interface ViewPreferences {
   sort: RecentSort
   layout: 'list' | 'grid'
@@ -11,8 +14,8 @@ export interface ViewPreferences {
   // Last successful creation choices; the folder is revalidated before it is used again.
   lastFormat: Partial<Record<OfficeKind, string>>
   lastFolder: Partial<Record<OfficeKind, FileRef>>
-  // Single-key shortcuts can be switched off (WCAG 2.1.4).
-  shortcuts: boolean
+  // Files created through this app in this browser; only drives the automatic band.
+  createdCount: number
 }
 interface StoragePort {
   getItem(key: string): string | null
@@ -28,11 +31,11 @@ export function defaultViewPreferences(): ViewPreferences {
   return {
     sort: 'activity',
     layout: 'list',
-    band: 'row',
+    band: 'auto',
     pinned: { docs: [], sheets: [], slides: [] },
     lastFormat: {},
     lastFolder: {},
-    shortcuts: true
+    createdCount: 0
   }
 }
 
@@ -50,7 +53,8 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
   const value = raw as Record<string, unknown>
   if (value.sort === 'activity' || value.sort === 'name') result.sort = value.sort
   if (value.layout === 'list' || value.layout === 'grid') result.layout = value.layout
-  if (value.band === 'row' || value.band === 'compact') result.band = value.band
+  if (value.band === 'auto' || value.band === 'row' || value.band === 'compact')
+    result.band = value.band
   const pinned = value.pinned && typeof value.pinned === 'object' ? value.pinned : {}
   for (const kind of KINDS) result.pinned[kind] = pins((pinned as Record<string, unknown>)[kind])
   const formats = (value.lastFormat ?? {}) as Record<string, unknown>
@@ -72,7 +76,8 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
     )
       result.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
   }
-  if (typeof value.shortcuts === 'boolean') result.shortcuts = value.shortcuts
+  if (Number.isInteger(value.createdCount) && (value.createdCount as number) >= 0)
+    result.createdCount = Math.min(value.createdCount as number, MAX_COUNT)
   return result
 }
 
@@ -105,6 +110,13 @@ export function createViewPreferenceStore(
   }
 }
 export type ViewPreferenceStore = ReturnType<typeof createViewPreferenceStore>
+
+export function compactBand(preferences: Pick<ViewPreferences, 'band' | 'createdCount'>) {
+  return (
+    preferences.band === 'compact' ||
+    (preferences.band === 'auto' && preferences.createdCount >= AUTO_COMPACT_AFTER)
+  )
+}
 
 export function togglePin(list: readonly string[], id: string): string[] {
   return list.includes(id)

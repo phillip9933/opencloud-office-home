@@ -212,8 +212,7 @@ export function fixtureServices(
     const items = records.filter(
       (r) =>
         parents.get(refKey(r.ref)) === refKey(query.folder) &&
-        (query.kind === 'any' || belongsTo(r, query.kind)) &&
-        r.name.toLowerCase().includes(query.text.toLowerCase())
+        (query.kind === 'any' || belongsTo(r, query.kind))
     )
     return ok({ items, partial: false })
   }
@@ -264,19 +263,6 @@ export function fixtureServices(
           )
           .sort((a, b) => b.modifiedAt! - a.modifiedAt!)
         return Promise.resolve(ok({ items, partial: false }))
-      },
-      search({ text, kind, filter }) {
-        const term = text.trim().toLowerCase()
-        const items = records.filter(
-          (r) =>
-            r.kind === 'file' &&
-            r.ref.spaceId !== templatesRoot.spaceId &&
-            belongsTo(r, kind) &&
-            r.name.toLowerCase().includes(term) &&
-            (!filter.favorites || r.favorite) &&
-            (!filter.tags.length || filter.tags.some((tag) => r.tags?.includes(tag)))
-        )
-        return Promise.resolve(term ? ok({ items, partial: false }) : fail('searchUnavailable'))
       },
       latestActivity(ref) {
         const record = records.find((r) => refKey(r.ref) === refKey(ref))

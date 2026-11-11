@@ -73,13 +73,7 @@ defineExpose({ focus: () => toggleButton.value?.focus() })
         <p>{{ state.error }}</p>
         <button type="button" @click="emit('reload')">Load again</button>
       </div>
-      <p v-else-if="!state.rows.length" class="office-empty">
-        {{
-          state.location.text
-            ? 'No matching files in this folder.'
-            : 'No files to show in this folder.'
-        }}
-      </p>
+      <p v-else-if="!state.rows.length" class="office-empty">No files to show in this folder.</p>
       <ul v-else class="office-file-list">
         <li v-for="file in state.rows" :key="file.ref.spaceId + file.ref.itemId">
           <FamilyIcon :kind="file.kind === 'folder' ? 'folder' : kind" />

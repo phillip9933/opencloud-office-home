@@ -41,6 +41,7 @@ export function createOfficeContext(
     rememberCreation(kind: OfficeKind, extension: string, folder: FileRef) {
       preferences.lastFormat[kind] = extension
       preferences.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
+      preferences.createdCount = Math.min(preferences.createdCount + 1, 1000)
     },
     forgetFolder(kind: OfficeKind) {
       delete preferences.lastFolder[kind]

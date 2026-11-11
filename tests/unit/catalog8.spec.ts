@@ -5,7 +5,6 @@ import {
   createCatalog8,
   catalogError,
   normalizeReadMetadata,
-  searchTerm,
   type ReadPort8
 } from '../../src/adapters/opencloud/catalog8'
 
@@ -83,7 +82,6 @@ function setup() {
   const query = {
     folder: { spaceId: personal.id, itemId: root.fileId! },
     kind: 'docs' as const,
-    text: '',
     signal: new AbortController().signal
   }
   return {
@@ -174,13 +172,9 @@ describe('8.x SDK catalog candidate', () => {
       { depth: 1, signal: test.query.signal }
     )
   })
-  it('does not substitute recursive crawling or an incomplete folder listing for unsupported search/pagination', async () => {
+  it('does not substitute an incomplete folder listing for unsupported pagination', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)
-    expect(await test.catalog.list({ ...test.query, text: 'private query' })).toEqual({
-      ok: false,
-      error: 'searchUnavailable'
-    })
     expect(await test.catalog.list({ ...test.query, cursor: 'opaque-cursor' })).toEqual({
       ok: false,
       error: 'paginationUnavailable'
@@ -300,34 +294,6 @@ describe('8.x SDK catalog candidate', () => {
       'mtime:"last 30 days" AND mediatype:("spreadsheet")',
       expect.anything()
     )
-  })
-  it('searches file names in all spaces with phrase-breaking characters removed', async () => {
-    const test = setup()
-    await test.catalog.listSpaces(test.query.signal)
-    test.port.webdav.search.mockResolvedValue({
-      resources: [{ ...file(), storageId: test.personal.id, highlights: '' }],
-      totalResults: 1
-    })
-    const result = await test.catalog.search({
-      text: ' budget" OR name:"* \\x ',
-      kind: 'docs',
-      filter: noFilter,
-      signal: test.query.signal
-    })
-    expect(result.ok && result.value.items.map((r) => r.name)).toEqual(['Report.odt'])
-    expect(test.port.webdav.search).toHaveBeenLastCalledWith(
-      'name:"*budget OR name: * x*" AND mediatype:("document")',
-      expect.anything()
-    )
-    expect(searchTerm('a\u0000b' + 'c'.repeat(200))).toHaveLength(100)
-    expect(
-      await test.catalog.search({
-        text: ' "" ',
-        kind: 'docs',
-        filter: noFilter,
-        signal: test.query.signal
-      })
-    ).toEqual({ ok: false, error: 'searchUnavailable' })
   })
   it('renders the latest activity as plain text and asks only for one entry', async () => {
     const test = setup()

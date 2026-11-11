@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref } from 'vue'
+import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { Activity, FileRecord, OfficeServices } from '../contracts/office'
 import { errorText, type FileMenuAction } from '../services/home'
 
@@ -56,7 +57,7 @@ onBeforeUnmount(() => close(false))
       title="More actions"
       @click.stop="show"
     >
-      <span aria-hidden="true">⋯</span>
+      <OcIcon name="more-2" fill-type="fill" class="office-icon" />
     </button>
     <div v-if="open" ref="panel" class="office-popover-panel">
       <ul class="office-menu-list">

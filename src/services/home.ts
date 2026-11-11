@@ -17,8 +17,6 @@ import {
 } from '../contracts/office'
 
 export const errorText: Record<AppError, string> = {
-  searchUnavailable:
-    'Search has not been verified for this integration. Clear the search to browse folders.',
   paginationUnavailable: 'Further pages cannot be loaded through this integration yet.',
   unauthenticated: 'Sign in again through OpenCloud.',
   forbiddenOrMissing: 'This item is unavailable or you no longer have access.',
@@ -45,7 +43,7 @@ export async function attempt<T>(operation: () => Promise<Result<T>>): Promise<R
   }
 }
 export function defaultLocation(kind: OfficeKind): HomeLocation {
-  return { kind, spaceId: '', folder: null, trail: [], text: '', scope: 'all', scroll: 0 }
+  return { kind, spaceId: '', folder: null, trail: [], scroll: 0 }
 }
 export type FileMenuAction =
   'open' | 'openReadOnly' | 'showInFiles' | 'copyLink' | 'download' | 'share'
@@ -86,10 +84,7 @@ export function createHomeModel(
     opening: false,
     uncertain: false,
     destinationWritable: false,
-    created: null as FileRecord | null,
-    // All-spaces search results; null when no such search is active.
-    results: null as FileRecord[] | null,
-    resultsNote: ''
+    created: null as FileRecord | null
   })
   let generation = 0
   let abort = new AbortController()
@@ -179,8 +174,6 @@ export function createHomeModel(
       state.recent = []
       state.next = undefined
       state.partial = false
-      state.results = null
-      state.resultsNote = ''
     }
     const [spaces, formats, templates] = await Promise.all([
       attempt(() => services.catalog.listSpaces(signal)),
@@ -223,36 +216,22 @@ export function createHomeModel(
       state.location = {
         ...defaultLocation(kind),
         spaceId: space.id,
-        folder: space.root,
-        text: location.text,
-        scope: location.scope
+        folder: space.root
       }
     const folder = state.location.folder ?? space.root
     state.location.folder = { ...folder }
     const recentLoad = ++recentRequest
-    const searching = state.location.scope === 'all' && state.location.text.trim() !== ''
-    const [destination, listing, recent, found] = await Promise.all([
+    const [destination, listing, recent] = await Promise.all([
       attempt(() => services.catalog.resolve(folder)),
       attempt(() =>
         services.catalog.list({
           folder,
           kind,
-          text: state.location.scope === 'folder' ? state.location.text : '',
           cursor: more ? state.next : undefined,
           signal
         })
       ),
-      loadRecent(signal),
-      searching
-        ? attempt(() =>
-            services.catalog.search({
-              text: state.location.text,
-              kind,
-              filter: structuredClone(toRaw(filter)),
-              signal
-            })
-          )
-        : undefined
+      loadRecent(signal)
     ])
     if (!current()) return
     state.destinationWritable =
@@ -270,14 +249,6 @@ export function createHomeModel(
     } else {
       state.rows = []
       state.error = errorText[listing.error]
-    }
-    if (found) {
-      state.results = found.ok ? found.value.items : []
-      state.resultsNote = !found.ok
-        ? errorText[found.error]
-        : found.value.partial
-          ? 'Showing the first results OpenCloud returned; refine the search to see more.'
-          : ''
     }
     // A filter change during this load already started a newer Recent request.
     if (recentLoad === recentRequest) {

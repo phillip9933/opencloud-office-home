@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
+import { OcIcon } from '@opencloud-eu/design-system/components'
 import type { FileCatalog, RecentFilter } from '../contracts/office'
 import { errorText } from '../services/home'
 
@@ -52,7 +53,9 @@ function choose(tag: string, checked: boolean) {
       aria-controls="office-tag-filter"
       @click="show"
     >
-      <span aria-hidden="true">#</span> Tags<span v-if="filter.tags.length">
+      <OcIcon name="price-tag-3" fill-type="line" class="office-icon" /> Tags<span
+        v-if="filter.tags.length"
+      >
         ({{ filter.tags.length }})</span
       >
     </button>

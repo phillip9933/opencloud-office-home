@@ -30,7 +30,7 @@
     1rem/1.5 system-ui,
     sans-serif;
   height: 100%;
-  overflow: auto;
+  overflow: hidden;
   box-sizing: border-box;
 }
 .office *,

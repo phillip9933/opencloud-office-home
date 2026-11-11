@@ -15,7 +15,6 @@ export type AppError =
   | 'network'
   | 'unknown'
   | 'cancelled'
-  | 'searchUnavailable'
   | 'paginationUnavailable'
 export type Result<T> = { ok: true; value: T } | { ok: false; error: AppError }
 export const ok = <T>(value: T): Result<T> => ({ ok: true, value })
@@ -44,12 +43,6 @@ export interface Activity {
   text: string
   at?: number
 }
-export interface SearchQuery {
-  text: string
-  kind: OfficeKind
-  filter: RecentFilter
-  signal: AbortSignal
-}
 // Narrows Recent. Tags match when a file has any of them.
 export interface RecentFilter {
   favorites: boolean
@@ -69,7 +62,6 @@ export interface CatalogQuery {
   folder: FileRef
   // 'any' lists every child, for template folders that hold companion preview images.
   kind: OfficeKind | 'any'
-  text: string
   cursor?: string
   signal: AbortSignal
 }
@@ -85,8 +77,6 @@ export interface FileCatalog {
   ): Promise<Result<Page<FileRecord>>>
   // Tags the user can filter by; only offered when the server advertises tags.
   listTags(signal: AbortSignal): Promise<Result<string[]>>
-  // Name search across every space the user can reach, through the host's search service.
-  search(query: SearchQuery): Promise<Result<Page<FileRecord>>>
   // The newest activity-log entry for a file, as plain text; null when none is recorded.
   latestActivity(ref: FileRef, signal: AbortSignal): Promise<Result<Activity | null>>
 }
@@ -131,9 +121,6 @@ export interface HomeLocation {
   spaceId: string
   folder: FileRef | null
   trail: { name: string; ref: FileRef }[]
-  text: string
-  // 'all' searches every reachable space; 'folder' filters the browsed folder.
-  scope: 'all' | 'folder'
   scroll: number
 }
 export interface EditorGateway {

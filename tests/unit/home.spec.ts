@@ -46,7 +46,7 @@ describe('home workflow', () => {
     expect(home.state.rows).toEqual([])
     expect(home.state.recent).toEqual([])
   })
-  it('ignores late search results even when the source ignores cancellation', async () => {
+  it('ignores late folder results even when the source ignores cancellation', async () => {
     const first = deferred<Result<Page<FileRecord>>>()
     const second = deferred<Result<Page<FileRecord>>>()
     const list = vi
@@ -54,15 +54,20 @@ describe('home workflow', () => {
       .mockImplementationOnce(() => first.promise)
       .mockImplementationOnce(() => second.promise)
     const home = createHomeModel(services, 'docs')
-    const stale = home.load({ ...defaultLocation('docs'), text: 'old' })
+    const reports = { spaceId: 'fixture-personal', itemId: 'reports' }
+    const stale = home.load(defaultLocation('docs'))
     await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(1))
-    const fresh = home.load({ ...defaultLocation('docs'), text: 'new' })
+    const fresh = home.load({
+      ...defaultLocation('docs'),
+      spaceId: reports.spaceId,
+      folder: reports
+    })
     await vi.waitFor(() => expect(list).toHaveBeenCalledTimes(2))
     second.resolve(ok({ items: [], partial: true, next: 'opaque-cursor' }))
     await fresh
     first.resolve(fail('network'))
     await stale
-    expect(home.state.location.text).toBe('new')
+    expect(home.state.location.folder).toEqual(reports)
     expect(home.state.error).toBe('')
     expect(home.state.partial).toBe(true)
     expect(list.mock.calls[0]![0].signal.aborted).toBe(true)
@@ -165,12 +170,9 @@ describe('home workflow', () => {
     expect(home.state.recent.map((e) => e.file.name)).toEqual(['Team handbook.docx'])
     expect(list).not.toHaveBeenCalled()
   })
-  it('searches all spaces, opens read-only on request, and simulates native file actions', async () => {
+  it('opens read-only on request and simulates native file actions', async () => {
     const home = createHomeModel(services, 'docs')
-    await home.load({ ...defaultLocation('docs'), text: 'shared' })
-    expect(home.state.results?.map((f) => f.name)).toEqual(['Shared Docs.docx'])
-    // An all-spaces search leaves the browsed folder unfiltered.
-    expect(home.state.rows.map((f) => f.name)).toContain('Reports')
+    await home.load(defaultLocation('docs'))
     const launch = vi.spyOn(services.editor, 'open')
     const editable = home.state.rows.find((f) => f.name === 'Project Docs.odt')!
     await home.runAction('openReadOnly', editable)

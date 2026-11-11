@@ -60,7 +60,7 @@ export async function folderTemplates(
   kind: OfficeKind,
   signal: AbortSignal
 ): Promise<Result<Template[]>> {
-  const root = await catalog.list({ folder, kind: 'any', text: '', signal })
+  const root = await catalog.list({ folder, kind: 'any', signal })
   if (!root.ok) return root
   const templates = templatesIn(root.value.items, kind, GENERAL_CATEGORY)
   const categories = root.value.items
@@ -68,7 +68,7 @@ export async function folderTemplates(
     .sort((a, b) => a.name.localeCompare(b.name))
     .slice(0, MAX_CATEGORIES)
   for (const category of categories) {
-    const listed = await catalog.list({ folder: category.ref, kind: 'any', text: '', signal })
+    const listed = await catalog.list({ folder: category.ref, kind: 'any', signal })
     if (!listed.ok) return fail(listed.error)
     templates.push(...templatesIn(listed.value.items, kind, category.name))
   }

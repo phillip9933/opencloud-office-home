@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AUTO_COMPACT_AFTER,
+  compactBand,
   createViewPreferenceStore,
   defaultViewPreferences,
   movePin,
@@ -48,19 +50,26 @@ describe('view preferences', () => {
     )
     expect(() => createViewPreferenceStore({ instance: '', user: 'u' })).toThrow()
   })
-  it('remembers creation choices and the shortcut switch, rejecting malformed values', () => {
+  it('remembers creation choices and the creation count, rejecting malformed values', () => {
     expect(
       parseViewPreferences({
         lastFormat: { docs: 'docx', sheets: '../x', slides: 7 },
         lastFolder: { docs: { spaceId: 's', itemId: 'f' }, sheets: { spaceId: '' }, slides: 'f' },
-        shortcuts: false
+        createdCount: 5e9
       })
     ).toMatchObject({
       lastFormat: { docs: 'docx' },
       lastFolder: { docs: { spaceId: 's', itemId: 'f' } },
-      shortcuts: false
+      createdCount: 1000
     })
-    expect(defaultViewPreferences().shortcuts).toBe(true)
+    expect(parseViewPreferences({ createdCount: -2 }).createdCount).toBe(0)
+  })
+  it('collapses the automatic template band only after a few created files', () => {
+    expect(defaultViewPreferences().band).toBe('auto')
+    expect(compactBand({ band: 'auto', createdCount: AUTO_COMPACT_AFTER - 1 })).toBe(false)
+    expect(compactBand({ band: 'auto', createdCount: AUTO_COMPACT_AFTER })).toBe(true)
+    expect(compactBand({ band: 'row', createdCount: 99 })).toBe(false)
+    expect(compactBand({ band: 'compact', createdCount: 0 })).toBe(true)
   })
   it('toggles and reorders pins without duplicates', () => {
     expect(togglePin(['a', 'b'], 'c')).toEqual(['a', 'b', 'c'])

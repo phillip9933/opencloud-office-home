@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import FileList from './FileList.vue'
+import { OcIcon } from '@opencloud-eu/design-system/components'
+import InfoTip from './InfoTip.vue'
 import TagFilter from './TagFilter.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, OfficeKind } from '../contracts/office'
@@ -15,7 +17,7 @@ const props = defineProps<{
   note: string
   opening: boolean
 }>()
-const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord]; clear: [] }>()
+const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord] }>()
 const preferences = props.context.preferences
 const filter = props.context.recentFilter
 const filtered = computed(() => filter.favorites || filter.tags.length > 0)
@@ -29,13 +31,16 @@ function activity(entry: RecentEntry) {
   const when = at >= today.getTime() ? timeFormat.format(at) : dateFormat.format(at)
   return `${kind === 'opened' ? 'Opened' : 'Changed'} ${when}`
 }
-const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !== undefined))
+const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAYS} days, by you or people you share with, and files you opened in this browser.`
 </script>
 
 <template>
   <section aria-labelledby="recent-heading" class="office-recents">
     <div class="office-toolbar">
-      <h2 id="recent-heading">Recent</h2>
+      <div class="office-heading-with-tip">
+        <h2 id="recent-heading">Recent</h2>
+        <InfoTip label="About Recent" :text="about" />
+      </div>
       <div class="office-toolbar-actions">
         <button
           v-if="context.services.filters.favorites"
@@ -43,7 +48,8 @@ const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !=
           :aria-pressed="filter.favorites"
           @click="filter.favorites = !filter.favorites"
         >
-          <span aria-hidden="true">{{ filter.favorites ? '★' : '☆' }}</span> Favorites
+          <OcIcon name="star" :fill-type="filter.favorites ? 'fill' : 'line'" class="office-icon" />
+          Favorites
         </button>
         <TagFilter
           v-if="context.services.filters.tags"
@@ -66,7 +72,7 @@ const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !=
             title="List view"
             @click="preferences.layout = 'list'"
           >
-            <span aria-hidden="true">☰</span>
+            <OcIcon name="list-unordered" fill-type="none" class="office-icon" />
           </button>
           <button
             type="button"
@@ -75,18 +81,11 @@ const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !=
             title="Grid view"
             @click="preferences.layout = 'grid'"
           >
-            <span aria-hidden="true">▦</span>
+            <OcIcon name="gallery-view-2" fill-type="none" class="office-icon" />
           </button>
         </div>
       </div>
     </div>
-    <p class="office-muted office-recents-scope">
-      Changed in OpenCloud in the last {{ RECENT_CHANGE_DAYS }} days, by you or people you share
-      with, or opened in this browser.
-      <button v-if="hasOpened" type="button" class="office-link" @click="emit('clear')">
-        Clear this browser's history
-      </button>
-    </p>
     <p v-if="note" class="office-muted" role="status">{{ note }}</p>
     <p v-if="!entries.length && filtered" class="office-empty">
       No recent files match these filters.

@@ -4,7 +4,7 @@ import TemplateCard from './TemplateCard.vue'
 import type { OfficeContext } from '../app/context'
 import type { OfficeKind, Template } from '../contracts/office'
 import type { HomeModel } from '../services/home'
-import { movePin, togglePin } from '../preferences/view'
+import { compactBand, movePin, togglePin, type TemplateBand } from '../preferences/view'
 
 // Templates shown beside the Blank card; pins come first and may exceed it.
 const ROW_TEMPLATES = 5
@@ -24,7 +24,7 @@ watch(
   () => props.kind,
   () => (expanded.value = false)
 )
-const compact = computed(() => preferences.band === 'compact' && !expanded.value)
+const compact = computed(() => compactBand(preferences) && !expanded.value)
 const creatable = (template?: Template) =>
   !props.state.mutation &&
   !props.state.uncertain &&
@@ -65,7 +65,7 @@ function drop(target: Template) {
   }
   dragging.value = undefined
 }
-function setBand(band: 'row' | 'compact') {
+function setBand(band: TemplateBand) {
   preferences.band = band
   expanded.value = false
 }
@@ -103,9 +103,9 @@ function setBand(band: 'row' | 'compact') {
           <button
             type="button"
             class="office-quiet"
-            :aria-pressed="preferences.band === 'compact'"
+            :aria-pressed="compactBand(preferences)"
             :title="compact ? 'Show template cards' : 'Show a single line'"
-            @click="setBand(preferences.band === 'compact' ? 'row' : 'compact')"
+            @click="setBand(compactBand(preferences) ? 'row' : 'compact')"
           >
             Compact
           </button>

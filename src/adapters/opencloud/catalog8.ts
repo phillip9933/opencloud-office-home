@@ -34,7 +34,6 @@ const MEDIA_TYPE: Record<OfficeKind, string> = {
 }
 // The server ranks matches by score, not date, and truncates at its page size.
 const SEARCH_LIMIT = 200
-const MAX_SEARCH_LENGTH = 100
 const MAX_ACTIVITY_LENGTH = 300
 const MAX_TAGS = 100
 const MAX_TAG_LENGTH = 100
@@ -56,23 +55,6 @@ function filterClauses(filter: RecentFilter): string[] {
 
 function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
   return [RECENT_CHANGE_QUERY, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
-    ' AND '
-  )
-}
-
-// Web 8.2.1 sends user text unescaped inside name:"*…*". Characters that could end the phrase or
-// act as escapes are replaced, so input can only ever narrow the name match.
-export function searchTerm(text: string): string {
-  return Array.from(text)
-    .map((char) => (char.charCodeAt(0) < 32 || '"\\'.includes(char) ? ' ' : char))
-    .join('')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, MAX_SEARCH_LENGTH)
-}
-
-function nameQuery(term: string, kind: OfficeKind, filter: RecentFilter): string {
-  return [`name:"*${term}*"`, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
     ' AND '
   )
 }
@@ -218,8 +200,7 @@ export function createCatalog8(
   async function searchHits(
     query: string,
     kind: OfficeKind,
-    signal: AbortSignal,
-    newestFirst: boolean
+    signal: AbortSignal
   ): Promise<Result<Page<FileRecord>>> {
     const key = currentSession()
     if (!key) return fail('unauthenticated')
@@ -233,7 +214,7 @@ export function createCatalog8(
       for (const resource of found.resources) {
         const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
         const item = space ? normalizeReadMetadata(space.id, resource) : undefined
-        if (!item?.ok || (newestFirst && item.value.modifiedAt === undefined)) {
+        if (!item?.ok || item.value.modifiedAt === undefined) {
           skipped++
           continue
         }
@@ -241,9 +222,8 @@ export function createCatalog8(
         if (item.value.kind === 'file' && belongsTo(item.value, kind))
           items.set(refKey(item.value.ref), item.value)
       }
-      const list = [...items.values()]
       return ok({
-        items: newestFirst ? list.sort((a, b) => b.modifiedAt! - a.modifiedAt!) : list,
+        items: [...items.values()].sort((a, b) => b.modifiedAt! - a.modifiedAt!),
         partial:
           skipped > 0 ||
           typeof found.totalResults !== 'number' ||
@@ -304,8 +284,7 @@ export function createCatalog8(
       if (query.signal.aborted) return fail('cancelled')
       if (!opaqueSegment(query.folder.itemId) || !opaqueSegment(query.folder.spaceId))
         return fail('forbiddenOrMissing')
-      // Never convert unsupported search or cursors into a misleading successful folder subset.
-      if (query.text.trim()) return fail('searchUnavailable')
+      // Never convert an unsupported cursor into a misleading successful folder subset.
       if (query.cursor !== undefined) return fail('paginationUnavailable')
       const space = spaces.get(query.folder.spaceId)
       if (!space) return fail('forbiddenOrMissing')
@@ -349,12 +328,7 @@ export function createCatalog8(
       }
     },
     recentlyChanged(kind, signal, filter) {
-      return searchHits(recentQuery(kind, filter), kind, signal, true)
-    },
-    search({ text, kind, filter, signal }) {
-      const term = searchTerm(text)
-      if (!term) return Promise.resolve(fail('searchUnavailable'))
-      return searchHits(nameQuery(term, kind, filter), kind, signal, false)
+      return searchHits(recentQuery(kind, filter), kind, signal)
     },
     async latestActivity(ref, signal) {
       const key = currentSession()
