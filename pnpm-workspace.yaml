@@ -1,0 +1,4 @@
+# The federation type tool pins an older Axios. Keep its patched replacement explicit.
+overrides:
+  '@module-federation/dts-plugin>axios': 1.20.0
+  '@module-federation/dts-plugin>ws': 8.21.0
