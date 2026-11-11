@@ -61,6 +61,7 @@ function setup() {
       listActivities: vi.fn<NativePort8['activities']['listActivities']>().mockResolvedValue([])
     },
     webdav: {
+      getPathForFileId: vi.fn<NativePort8['webdav']['getPathForFileId']>().mockResolvedValue('/'),
       getFileInfo: vi
         .fn<NativePort8['webdav']['getFileInfo']>()
         .mockImplementation((_space, ref) => {
@@ -228,6 +229,33 @@ describe('native SDK integration boundaries', () => {
     expect(url.searchParams.get('parent_container_id')).toBe('root')
     expect(url.searchParams.get('filename')).toBe('New.odt')
   })
+  it('resolves an ID-addressed subfolder path before name checks and creation confirmation', async () => {
+    const t = setup()
+    await t.init()
+    // An ID-based DAV href can normalize to / even when this is a nested folder.
+    const folder = file({ fileId: 'folder', name: 'Testing', path: '/', isFolder: true })
+    t.port.webdav.getPathForFileId.mockResolvedValue('/Testing')
+    const original = t.port.webdav.getFileInfo.getMockImplementation()!
+    let created = false
+    t.port.webdav.getFileInfo.mockImplementation((space, ref, options) => {
+      if (ref?.fileId === 'folder' || ref?.path === '/Testing') return Promise.resolve(folder)
+      if (ref?.path === '/Testing/New.odt')
+        return created
+          ? Promise.resolve(file({ fileId: 'new', name: 'New.odt', path: '/Testing/New.odt' }))
+          : Promise.reject({ statusCode: 404 })
+      return original(space, ref, options)
+    })
+    t.port.requestNew.mockImplementation(() => {
+      created = true
+      return Promise.resolve({ status: 200 })
+    })
+    const result = await t.native.services.creation.blank({
+      ...input,
+      destination: { spaceId: 'space', itemId: 'folder' }
+    })
+    expect(result.ok && result.value.path).toBe('/Testing/New.odt')
+    expect(t.port.requestNew).toHaveBeenCalledOnce()
+  })
   it('refuses read-only destinations, existing names, invalid IDs and provider redirects before dispatch', async () => {
     const t = setup()
     await t.init()
@@ -251,6 +279,16 @@ describe('native SDK integration boundaries', () => {
         destination: { ...rootRef, itemId: '../private' }
       })
     ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
+    expect(t.port.requestNew).not.toHaveBeenCalled()
+  })
+  it('refuses creation when the resolved destination path identifies a different folder', async () => {
+    const t = setup()
+    await t.init()
+    t.port.webdav.getPathForFileId.mockResolvedValue('/Moved')
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'forbiddenOrMissing'
+    })
     expect(t.port.requestNew).not.toHaveBeenCalled()
   })
   it('does not dispatch a second mutation while creation is pending', async () => {

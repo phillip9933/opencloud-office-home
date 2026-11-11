@@ -31,7 +31,7 @@ export interface NativeResource8 {
   file: FileRecord
 }
 export interface NativePort8 extends ReadPort8, ProviderPort8 {
-  webdav: ReadPort8['webdav'] & Pick<WebDAV, 'copyFiles'>
+  webdav: ReadPort8['webdav'] & Pick<WebDAV, 'copyFiles' | 'getPathForFileId'>
   // Host-authenticated request and native routes; no credential values enter this adapter.
   requestNew(url: string): Promise<{ status: number }>
   open(item: NativeResource8, mode: 'view' | 'edit'): Promise<boolean>
@@ -127,7 +127,33 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
         )
       )
         return fail('unsupportedType')
-      const path = fullPath(destination.value.resource.path, input.name)
+      // ID-addressed DAV hrefs do not necessarily carry a space-relative folder path.
+      // Resolve it through the native metadata endpoint, then verify that path still names
+      // the selected writable folder before any mutation (including a concurrent move).
+      const parentPath: unknown = await port.webdav.getPathForFileId(input.destination.itemId, {
+        signal: abort.signal
+      })
+      if (
+        typeof parentPath !== 'string' ||
+        !parentPath.startsWith('/') ||
+        parentPath.length > 4096 ||
+        /[\\\u0000-\u001f\u007f]/.test(parentPath) ||
+        parentPath.split('/').some((part) => part === '.' || part === '..')
+      )
+        return fail('forbiddenOrMissing')
+      const parent = await port.webdav.getFileInfo(
+        destination.value.space,
+        { path: parentPath },
+        { signal: abort.signal }
+      )
+      if (!session()) return fail('unauthenticated')
+      if (
+        parent.fileId !== input.destination.itemId ||
+        !parent.isFolder ||
+        !nativeAccess8(parent).createChild
+      )
+        return fail('forbiddenOrMissing')
+      const path = fullPath(parentPath, input.name)
       // Refuse pre-existing names; COPY additionally uses Overwrite:F. The app-provider remains
       // authoritative for a concurrent blank-name collision (verified live before release).
       try {
