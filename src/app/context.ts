@@ -12,7 +12,7 @@ import { createDetailLoader } from '../services/details'
 
 export function createOfficeContext(
   services: OfficeServices,
-  menuEntries: readonly AppDescriptor[] = officeApps,
+  menuEntries: readonly AppDescriptor[] = services.applications ?? officeApps,
   installedRoutes: ReadonlySet<string> = new Set(officeApps.map((app) => app.route))
 ) {
   const details = createDetailLoader(services.catalog)
@@ -54,7 +54,11 @@ export function createOfficeContext(
       if (!models.has(kind))
         models.set(
           kind,
-          createHomeModel(services, kind, recentFilter, () => preferences.templateFolder)
+          createHomeModel(services, kind, recentFilter, () =>
+            services.policy?.allowPersonalTemplates === false
+              ? undefined
+              : preferences.templateFolder
+          )
         )
       return models.get(kind)!
     },

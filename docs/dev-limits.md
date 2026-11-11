@@ -13,6 +13,17 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; no production behavior has been tested.
 - **Status:** open
 
+## DL-007: Shared administration policy deployment acceptance
+
+- **Type:** functional / placeholder
+- **Purpose:** Implement administrator configuration without assuming a global settings-write API or adding another authentication system.
+- **Location:** `src/adapters/opencloud/policy8.ts`, `src/administration/`, `src/views/OfficeAdministration.vue`.
+- **Release behaviour:** Administrator policy saves through a dedicated OpenCloud configuration file; normal users can read but cannot write/delete/move or change its access. Conflicts, loss of access and uncertain writes are recoverable without duplicate mutations.
+- **Resolution:** Provision and verify the explicit configuration file/parent ACLs, exercise writes and stale ETags as an administrator, and prove server denial as an ordinary user. Validate additional-format queries and native handlers on the pinned deployment.
+- **Verification:** Isolated adapter tests cover identity, permission gates, revision preconditions, missing metadata, account changes, repeated saves and uncertain responses. Browser tests cover ordinary-user refusal, policy persistence and enforced personal-template controls. These do not establish the live ACL or transport behavior.
+- **Tested build and result:** Local administration implementation under test; live policy file is not provisioned.
+- **Status:** open
+
 ## DL-002: Synthetic preview services
 
 - **Type:** placeholder

@@ -6,7 +6,10 @@ vi.mock('@opencloud-eu/web-pkg', () => ({
 }))
 
 vi.mock('../../src/adapters/opencloud/host8', () => ({
-  useNativeOffice8: () => ({ value: undefined })
+  useNativeOffice8: () => ({
+    context: { value: undefined },
+    status: { value: 'Waiting for OpenCloud sign-in…' }
+  })
 }))
 
 import application from '../../src/index'
@@ -21,6 +24,7 @@ describe('Office application registration', () => {
       routes.slice(1).map((route) => [route.name, route.path, route.meta?.authContext])
     ).toEqual([
       ['settings', '/settings', 'user'],
+      ['administration', '/admin', 'user'],
       ['docs', '/docs', 'user'],
       ['sheets', '/sheets', 'user'],
       ['slides', '/slides', 'user']

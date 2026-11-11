@@ -132,7 +132,7 @@ export function validateMenu(
           (f) =>
             !f ||
             typeof f.extension !== 'string' ||
-            !/^[a-z0-9]{1,8}$/.test(f.extension) ||
+            !/^[a-z0-9]{1,12}$/.test(f.extension) ||
             typeof f.mimeType !== 'string' ||
             !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(f.mimeType)
         ) ||
@@ -142,7 +142,7 @@ export function validateMenu(
               (f) =>
                 !f ||
                 typeof f.extension !== 'string' ||
-                !/^[a-z0-9]{1,8}$/.test(f.extension) ||
+                !/^[a-z0-9]{1,12}$/.test(f.extension) ||
                 typeof f.mimeType !== 'string' ||
                 !/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(f.mimeType) ||
                 !item.formats.some((format) => format.extension === f.creates)
@@ -157,28 +157,39 @@ export function validateMenu(
     .sort((a, b) => a.order - b.order)
 }
 
-export function familyFormats(kind: OfficeKind): readonly Format[] {
-  const app = officeApps.find((app) => app.id === kind)!
-  return [...app.formats, ...app.templateFormats]
+export function familyFormats(
+  kind: OfficeKind,
+  apps: readonly AppDescriptor[] = officeApps
+): readonly Format[] {
+  const app = apps.find((app) => app.id === kind)!
+  return [...app.formats, ...(app.templateFormats ?? [])]
 }
 
 // Resolves the editable format a document or template file produces, if it belongs to the family.
-export function resultFormat(file: FileRecord, kind: OfficeKind): Format | undefined {
-  if (file.kind !== 'file' || !belongsTo(file, kind)) return undefined
-  const app = officeApps.find((app) => app.id === kind)!
+export function resultFormat(
+  file: FileRecord,
+  kind: OfficeKind,
+  apps: readonly AppDescriptor[] = officeApps
+): Format | undefined {
+  if (file.kind !== 'file' || !belongsTo(file, kind, apps)) return undefined
+  const app = apps.find((app) => app.id === kind)!
   const matches = (format: Format) =>
     file.mimeType
       ? format.mimeType === file.mimeType.toLowerCase()
       : file.name.toLowerCase().endsWith(`.${format.extension}`)
-  const template = app.templateFormats.find(matches)
+  const template = app.templateFormats?.find(matches)
   return template
     ? app.formats.find((format) => format.extension === template.creates)
     : app.formats.find(matches)
 }
 
-export function belongsTo(file: FileRecord, kind: OfficeKind): boolean {
+export function belongsTo(
+  file: FileRecord,
+  kind: OfficeKind,
+  apps: readonly AppDescriptor[] = officeApps
+): boolean {
   if (file.kind === 'folder') return true
-  const formats = familyFormats(kind)
+  const formats = familyFormats(kind, apps)
   // A present but contradictory MIME type stays unclassified; extension fallback is for missing metadata.
   return file.mimeType
     ? formats.some((format) => format.mimeType === file.mimeType?.toLowerCase())

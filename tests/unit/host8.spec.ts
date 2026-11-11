@@ -27,11 +27,11 @@ import { useNativeOffice8 } from '../../src/adapters/opencloud/host8'
 
 it.each([true, false])(
   'uses native Favorite read ability (%s) instead of a guessed route name',
-  (allowed) => {
+  async (allowed) => {
     hostPolicy.favorites = allowed
     const scope = effectScope()
-    const context = scope.run(() => useNativeOffice8({}))!
-    expect(context.value?.services.filters.favorites).toBe(allowed)
+    const { context } = scope.run(() => useNativeOffice8({}))!
+    await vi.waitFor(() => expect(context.value?.services.filters.favorites).toBe(allowed))
     context.value?.dispose()
     scope.stop()
   }

@@ -69,6 +69,7 @@ export function createHomeModel(
   filter: RecentFilter = { favorites: false, tags: [] },
   templateFolder: () => FileRef | undefined = () => undefined
 ) {
+  const applications = services.applications ?? officeApps
   const state = reactive({
     location: defaultLocation(kind),
     spaces: [] as Space[],
@@ -115,7 +116,7 @@ export function createHomeModel(
       ({ resolved }) => resolved.ok || resolved.error === 'forbiddenOrMissing'
     )
       ? recent.flatMap(({ resolved, openedAt }) =>
-          resolved.ok && resolved.value.access.read && belongsTo(resolved.value, kind)
+          resolved.ok && resolved.value.access.read && belongsTo(resolved.value, kind, applications)
             ? [{ file: resolved.value, openedAt }]
             : []
         )
@@ -126,7 +127,7 @@ export function createHomeModel(
       opened.map((entry) => [refKey(entry.file.ref), entry])
     )
     for (const file of changed.ok ? changed.value.items : []) {
-      if (!file.access.read || !belongsTo(file, kind)) continue
+      if (!file.access.read || !belongsTo(file, kind, applications)) continue
       const known = merged.get(refKey(file.ref))
       merged.set(refKey(file.ref), { ...known, file, modifiedAt: file.modifiedAt })
     }
@@ -188,7 +189,7 @@ export function createHomeModel(
     state.spaces = spaces.ok ? spaces.value : []
     state.formats = formats.ok
       ? formats.value.filter((format) =>
-          officeApps
+          applications
             .find((app) => app.id === kind)!
             .formats.some((f) => f.mimeType === format.mimeType && f.extension === format.extension)
         )
@@ -249,7 +250,7 @@ export function createHomeModel(
       state.location.trail = [{ name: destination.value.name, ref: { ...folder } }]
     if (listing.ok) {
       const rows = [...(more ? state.rows : []), ...listing.value.items].filter(
-        (file) => file.access.read && belongsTo(file, kind)
+        (file) => file.access.read && belongsTo(file, kind, applications)
       )
       state.rows = [...new Map(rows.map((file) => [refKey(file.ref), file])).values()]
       state.partial = listing.value.partial

@@ -471,3 +471,84 @@ test('choose a save folder inline, cancel safely, and configure a personal templ
   await page.getByRole('link', { name: 'Back to Docs' }).click()
   await expect(page.getByRole('button', file('Letterhead'))).toBeVisible()
 })
+
+test('administration refuses ordinary users and protects personal settings', async ({ page }) => {
+  await page.goto('/#/office/admin')
+  await expect(page.getByRole('alert')).toContainText(
+    'requires OpenCloud settings-management permission'
+  )
+  await expect(page.getByRole('button', { name: 'Save configuration', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Administration', exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Personal settings', exact: true }).click()
+  await expect(
+    page.getByRole('button', { name: 'Choose template folder', exact: true })
+  ).toBeVisible()
+})
+
+test('administrator saves approved app links, format choices and template policy across reload', async ({
+  page
+}) => {
+  await page.goto('/?admin=1#/office/admin')
+  await expect(page.getByRole('heading', { name: 'Administration', exact: true })).toBeVisible()
+  const defaultFolder = page.getByRole('button', {
+    name: 'Choose default template folder',
+    exact: true
+  })
+  await defaultFolder.click()
+  await expect(
+    page.getByRole('region', { name: 'Choose installation template folder', exact: true })
+  ).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(
+    page.getByRole('region', { name: 'Choose installation template folder', exact: true })
+  ).toHaveCount(0)
+  await expect(defaultFolder).toBeFocused()
+  await page.getByRole('textbox', { name: 'App name', exact: true }).fill('Photo workspace')
+  await page.getByRole('textbox', { name: 'App URL', exact: true }).fill('javascript:alert(1)')
+  await page.getByRole('button', { name: 'Add app', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('HTTPS URL')
+  await page
+    .getByRole('textbox', { name: 'App URL', exact: true })
+    .fill('https://photos.example.org')
+  await page.getByRole('button', { name: 'Add app', exact: true }).click()
+  await page.getByRole('textbox', { name: 'Extension', exact: true }).fill('txt')
+  await page.getByRole('textbox', { name: 'MIME type', exact: true }).fill('text/plain')
+  await page.getByRole('button', { name: 'Add file type', exact: true }).click()
+  await expect(page.getByRole('checkbox', { name: 'TXT', exact: true })).toBeChecked()
+  await page
+    .getByRole('checkbox', {
+      name: 'Allow users to choose a personal template folder',
+      exact: true
+    })
+    .uncheck()
+  await page.getByRole('button', { name: 'Save configuration', exact: true }).click()
+  await expect(page.getByRole('status')).toContainText('Configuration saved')
+  await page.getByRole('button', { name: 'Reload Office', exact: true }).click()
+  await expect(page.getByRole('link', { name: /Photo workspace/ })).toHaveAttribute(
+    'href',
+    'https://photos.example.org/'
+  )
+  await expect(page.getByRole('link', { name: /Photo workspace/ })).toHaveAttribute(
+    'rel',
+    'noopener noreferrer'
+  )
+  await expect(
+    page.getByRole('checkbox', {
+      name: 'Allow users to choose a personal template folder',
+      exact: true
+    })
+  ).not.toBeChecked()
+  await page.getByRole('link', { name: 'Personal settings', exact: true }).click()
+  await expect(
+    page.getByText('Your administrator manages the template folder for this installation.')
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Choose template folder', exact: true })
+  ).toHaveCount(0)
+  await page.getByRole('link', { name: 'Administration', exact: true }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: test.info().outputPath('admin-mobile.png'), fullPage: true })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.screenshot({ path: test.info().outputPath('admin-desktop.png'), fullPage: true })
+})

@@ -10,6 +10,7 @@ import { officeApps } from './app/registry'
 import { useNativeOffice8 } from './adapters/opencloud/host8'
 const OfficeHome = defineAsyncComponent(() => import('./views/OfficeHome.vue'))
 const OfficeSettings = defineAsyncComponent(() => import('./views/OfficeSettings.vue'))
+const OfficeAdministration = defineAsyncComponent(() => import('./views/OfficeAdministration.vue'))
 
 // All authenticated route wrappers use the same session-aware rendering boundary.
 function authenticatedPage(render: () => VNode) {
@@ -18,7 +19,7 @@ function authenticatedPage(render: () => VNode) {
 
 export default defineWebApplication({
   setup({ applicationConfig }) {
-    const context = useNativeOffice8(applicationConfig)
+    const { context, status } = useNativeOffice8(applicationConfig)
     const router = useRouter()
     return {
       appInfo: { id: 'office', name: 'Office Home', icon: 'file-text' },
@@ -30,9 +31,19 @@ export default defineWebApplication({
           component: authenticatedPage(() =>
             context.value
               ? h(OfficeSettings, { key: context.value.id, context: context.value })
-              : h('p', { role: 'status' }, 'Waiting for OpenCloud sign-in…')
+              : h('p', { role: 'status' }, status.value)
           ),
           meta: { authContext: 'user', title: 'Office settings' }
+        },
+        {
+          path: '/admin',
+          name: 'administration',
+          component: authenticatedPage(() =>
+            context.value
+              ? h(OfficeAdministration, { key: context.value.id, context: context.value })
+              : h('p', { role: 'status' }, status.value)
+          ),
+          meta: { authContext: 'user', title: 'Office administration' }
         },
         ...officeApps.map((app) => ({
           path: `/${app.id}`,
@@ -40,7 +51,7 @@ export default defineWebApplication({
           component: authenticatedPage(() =>
             context.value
               ? h(OfficeHome, { key: context.value.id, kind: app.id, context: context.value })
-              : h('p', { role: 'status' }, 'Waiting for OpenCloud sign-in…')
+              : h('p', { role: 'status' }, status.value)
           ),
           meta: { authContext: 'user', title: app.label }
         }))

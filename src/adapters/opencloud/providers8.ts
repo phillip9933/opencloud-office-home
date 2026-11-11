@@ -1,6 +1,6 @@
 import type { AppProviderCapability } from '@opencloud-eu/web-client/ocs'
 import type { AppProviderService } from '@opencloud-eu/web-pkg'
-import { officeApps } from '../../app/registry'
+import { officeApps, type AppDescriptor } from '../../app/registry'
 import { fail, ok, type Format, type OfficeCapabilities } from '../../contracts/office'
 
 // These shapes come from the installed 8.x SDK. Web 8.2.1 loads `mimeTypes` from the
@@ -38,7 +38,11 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
 /**
  * DEV-LIMIT(DL-005): creation support derived from the 8.x registry; live provider acceptance remains open.
  */
-export function createProviderCapabilities8(port: ProviderPort8): OfficeCapabilities {
+export function createProviderCapabilities8(
+  port: ProviderPort8,
+  apps: readonly AppDescriptor[] = officeApps,
+  allowed: Partial<Record<'docs' | 'sheets' | 'slides', string[]>> = {}
+): OfficeCapabilities {
   return {
     creationFormats(kind) {
       // Native Web posts to the first app-provider capability. Unknown enablement is not consent.
@@ -56,14 +60,16 @@ export function createProviderCapabilities8(port: ProviderPort8): OfficeCapabili
         const entry = record(value)
         return entry && hasNamedProvider(entry) ? [entry] : []
       })
-      const family = officeApps.find((app) => app.id === kind)!.formats
+      const family = apps.find((app) => app.id === kind)!.formats
       const supported = family.filter((format) => entries.some((entry) => matches(entry, format)))
       if (!supported.length) return Promise.resolve(fail('providerNotConfigured'))
       return Promise.resolve(
         ok(
           supported
-            .filter((format) =>
-              entries.some((entry) => matches(entry, format) && entry.allow_creation === true)
+            .filter(
+              (format) =>
+                (!allowed[kind] || allowed[kind]!.includes(format.extension)) &&
+                entries.some((entry) => matches(entry, format) && entry.allow_creation === true)
             )
             .map((format) => ({ ...format }))
         )

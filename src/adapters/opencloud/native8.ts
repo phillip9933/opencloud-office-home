@@ -24,6 +24,8 @@ import {
 import { createProviderCapabilities8, type ProviderPort8 } from './providers8'
 import { nativeAccess8 } from './access8'
 import { canonicalRootDrives8 } from './roots8'
+import { defaultPolicy, policyApplications, type OfficePolicy } from '../../administration/policy'
+import type { Administration } from '../../administration/store'
 
 export interface NativeResource8 {
   space: SpaceResource
@@ -45,6 +47,8 @@ interface NativeOptions {
   session: () => string | undefined
   storage?: Storage
   templateFolder?: FileRef
+  policy?: OfficePolicy
+  administration?: Administration
   filters: OfficeServices['filters']
 }
 
@@ -68,12 +72,15 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   const session = () =>
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
+  const policy = options.policy ?? defaultPolicy()
+  const applications = policyApplications(policy)
   const catalog = createCatalog8(
     { ...port, drives: canonicalRootDrives8(port) },
     session,
-    nativeAccess8
+    nativeAccess8,
+    applications
   )
-  const capabilities = createProviderCapabilities8(port)
+  const capabilities = createProviderCapabilities8(port, applications, policy.creationFormats)
   const pendingNames = new Set<string>()
   const previewUrls = new Set<string>()
   const abort = new AbortController()
@@ -235,6 +242,9 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
 
   const services: OfficeServices = {
     mode: 'native',
+    policy,
+    applications,
+    administration: options.administration,
     templateFolderDefault: options.templateFolder,
     catalog,
     capabilities,
@@ -248,7 +258,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     templates(kind, selectedFolder) {
       const folder = selectedFolder ?? options.templateFolder
       if (!folder) return Promise.resolve(ok([]))
-      return folderTemplates(catalog, folder, kind, abort.signal)
+      return folderTemplates(catalog, folder, kind, abort.signal, applications)
     },
     editor: {
       async open(input) {

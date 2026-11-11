@@ -15,6 +15,10 @@ const directory = process.argv[2] ?? 'dist-spike'
 assert(['dist-spike', 'dist-native-test'].includes(directory), 'Unknown artifact scope')
 const native = await textTree(directory)
 assert(
+  !native.includes('office-preview-policy'),
+  'Synthetic administration storage leaked into the native artifact'
+)
+assert(
   !native.includes('synthetic-preview'),
   'Fixture services leaked into the native spike artifact'
 )

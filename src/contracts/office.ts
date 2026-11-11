@@ -1,4 +1,7 @@
 import type { ViewPreferenceStore } from '../preferences/view'
+import type { OfficePolicy } from '../administration/policy'
+import type { Administration } from '../administration/store'
+import type { AppDescriptor } from '../app/registry'
 
 export type OfficeKind = 'docs' | 'sheets' | 'slides'
 export type FileRef = Readonly<{ spaceId: string; itemId: string }>
@@ -157,6 +160,9 @@ export interface RecentStore {
 }
 export interface OfficeServices {
   mode: 'unconfigured' | 'fixture' | 'native'
+  policy?: OfficePolicy
+  applications?: readonly AppDescriptor[]
+  administration?: Administration
   catalog: FileCatalog
   actions: FileActions
   creation: FileCreation

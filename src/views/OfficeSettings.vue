@@ -23,7 +23,10 @@ async function describeFolder() {
   const request = ++revision
   folderError.value = ''
   folderLabel.value = ''
-  const selected = preferences.templateFolder ?? props.context.services.templateFolderDefault
+  const selected =
+    props.context.services.policy?.allowPersonalTemplates === false
+      ? props.context.services.templateFolderDefault
+      : (preferences.templateFolder ?? props.context.services.templateFolderDefault)
   if (!selected) return
   const spaces = await attempt(() => props.context.services.catalog.listSpaces(controller.signal))
   if (request !== revision) return
@@ -47,6 +50,7 @@ async function describeFolder() {
     .join(' / ')
 }
 function chooseTemplateFolder(folder: FileRecord, label: string) {
+  if (props.context.services.policy?.allowPersonalTemplates === false) return
   revision++
   preferences.templateFolder = { ...folder.ref }
   folderLabel.value = label
@@ -88,13 +92,19 @@ onMounted(async () => {
           <p>
             <strong
               >{{
-                preferences.templateFolder ? 'Your template folder' : 'Installation default'
+                context.services.policy?.allowPersonalTemplates !== false &&
+                preferences.templateFolder
+                  ? 'Your template folder'
+                  : 'Installation default'
               }}:</strong
             >
             {{ folderLabel || 'No folder selected' }}
           </p>
           <p v-if="folderError" role="alert">{{ folderError }}</p>
-          <div class="office-panel-actions">
+          <p v-if="context.services.policy?.allowPersonalTemplates === false" class="office-muted">
+            Your administrator manages the template folder for this installation.
+          </p>
+          <div v-else class="office-panel-actions">
             <button type="button" @click="choosingFolder = !choosingFolder">
               Choose template folder
             </button>
@@ -103,7 +113,7 @@ onMounted(async () => {
             </button>
           </div>
           <FolderPicker
-            v-if="choosingFolder"
+            v-if="choosingFolder && context.services.policy?.allowPersonalTemplates !== false"
             :catalog="context.services.catalog"
             title="Choose template folder"
             :start="preferences.templateFolder ?? context.services.templateFolderDefault"
@@ -111,9 +121,12 @@ onMounted(async () => {
             @cancel="choosingFolder = false"
           />
           <p class="office-muted">
-            Your choice applies to Docs, Sheets and Slides in this browser. An administrator can
-            configure an installation default for all users. Choose ordinary editable documents for
-            templates; template-container conversion is not available in this test build.
+            <span v-if="context.services.policy?.allowPersonalTemplates !== false"
+              >Your choice applies to Docs, Sheets and Slides in this browser.</span
+            >
+            An administrator can configure an installation default for all users. Choose ordinary
+            editable documents for templates; template-container conversion is not available in this
+            test build.
           </p>
           <fieldset class="office-settings-group">
             <legend>Template section display</legend>

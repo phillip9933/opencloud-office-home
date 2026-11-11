@@ -1,7 +1,7 @@
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import type { Graph } from '@opencloud-eu/web-client/graph'
 import type { WebDAV } from '@opencloud-eu/web-client/webdav'
-import { belongsTo } from '../../app/registry'
+import { belongsTo, officeApps, type AppDescriptor } from '../../app/registry'
 import {
   fail,
   ok,
@@ -53,10 +53,24 @@ function filterClauses(filter: RecentFilter): string[] {
   return parts
 }
 
-function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
-  return [RECENT_CHANGE_QUERY, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
-    ' AND '
-  )
+function familyQuery(kind: OfficeKind, apps: readonly AppDescriptor[]): string {
+  const baseline: readonly string[] = officeApps
+    .find((app) => app.id === kind)!
+    .formats.map((format) => format.extension)
+  const additional = apps
+    .find((app) => app.id === kind)!
+    .formats.filter((format) => !baseline.includes(format.extension))
+  const media = `mediatype:("${MEDIA_TYPE[kind]}")`
+  return additional.length
+    ? `(${[media, ...additional.map((format) => `name:"*.${format.extension}"`)].join(' OR ')})`
+    : media
+}
+function recentQuery(
+  kind: OfficeKind,
+  filter: RecentFilter,
+  apps: readonly AppDescriptor[]
+): string {
+  return [RECENT_CHANGE_QUERY, familyQuery(kind, apps), ...filterClauses(filter)].join(' AND ')
 }
 
 // Activity messages are templates such as "{user} updated {resource}"; values become plain text.
@@ -184,7 +198,8 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
 export function createCatalog8(
   port: ReadPort8,
   getSessionKey: () => string | undefined,
-  access?: (resource: Resource) => FileRecord['access']
+  access?: (resource: Resource) => FileRecord['access'],
+  apps: readonly AppDescriptor[] = officeApps
 ): FileCatalog & { dispose(): void; space(id: string): SpaceResource | undefined } {
   function normalize(spaceId: string, resource: Resource) {
     const result = normalizeReadMetadata(spaceId, resource)
@@ -233,7 +248,7 @@ export function createCatalog8(
           continue
         }
         // The server's media groups include non-office types such as plain text.
-        if (item.value.kind === 'file' && belongsTo(item.value, kind))
+        if (item.value.kind === 'file' && belongsTo(item.value, kind, apps))
           items.set(refKey(item.value.ref), item.value)
       }
       return ok({
@@ -327,7 +342,7 @@ export function createCatalog8(
         const items = new Map<string, FileRecord>()
         for (const resource of page.children ?? []) {
           const item = normalize(space.id, resource)
-          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
+          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind, apps)))
             items.set(refKey(item.value.ref), item.value)
         }
         if (access) {
@@ -370,15 +385,13 @@ export function createCatalog8(
       if (!phrase || phrase.length > 200 || /["\\*?\u0000-\u001f]/.test(phrase))
         return Promise.resolve(fail('invalidSearch'))
       return searchHits(
-        [`name:"*${phrase}*"`, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
-          ' AND '
-        ),
+        [`name:"*${phrase}*"`, familyQuery(kind, apps), ...filterClauses(filter)].join(' AND '),
         kind,
         signal
       )
     },
     recentlyChanged(kind, signal, filter) {
-      return searchHits(recentQuery(kind, filter), kind, signal)
+      return searchHits(recentQuery(kind, filter, apps), kind, signal)
     },
     async latestActivity(ref, signal) {
       const key = currentSession()
