@@ -1,3 +1,5 @@
+import type { ViewPreferenceStore } from '../preferences/view'
+
 export type OfficeKind = 'docs' | 'sheets' | 'slides'
 export type FileRef = Readonly<{ spaceId: string; itemId: string }>
 export type AppError =
@@ -29,7 +31,14 @@ export interface FileRecord {
   path?: string
   // Last content change in OpenCloud (epoch milliseconds), by anyone with access.
   modifiedAt?: number
+  favorite?: boolean
+  tags?: string[]
   access: { read: boolean; write: boolean; createChild: boolean }
+}
+// Narrows Recent. Tags match when a file has any of them.
+export interface RecentFilter {
+  favorites: boolean
+  tags: string[]
 }
 export interface Space {
   id: string
@@ -54,7 +63,13 @@ export interface FileCatalog {
   list(query: CatalogQuery): Promise<Result<Page<FileRecord>>>
   resolve(ref: FileRef): Promise<Result<FileRecord>>
   // Family files changed within RECENT_CHANGE_DAYS across the user's spaces, newest first.
-  recentlyChanged(kind: OfficeKind, signal: AbortSignal): Promise<Result<Page<FileRecord>>>
+  recentlyChanged(
+    kind: OfficeKind,
+    signal: AbortSignal,
+    filter: RecentFilter
+  ): Promise<Result<Page<FileRecord>>>
+  // Tags the user can filter by; only offered when the server advertises tags.
+  listTags(signal: AbortSignal): Promise<Result<string[]>>
 }
 export const RECENT_CHANGE_DAYS = 30
 export interface Format {
@@ -126,6 +141,9 @@ export interface OfficeServices {
   recents: RecentStore
   templates(kind: OfficeKind): Promise<Result<Template[]>>
   preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
+  // Server capabilities that decide which Recent filters exist (files.favorites, files.tags).
+  filters: { favorites: boolean; tags: boolean }
+  viewPreferences: ViewPreferenceStore
 }
 export function refKey(ref: FileRef): string {
   return JSON.stringify([ref.spaceId, ref.itemId])

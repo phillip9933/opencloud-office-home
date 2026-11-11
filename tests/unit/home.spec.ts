@@ -146,6 +146,25 @@ describe('home workflow', () => {
     ])
     expect(home.state.recent.every((entry) => entry.openedAt === undefined)).toBe(true)
   })
+  it('applies Recent filters to both sources and refreshes only Recent', async () => {
+    services = fixtureServices({ seedHistory: true })
+    const filter = { favorites: false, tags: [] as string[] }
+    const home = createHomeModel(services, 'docs', filter)
+    await home.load(defaultLocation('docs'))
+    const list = vi.spyOn(services.catalog, 'list')
+    filter.favorites = true
+    await home.refreshRecent()
+    // Favorites: one opened here (Project Docs) and one only opened (Meeting notes).
+    expect(home.state.recent.map((e) => e.file.name).sort()).toEqual([
+      'Meeting notes 4 November.odt',
+      'Project Docs.odt'
+    ])
+    filter.favorites = false
+    filter.tags = ['Onboarding']
+    await home.refreshRecent()
+    expect(home.state.recent.map((e) => e.file.name)).toEqual(['Team handbook.docx'])
+    expect(list).not.toHaveBeenCalled()
+  })
   it('keeps browser history and explains when recent changes cannot be loaded', async () => {
     services.recents.record({ spaceId: 'fixture-personal', itemId: 'docs' }, 'docs')
     vi.spyOn(services.catalog, 'recentlyChanged').mockResolvedValue(fail('network'))

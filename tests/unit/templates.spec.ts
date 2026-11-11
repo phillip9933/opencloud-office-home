@@ -28,6 +28,7 @@ function catalog(children: Record<string, FileRecord[]>): FileCatalog {
     listSpaces: () => Promise.resolve(ok([])),
     resolve: () => Promise.resolve(fail('forbiddenOrMissing')),
     recentlyChanged: () => Promise.resolve(ok({ items: [], partial: false })),
+    listTags: () => Promise.resolve(ok([])),
     list: vi.fn((query: CatalogQuery) => {
       const items = children[refKey(query.folder)]
       return Promise.resolve(items ? ok({ items, partial: false }) : fail('forbiddenOrMissing'))

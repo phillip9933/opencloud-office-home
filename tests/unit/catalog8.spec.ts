@@ -60,6 +60,9 @@ function setup() {
     drives: {
       listMyDrives: vi.fn<ReadPort8['drives']['listMyDrives']>().mockResolvedValue([personal])
     },
+    tags: {
+      listTags: vi.fn<ReadPort8['tags']['listTags']>().mockResolvedValue(['Finance'])
+    },
     webdav: {
       listFiles: vi
         .fn<ReadPort8['webdav']['listFiles']>()
@@ -89,6 +92,8 @@ function setup() {
     }
   }
 }
+
+const noFilter = { favorites: false, tags: [] }
 
 describe('8.x SDK catalog candidate', () => {
   it('rejects path syntax in opaque references before sending any SDK request', async () => {
@@ -258,7 +263,7 @@ describe('8.x SDK catalog candidate', () => {
       totalResults: 3
     })
     await test.catalog.listSpaces(test.query.signal)
-    const result = await test.catalog.recentlyChanged('docs', test.query.signal)
+    const result = await test.catalog.recentlyChanged('docs', test.query.signal, noFilter)
     expect(result.ok && result.value.items.map((r) => [r.name, r.modifiedAt])).toEqual([
       ['Newer.docx', Date.parse('2026-11-10T08:00:00Z')],
       ['Older.odt', Date.parse('2026-11-02T09:00:00Z')]
@@ -271,6 +276,42 @@ describe('8.x SDK catalog candidate', () => {
       { searchLimit: 200, signal: test.query.signal }
     )
   })
+  it('narrows recent changes by favorites and tags, and keeps unsafe tag text out of the query', async () => {
+    const test = setup()
+    await test.catalog.listSpaces(test.query.signal)
+    await test.catalog.recentlyChanged('sheets', test.query.signal, {
+      favorites: true,
+      tags: ['Finance', 'Q4 plan']
+    })
+    expect(test.port.webdav.search).toHaveBeenLastCalledWith(
+      'mtime:"last 30 days" AND mediatype:("spreadsheet") AND is:favorite AND tag:("Finance" OR "Q4 plan")',
+      expect.anything()
+    )
+    await test.catalog.recentlyChanged('sheets', test.query.signal, {
+      favorites: false,
+      tags: ['Finance', 'say "hi"']
+    })
+    expect(test.port.webdav.search).toHaveBeenLastCalledWith(
+      'mtime:"last 30 days" AND mediatype:("spreadsheet")',
+      expect.anything()
+    )
+  })
+  it('carries favorite and tag metadata and lists tags from the server, bounded and sorted', async () => {
+    const test = setup()
+    expect(
+      normalizeReadMetadata('s', file('t', { starred: true, tags: ['Q4', '', 'Finance'] }))
+    ).toMatchObject({ ok: true, value: { favorite: true, tags: ['Q4', 'Finance'] } })
+    test.port.tags.listTags.mockResolvedValue(['Q4', 'Finance', 'Q4', ''])
+    expect(await test.catalog.listTags(test.query.signal)).toEqual({
+      ok: true,
+      value: ['Finance', 'Q4']
+    })
+    test.port.tags.listTags.mockRejectedValue({ statusCode: 401 })
+    expect(await test.catalog.listTags(test.query.signal)).toEqual({
+      ok: false,
+      error: 'unauthenticated'
+    })
+  })
   it('marks recent changes partial when hits are truncated or belong to an unmapped share', async () => {
     const test = setup()
     test.port.webdav.search.mockResolvedValue({
@@ -281,12 +322,12 @@ describe('8.x SDK catalog candidate', () => {
       totalResults: 2
     })
     await test.catalog.listSpaces(test.query.signal)
-    expect(await test.catalog.recentlyChanged('docs', test.query.signal)).toEqual({
+    expect(await test.catalog.recentlyChanged('docs', test.query.signal, noFilter)).toEqual({
       ok: true,
       value: { items: [], partial: true }
     })
     test.port.webdav.search.mockResolvedValue({ resources: [], totalResults: 500 })
-    const truncated = await test.catalog.recentlyChanged('sheets', test.query.signal)
+    const truncated = await test.catalog.recentlyChanged('sheets', test.query.signal, noFilter)
     expect(truncated.ok && truncated.value.partial).toBe(true)
   })
   it('discards recent changes that arrive after an account change', async () => {
@@ -301,7 +342,7 @@ describe('8.x SDK catalog candidate', () => {
         totalResults: 1
       })
     })
-    expect(await test.catalog.recentlyChanged('docs', test.query.signal)).toEqual({
+    expect(await test.catalog.recentlyChanged('docs', test.query.signal, noFilter)).toEqual({
       ok: false,
       error: 'unauthenticated'
     })

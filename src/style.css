@@ -267,6 +267,108 @@
   min-height: 24px;
 }
 
+/* Compact band, pins and reordering */
+.office-start-compact {
+  padding-block: 0.6rem;
+}
+.office-start-compact .office-start-head {
+  margin-bottom: 0;
+}
+.office-template-card {
+  position: relative;
+}
+.office .office-pin {
+  position: absolute;
+  top: 0.35rem;
+  inset-inline-end: 0.35rem;
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: var(--office-surface);
+  color: var(--office-muted);
+}
+.office .office-pin[aria-pressed='true'] {
+  color: var(--office-accent);
+  border-color: var(--office-accent);
+}
+.office-pin svg {
+  width: 1rem;
+  height: 1rem;
+}
+.office-reorder {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.office .office-reorder button {
+  min-height: 32px;
+  min-width: 40px;
+  padding: 0.2rem 0.5rem;
+}
+li[draggable='true'] {
+  cursor: grab;
+}
+.office-dragging {
+  opacity: 0.5;
+}
+
+/* Recent filters */
+.office-popover {
+  position: relative;
+}
+.office-popover-panel {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 0;
+  top: calc(100% + 0.4rem);
+  min-width: 15rem;
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--office-surface);
+  border: 1px solid var(--office-line);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px #153b3020;
+}
+.office-popover-panel fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.office-popover-panel legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.office .office-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 450;
+  min-height: 32px;
+}
+.office .office-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: 0;
+}
+.office-popover-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+.office .office-toolbar-actions [aria-pressed='true'] {
+  background: var(--office-hover);
+  border-color: var(--office-muted);
+}
+
 /* Family icons */
 .office[data-kind='docs'],
 .office [data-kind='docs'] {

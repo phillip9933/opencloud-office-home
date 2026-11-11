@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import FamilyIcon from './FamilyIcon.vue'
 import FileThumb from './FileThumb.vue'
+import TagFilter from './TagFilter.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, OfficeKind } from '../contracts/office'
 import { groupRecents, lastActivity, type RecentEntry } from '../services/recentView'
@@ -16,6 +17,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ open: [file: FileRecord]; clear: [] }>()
 const preferences = props.context.preferences
+const filter = props.context.recentFilter
+const filtered = computed(() => filter.favorites || filter.tags.length > 0)
 const groups = computed(() => groupRecents(props.entries, preferences.sort, Date.now()))
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' })
 const timeFormat = new Intl.DateTimeFormat(undefined, { timeStyle: 'short' })
@@ -38,6 +41,20 @@ function extension(file: FileRecord) {
     <div class="office-toolbar">
       <h2 id="recent-heading">Recent</h2>
       <div class="office-toolbar-actions">
+        <button
+          v-if="context.services.filters.favorites"
+          type="button"
+          :aria-pressed="filter.favorites"
+          @click="filter.favorites = !filter.favorites"
+        >
+          <span aria-hidden="true">{{ filter.favorites ? '★' : '☆' }}</span> Favorites
+        </button>
+        <TagFilter
+          v-if="context.services.filters.tags"
+          :catalog="context.services.catalog"
+          :filter="filter"
+          @change="(tags) => (filter.tags = tags)"
+        />
         <label class="office-inline-label"
           >Sort by
           <select v-model="preferences.sort">
@@ -69,14 +86,24 @@ function extension(file: FileRecord) {
     </div>
     <p class="office-muted office-recents-scope">
       {{ context.services.mode === 'fixture' ? 'Synthetic preview history.' : '' }}
-      Files changed in OpenCloud in the last {{ RECENT_CHANGE_DAYS }} days, by you on any device or
-      by people you share with, and files you opened in this browser.
+      Changed in OpenCloud in the last {{ RECENT_CHANGE_DAYS }} days, by you or people you share
+      with, or opened in this browser.
       <button v-if="hasOpened" type="button" class="office-link" @click="emit('clear')">
         Clear this browser's history
       </button>
     </p>
     <p v-if="note" class="office-muted" role="status">{{ note }}</p>
-    <p v-if="!entries.length" class="office-empty">No recent files yet.</p>
+    <p v-if="!entries.length && filtered" class="office-empty">
+      No recent files match these filters.
+      <button
+        type="button"
+        class="office-link"
+        @click="Object.assign(filter, { favorites: false, tags: [] })"
+      >
+        Clear filters
+      </button>
+    </p>
+    <p v-else-if="!entries.length" class="office-empty">No recent files yet.</p>
     <section
       v-for="group in groups"
       :key="group.label"

@@ -10,12 +10,14 @@ import {
   type FileCatalog,
   type FileRecord,
   type OfficeKind,
+  type RecentFilter,
   type Result
 } from '../../contracts/office'
 
 // These method types come from the installed 8.x SDK, not a proposed REST schema.
 export interface ReadPort8 {
   drives: Pick<Graph['drives'], 'listMyDrives'>
+  tags: Pick<Graph['tags'], 'listTags'>
   webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo' | 'search'>
 }
 
@@ -29,6 +31,23 @@ const MEDIA_TYPE: Record<OfficeKind, string> = {
 }
 // The server ranks matches by score, not date, and truncates at its page size.
 const RECENT_CHANGE_LIMIT = 200
+const MAX_TAGS = 100
+const MAX_TAG_LENGTH = 100
+
+function validTag(tag: unknown): tag is string {
+  return typeof tag === 'string' && tag.trim() !== '' && tag.length <= MAX_TAG_LENGTH
+}
+
+// Tags are user text inside a KQL phrase. Ones containing quote or escape characters are not
+// sent; the caller still filters by them locally, so they narrow results but never the query.
+function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
+  const parts = [RECENT_CHANGE_QUERY, `mediatype:("${MEDIA_TYPE[kind]}")`]
+  if (filter.favorites) parts.push('is:favorite')
+  const tags = filter.tags.filter((tag) => validTag(tag) && !/["\\]/.test(tag))
+  if (tags.length && tags.length === filter.tags.length)
+    parts.push(`tag:(${tags.map((tag) => `"${tag}"`).join(' OR ')})`)
+  return parts.join(' AND ')
+}
 
 function record(value: unknown): Record<string, unknown> | undefined {
   // The object check establishes the boundary before optional SDK error fields are inspected.
@@ -87,6 +106,10 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
     path: resource.path,
     ...(typeof resource.mimeType === 'string' ? { mimeType: resource.mimeType } : {}),
     ...(modifiedAt(resource.mdate) !== undefined ? { modifiedAt: modifiedAt(resource.mdate) } : {}),
+    ...(resource.starred === true ? { favorite: true } : {}),
+    ...(Array.isArray(resource.tags) && resource.tags.length
+      ? { tags: resource.tags.filter(validTag).slice(0, MAX_TAGS) }
+      : {}),
     // A successful authenticated metadata response permits metadata display only.
     // It cannot authorize content access, editing or creation; the gateway stays unavailable.
     access: { read: true, write: false, createChild: false }
@@ -203,15 +226,27 @@ export function createCatalog8(
         return fail(interrupted(key, query.signal) ?? catalogError(error))
       }
     },
-    async recentlyChanged(kind, signal) {
+    async listTags(signal) {
+      const key = currentSession()
+      if (!key) return fail('unauthenticated')
+      try {
+        const tags = await port.tags.listTags({ signal })
+        const stopped = interrupted(key, signal)
+        if (stopped) return fail(stopped)
+        return ok([...new Set(tags.filter(validTag))].sort().slice(0, MAX_TAGS))
+      } catch (error) {
+        return fail(interrupted(key, signal) ?? catalogError(error))
+      }
+    },
+    async recentlyChanged(kind, signal, filter) {
       const key = currentSession()
       if (!key) return fail('unauthenticated')
       if (signal.aborted) return fail('cancelled')
       try {
-        const found = await port.webdav.search(
-          `${RECENT_CHANGE_QUERY} AND mediatype:("${MEDIA_TYPE[kind]}")`,
-          { searchLimit: RECENT_CHANGE_LIMIT, signal }
-        )
+        const found = await port.webdav.search(recentQuery(kind, filter), {
+          searchLimit: RECENT_CHANGE_LIMIT,
+          signal
+        })
         const stopped = interrupted(key, signal)
         if (stopped) return fail(stopped)
         const items = new Map<string, FileRecord>()

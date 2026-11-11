@@ -145,6 +145,11 @@ watch(
   },
   { immediate: true }
 )
+// Filters narrow Recent only, so a change reloads that section and leaves the folder view alone.
+watch(
+  () => [props.context.recentFilter.favorites, ...props.context.recentFilter.tags],
+  () => void model.value.refreshRecent()
+)
 onBeforeUnmount(() => {
   clearTimeout(timer)
   navigation++
@@ -185,7 +190,7 @@ onBeforeUnmount(() => {
     <TemplateStrip
       :kind="kind"
       :noun="nouns[kind]"
-      :services="context.services"
+      :context="context"
       :state="state"
       @start="start"
     >

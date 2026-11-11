@@ -10,6 +10,7 @@ import {
   type HomeLocation,
   type OfficeKind,
   type OfficeServices,
+  type RecentFilter,
   type Result,
   type Space,
   type Template
@@ -47,7 +48,18 @@ export function defaultLocation(kind: OfficeKind): HomeLocation {
   return { kind, spaceId: '', folder: null, trail: [], text: '', scroll: 0 }
 }
 
-export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
+function matchesFilter(file: FileRecord, filter: RecentFilter): boolean {
+  return (
+    (!filter.favorites || file.favorite === true) &&
+    (!filter.tags.length || filter.tags.some((tag) => file.tags?.includes(tag)))
+  )
+}
+
+export function createHomeModel(
+  services: OfficeServices,
+  kind: OfficeKind,
+  filter: RecentFilter = { favorites: false, tags: [] }
+) {
   const state = reactive({
     location: defaultLocation(kind),
     spaces: [] as Space[],
@@ -72,11 +84,69 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
   let generation = 0
   let abort = new AbortController()
   let active = false
+  let recentRequest = 0
+  let recentAbort = new AbortController()
+
+  // Merges browser-opened references and server changes, then applies the Recent filter to both.
+  async function loadRecent(signal: AbortSignal) {
+    const filterNow = structuredClone(toRaw(filter))
+    const [recent, changed] = await Promise.all([
+      Promise.all(
+        services.recents.list(kind).map(async ({ ref, openedAt }) => {
+          const resolved = await attempt(() => services.catalog.resolve(ref))
+          if (!resolved.ok && resolved.error === 'forbiddenOrMissing') services.recents.remove(ref)
+          return { resolved, openedAt }
+        })
+      ),
+      attempt(() => services.catalog.recentlyChanged(kind, signal, filterNow))
+    ])
+    // Failed refreshes show no cached private metadata, including when only one recent failed.
+    const opened = recent.every(
+      ({ resolved }) => resolved.ok || resolved.error === 'forbiddenOrMissing'
+    )
+      ? recent.flatMap(({ resolved, openedAt }) =>
+          resolved.ok && resolved.value.access.read && belongsTo(resolved.value, kind)
+            ? [{ file: resolved.value, openedAt }]
+            : []
+        )
+      : []
+    // Server changes and browser opens are merged by identity; each keeps its own timestamp.
+    // Only the server query sets modifiedAt here; an opened file's old change date is not "recent".
+    const merged = new Map<string, RecentEntry>(
+      opened.map((entry) => [refKey(entry.file.ref), entry])
+    )
+    for (const file of changed.ok ? changed.value.items : []) {
+      if (!file.access.read || !belongsTo(file, kind)) continue
+      const known = merged.get(refKey(file.ref))
+      merged.set(refKey(file.ref), { ...known, file, modifiedAt: file.modifiedAt })
+    }
+    return {
+      entries: [...merged.values()].filter((entry) => matchesFilter(entry.file, filterNow)),
+      note: !changed.ok
+        ? `Changes from other devices are unavailable. ${errorText[changed.error]}`
+        : changed.value.partial
+          ? 'OpenCloud returned only some recent changes; older ones may be missing.'
+          : ''
+    }
+  }
+
+  // Reloads only Recent, for example after the filter changes, without touching the folder view.
+  async function refreshRecent() {
+    if (!active) return
+    recentAbort.abort()
+    recentAbort = new AbortController()
+    const request = ++recentRequest
+    const result = await loadRecent(recentAbort.signal)
+    if (!active || request !== recentRequest) return
+    state.recent = result.entries
+    state.recentNote = result.note
+  }
 
   function deactivate() {
     active = false
     generation++
     abort.abort()
+    recentAbort.abort()
     state.loading = false
     state.rows = []
     state.recent = []
@@ -146,7 +216,8 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
       }
     const folder = state.location.folder ?? space.root
     state.location.folder = { ...folder }
-    const [destination, listing, recent, changed] = await Promise.all([
+    const recentLoad = ++recentRequest
+    const [destination, listing, recent] = await Promise.all([
       attempt(() => services.catalog.resolve(folder)),
       attempt(() =>
         services.catalog.list({
@@ -157,14 +228,7 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
           signal
         })
       ),
-      Promise.all(
-        services.recents.list(kind).map(async ({ ref, openedAt }) => {
-          const resolved = await attempt(() => services.catalog.resolve(ref))
-          if (!resolved.ok && resolved.error === 'forbiddenOrMissing') services.recents.remove(ref)
-          return { resolved, openedAt }
-        })
-      ),
-      attempt(() => services.catalog.recentlyChanged(kind, signal))
+      loadRecent(signal)
     ])
     if (!current()) return
     state.destinationWritable =
@@ -180,32 +244,11 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
       state.rows = []
       state.error = errorText[listing.error]
     }
-    // Failed refreshes show no cached private metadata, including when only one recent failed.
-    const opened = recent.every(
-      ({ resolved }) => resolved.ok || resolved.error === 'forbiddenOrMissing'
-    )
-      ? recent.flatMap(({ resolved, openedAt }) =>
-          resolved.ok && resolved.value.access.read && belongsTo(resolved.value, kind)
-            ? [{ file: resolved.value, openedAt }]
-            : []
-        )
-      : []
-    // Server changes and browser opens are merged by identity; each keeps its own timestamp.
-    // Only the server query sets modifiedAt here; an opened file's old change date is not "recent".
-    const merged = new Map<string, RecentEntry>(
-      opened.map((entry) => [refKey(entry.file.ref), entry])
-    )
-    for (const file of changed.ok ? changed.value.items : []) {
-      if (!file.access.read || !belongsTo(file, kind)) continue
-      const known = merged.get(refKey(file.ref))
-      merged.set(refKey(file.ref), { ...known, file, modifiedAt: file.modifiedAt })
+    // A filter change during this load already started a newer Recent request.
+    if (recentLoad === recentRequest) {
+      state.recent = recent.entries
+      state.recentNote = recent.note
     }
-    state.recent = [...merged.values()]
-    state.recentNote = !changed.ok
-      ? `Changes from other devices are unavailable. ${errorText[changed.error]}`
-      : changed.value.partial
-        ? 'OpenCloud returned only some recent changes; older ones may be missing.'
-        : ''
     state.loading = false
   }
 
@@ -330,6 +373,6 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
       modifiedAt === undefined ? [] : [{ file, modifiedAt }]
     )
   }
-  return { state, load, deactivate, open, create, clearRecents }
+  return { state, load, refreshRecent, deactivate, open, create, clearRecents }
 }
 export type HomeModel = ReturnType<typeof createHomeModel>

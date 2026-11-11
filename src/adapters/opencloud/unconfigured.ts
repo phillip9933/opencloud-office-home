@@ -1,5 +1,6 @@
 import { fail, type OfficeServices } from '../../contracts/office'
 import { createRecentStore } from '../../preferences/recents'
+import { createViewPreferenceStore } from '../../preferences/view'
 
 // DEV-LIMIT(DL-001): this is deliberately not an SDK implementation. No endpoint or provider is assumed.
 // Replace only after release-specific adapter contracts and deployment checks pass.
@@ -17,6 +18,9 @@ export function unconfiguredServices(): OfficeServices {
         return Promise.resolve(fail('editorUnavailable'))
       },
       recentlyChanged() {
+        return Promise.resolve(fail('editorUnavailable'))
+      },
+      listTags() {
         return Promise.resolve(fail('editorUnavailable'))
       }
     },
@@ -40,6 +44,8 @@ export function unconfiguredServices(): OfficeServices {
     },
     templates: () => Promise.resolve(fail('editorUnavailable')),
     preview: () => Promise.resolve(fail('editorUnavailable')),
+    filters: { favorites: false, tags: false },
+    viewPreferences: createViewPreferenceStore({ instance: 'unconfigured', user: 'unconfigured' }),
     recents: createRecentStore({
       instance: 'unconfigured',
       user: 'unconfigured'

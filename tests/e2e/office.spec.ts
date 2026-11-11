@@ -60,11 +60,13 @@ test('template gallery categories, previews, grid layout and name sorting', asyn
   for (const category of ['Business', 'Personal', 'Education'])
     await expect(page.getByRole('heading', { name: category, level: 3 })).toBeVisible()
   // Companion images become previews; a template without one falls back to its format card.
-  const timeline = page.getByRole('button', { name: 'Project timeline' })
+  const timeline = page.getByRole('button', { name: 'Project timeline', exact: true })
   await expect(timeline.locator('img')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Invoice' }).locator('img')).toHaveCount(1)
+  await expect(
+    page.getByRole('button', { name: 'Invoice', exact: true }).locator('img')
+  ).toHaveCount(1)
 
-  await page.getByRole('button', { name: 'Household budget' }).click()
+  await page.getByRole('button', { name: 'Household budget', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'New from Household budget' })
   await expect(dialog).toContainText('Format: ODS')
   await dialog.getByRole('button', { name: 'Create', exact: true }).click()
@@ -147,4 +149,41 @@ test('keyboard disclosure, dialog focus, mobile width, and safe text rendering',
     true
   )
   await page.screenshot({ path: 'test-results/office-mobile.png', fullPage: true })
+})
+
+test('recent filters, template pinning and order, and the compact band', async ({ page }) => {
+  await page.goto('/#/office/sheets')
+  await expect(recents(page).getByRole('button', { name: 'Project Sheets.ods' })).toBeVisible()
+  const favorites = page.getByRole('button', { name: 'Favorites' })
+  await favorites.click()
+  await expect(favorites).toHaveAttribute('aria-pressed', 'true')
+  await expect(recents(page).getByRole('button', { name: 'Expense log.ods' })).toBeVisible()
+  await expect(recents(page).getByRole('button', { name: 'Project Sheets.ods' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Tags' }).click()
+  await page.getByRole('checkbox', { name: 'Q4' }).check()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Tags (1)' })).toBeFocused()
+  await expect(page.getByText('No recent files match these filters.')).toBeVisible()
+  await page.getByRole('button', { name: 'Clear filters' }).click()
+  await expect(recents(page).getByRole('button', { name: 'Project Sheets.ods' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Template gallery' }).click()
+  await page.getByRole('button', { name: 'Pin Invoice to the top' }).click()
+  await page.getByRole('button', { name: 'Pin Gradebook to the top' }).first().click()
+  await expect(
+    page.getByRole('button', { name: 'Pin Invoice to the top' }).first()
+  ).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Move Gradebook earlier' }).click()
+  await page.getByRole('button', { name: 'Template gallery' }).click()
+  const row = await page.locator('.office-cards-row .office-card-name').allTextContents()
+  expect(row.slice(0, 3)).toEqual(['Blank spreadsheet', 'Gradebook', 'Invoice'])
+
+  await page.getByRole('button', { name: 'Compact' }).click()
+  await expect(page.getByRole('button', { name: 'Blank spreadsheet', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '+ Blank spreadsheet' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Applications' }).click()
+  await page.getByRole('link', { name: 'Docs', exact: true }).click()
+  await expect(page.getByRole('button', { name: '+ Blank document' })).toBeVisible()
+  await page.getByRole('button', { name: 'Compact' }).click()
+  await expect(page.getByRole('button', { name: 'Blank document', exact: true })).toBeVisible()
 })

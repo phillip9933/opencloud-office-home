@@ -14,6 +14,7 @@ import {
   type Result
 } from '../contracts/office'
 import { createRecentStore } from '../preferences/recents'
+import { createViewPreferenceStore } from '../preferences/view'
 import { folderTemplates } from '../services/templates'
 import { syntheticPreview } from './previews'
 
@@ -166,6 +167,20 @@ export function fixtureServices(
       const record = records.find((r) => refKey(r.ref) === refKey(ref))
       if (record) record.modifiedAt = now() - age
     }
+  // Synthetic favorites and tags, as OpenCloud would report them on each resource.
+  const labels: [string, boolean, string[]][] = [
+    ['docs', true, ['Client']],
+    ['handbook', false, ['Onboarding']],
+    ['notes', true, []],
+    ['sheets', false, ['Finance', 'Q4']],
+    ['expenses', true, ['Finance']],
+    ['kickoff', false, ['Client', 'Q4']],
+    ['training', true, ['Onboarding']]
+  ]
+  for (const [id, favorite, tags] of labels) {
+    const record = records.find((r) => r.kind === 'file' && r.ref.itemId === id)
+    if (record) Object.assign(record, favorite ? { favorite } : {}, tags.length ? { tags } : {})
+  }
   const history = new Map<string, string>()
   if (options.seedHistory)
     history.set(
@@ -218,7 +233,7 @@ export function fixtureServices(
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },
       list: listChildren,
-      recentlyChanged(kind) {
+      recentlyChanged(kind, _signal, filter) {
         const since = now() - RECENT_CHANGE_DAYS * DAY
         const items = records
           .filter(
@@ -226,10 +241,15 @@ export function fixtureServices(
               r.kind === 'file' &&
               r.modifiedAt !== undefined &&
               r.modifiedAt >= since &&
-              belongsTo(r, kind)
+              belongsTo(r, kind) &&
+              (!filter.favorites || r.favorite) &&
+              (!filter.tags.length || filter.tags.some((tag) => r.tags?.includes(tag)))
           )
           .sort((a, b) => b.modifiedAt! - a.modifiedAt!)
         return Promise.resolve(ok({ items, partial: false }))
+      },
+      listTags() {
+        return Promise.resolve(ok([...new Set(records.flatMap((r) => r.tags ?? []))].sort()))
       }
     },
     capabilities: {
@@ -257,6 +277,14 @@ export function fixtureServices(
       const source = { ...services.catalog, list: listChildren }
       return folderTemplates(source, templatesRoot, kind, new AbortController().signal)
     },
+    filters: { favorites: true, tags: true },
+    viewPreferences: createViewPreferenceStore(
+      { instance: 'fixture', user: 'synthetic-preview' },
+      {
+        getItem: (key) => history.get(key) ?? null,
+        setItem: (key, value) => void history.set(key, value)
+      }
+    ),
     preview(ref) {
       // Like OpenCloud 9.0.0, only images have previews; office documents fall back to a card.
       const url = previews.get(refKey(ref))
