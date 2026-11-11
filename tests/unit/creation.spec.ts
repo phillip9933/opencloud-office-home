@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import CreatePanel from '../../src/components/CreatePanel.vue'
 import { fixtureServices } from '../../src/fixtures/services'
 import { createHomeModel, defaultLocation } from '../../src/services/home'
-import { type FileRecord, type Result } from '../../src/contracts/office'
+import { ok, type FileRecord, type Result } from '../../src/contracts/office'
 
 async function setup() {
   const services = fixtureServices()
@@ -44,6 +44,34 @@ describe('inline creation', () => {
     expect(test.wrapper.find('section').exists()).toBe(false)
     expect(document.activeElement).toBe(test.opener)
     expect(blank).not.toHaveBeenCalled()
+    test.close()
+  })
+  it('offers an additional registry-enabled format and submits the selected format explicitly', async () => {
+    const test = await setup()
+    const formats = [
+      { extension: 'odt', mimeType: 'application/vnd.oasis.opendocument.text' },
+      {
+        extension: 'docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      }
+    ]
+    vi.spyOn(test.services.capabilities, 'creationFormats').mockResolvedValue(ok(formats))
+    await test.model.load(defaultLocation('docs'))
+    const blank = vi.spyOn(test.services.creation, 'blank')
+    await test.wrapper.vm.open(undefined, test.opener)
+    expect(test.wrapper.findAll('select option').map((value) => value.text())).toEqual([
+      'ODT',
+      'DOCX'
+    ])
+    await test.wrapper.get('select').setValue('docx')
+    await test.wrapper.get('input').setValue('Selected Word format')
+    await test.wrapper.get('form').trigger('submit')
+    await flushPromises()
+    expect(blank.mock.calls[0]![0]).toMatchObject({
+      name: 'Selected Word format.docx',
+      format: formats[1]
+    })
+    expect(test.model.state.created?.name).toBe('Selected Word format.docx')
     test.close()
   })
   it('holds the one explicit creation while pending and retains fixable errors', async () => {

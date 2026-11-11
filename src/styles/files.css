@@ -82,11 +82,13 @@
 }
 .office-table th:last-child,
 .office-actions-cell {
-  width: 3rem;
+  /* Include cell padding around the menu target; a narrower cell adds overflow to every row. */
+  width: 4rem;
   text-align: end;
 }
 .office .office-menu-button {
   min-width: 40px;
+  padding-inline: 0.5rem;
   border-color: transparent;
   background: transparent;
   font-weight: 700;
@@ -286,19 +288,4 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
-}
-
-/* The search form wraps as a unit instead of widening a narrow host content pane. */
-.office-search {
-  margin-block-end: 1.5rem;
-}
-.office-search input {
-  min-width: 0;
-  width: 100%;
-}
-.office-search .office-toolbar {
-  flex-wrap: wrap;
-}
-.office-search .office-inline-label {
-  max-width: 100%;
 }

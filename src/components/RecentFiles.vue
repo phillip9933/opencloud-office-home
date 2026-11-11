@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import FileList from './FileList.vue'
+import FileToolbar from './FileToolbar.vue'
 import InfoTip from './InfoTip.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, OfficeKind } from '../contracts/office'
@@ -39,6 +40,7 @@ const about = `Office files changed in OpenCloud in the last ${RECENT_CHANGE_DAY
         <h2 id="recent-heading">Recent</h2>
         <InfoTip label="About Recent" :text="about" />
       </div>
+      <FileToolbar :context="context" />
     </div>
     <p v-if="note" class="office-muted" role="status">{{ note }}</p>
     <p v-if="!entries.length && filtered" class="office-empty">

@@ -226,10 +226,11 @@ describe('home workflow', () => {
   })
 })
 
-it('preserves a search submitted before initial space discovery finishes', async () => {
+it('preserves an explicit folder submitted before initial space discovery finishes', async () => {
   const home = createHomeModel(fixtureServices(), 'docs')
-  await home.load({ ...defaultLocation('docs'), search: { term: 'handbook', scope: 'all' } })
-  expect(home.state.location.search).toEqual({ term: 'handbook', scope: 'all' })
+  const folder = { spaceId: 'fixture-personal', itemId: 'reports' }
+  await home.load({ ...defaultLocation('docs'), spaceId: folder.spaceId, folder })
+  expect(home.state.location.folder).toEqual(folder)
   expect(home.state.location.spaceId).not.toBe('')
 })
 

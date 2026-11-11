@@ -4,7 +4,7 @@ import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
 import CreatePanel from '../components/CreatePanel.vue'
 import FileBrowser from '../components/FileBrowser.vue'
-import SearchFiles from '../components/SearchFiles.vue'
+import RecentFiles from '../components/RecentFiles.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
 import type { OfficeContext } from '../app/context'
@@ -143,7 +143,7 @@ watch(
     const saved = props.context.views.get(id)
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
-    browseOpen.value ||= location.trail.length > 0 || location.search?.scope === 'folder'
+    browseOpen.value ||= location.trail.length > 0
     await activeModel.load(location)
     if (revision !== navigation) return
     if (id === rememberedView && state.value.error) {
@@ -164,7 +164,7 @@ watch(
   },
   { immediate: true }
 )
-// Refresh Recent without changing the browse folder; search applies these filters independently.
+// Refresh Recent without changing the browse folder.
 watch(
   () => [props.context.recentFilter.favorites, ...props.context.recentFilter.tags],
   () => void model.value.refreshRecent()
@@ -204,18 +204,12 @@ onBeforeUnmount(() => {
           :preferred="context.preferences.lastFormat[kind]"
           @created="remember"
         />
-        <SearchFiles
-          :key="kind"
-          :context="context"
+        <RecentFiles
           :kind="kind"
-          :search="state.location.search"
-          :folder-rows="state.rows"
-          :folder-partial="state.partial"
-          :ready="!state.loading && !!state.location.folder && !state.error"
-          :opening="state.opening"
+          :context="context"
           :entries="state.recent"
           :note="state.recentNote"
-          @search="(search) => navigate({ ...snapshot(), search, scroll: 0 })"
+          :opening="state.opening"
           @action="act"
         />
         <FileBrowser

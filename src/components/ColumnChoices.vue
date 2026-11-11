@@ -19,7 +19,7 @@ function move(id: FileColumn, offset: number) {
 </script>
 <template>
   <fieldset class="office-settings-group">
-    <legend>Recent and search columns</legend>
+    <legend>Recent columns</legend>
     <p class="office-muted">
       Name and file actions are always shown. Select optional columns and set their order.
     </p>

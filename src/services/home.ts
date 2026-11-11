@@ -223,7 +223,6 @@ export function createHomeModel(
     if (space.id !== location.spaceId)
       state.location = {
         ...defaultLocation(kind),
-        search: location.search,
         spaceId: space.id,
         folder: space.root
       }

@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
 import FolderPicker from '../components/FolderPicker.vue'
-import ColumnChoices from '../components/ColumnChoices.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord } from '../contracts/office'
 import { attempt, errorText } from '../services/home'
 const props = defineProps<{ context: OfficeContext }>()
-const router = useRouter()
 const preferences = props.context.preferences
 const choosingFolder = ref(false)
 const folderLabel = ref('')
 const folderError = ref('')
 const heading = ref<HTMLElement>()
-const columnsHeading = ref<HTMLElement>()
 const lastKind = preferences.lastKind
 const lastView = props.context.lastView.get(lastKind)
 let revision = 0
@@ -63,10 +59,7 @@ async function useDefault() {
 }
 onMounted(async () => {
   await nextTick()
-  ;(router.currentRoute.value.hash === '#recent-columns'
-    ? columnsHeading.value
-    : heading.value
-  )?.focus()
+  heading.value?.focus()
   await describeFolder()
 })
 </script>
@@ -140,14 +133,6 @@ onMounted(async () => {
               ></label
             >
           </fieldset>
-        </section>
-        <section class="office-settings-section" aria-labelledby="recent-columns">
-          <h2 id="recent-columns" ref="columnsHeading" tabindex="-1">Columns</h2>
-          <ColumnChoices :context="context" />
-          <p class="office-muted">
-            Owner and date created are shown when OpenCloud supplies them. Date created is never
-            inferred from the last modification date.
-          </p>
         </section>
       </div>
     </main>

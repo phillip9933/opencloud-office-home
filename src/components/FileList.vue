@@ -9,7 +9,7 @@ import type { FileMenuAction } from '../services/home'
 import { defaultColumns, fileColumns, fileColumnValue, type FileColumn } from '../services/columns'
 import type { DetailLoader } from '../services/details'
 
-// One presentation for Recent and search results: a table with column headers, or cards.
+// Recent files use a table with optional columns, or cards.
 const props = defineProps<{
   items: { file: FileRecord; meta: string }[]
   layout: 'list' | 'grid'
@@ -86,12 +86,19 @@ function extension(file: FileRecord) {
   >
     <table
       class="office-table"
-      :style="{ minWidth: `${Math.max(36, 18 + columns.length * 10)}rem` }"
+      :style="{ minWidth: columns.length > 2 ? `${18 + columns.length * 8}rem` : undefined }"
     >
       <thead>
         <tr>
           <th scope="col">Name</th>
-          <th v-for="column in columns" :key="column" scope="col">{{ columnLabel(column) }}</th>
+          <th
+            v-for="column in columns"
+            :key="column"
+            scope="col"
+            :class="{ 'office-hide-narrow': column === 'location' && columns.length <= 2 }"
+          >
+            {{ columnLabel(column) }}
+          </th>
           <th scope="col"><span class="office-visually-hidden">Actions</span></th>
         </tr>
       </thead>
@@ -108,8 +115,18 @@ function extension(file: FileRecord) {
               <span>{{ item.file.name }}</span>
             </button>
             <FileMarks :file="metadata(item.file)" />
+            <span
+              v-if="columns.includes('location') && columns.length <= 2"
+              class="office-mobile-location office-muted"
+              >{{ fileColumnValue(metadata(item.file), 'location', item.meta) }}</span
+            >
           </td>
-          <td v-for="column in columns" :key="column" class="office-muted">
+          <td
+            v-for="column in columns"
+            :key="column"
+            class="office-muted"
+            :class="{ 'office-hide-narrow': column === 'location' && columns.length <= 2 }"
+          >
             {{ fileColumnValue(metadata(item.file), column, item.meta) }}
           </td>
           <td class="office-actions-cell">

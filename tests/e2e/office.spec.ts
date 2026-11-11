@@ -48,10 +48,14 @@ test('create, conflict recovery, launch, folder history and full-page settings',
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Clear.*history/ })).toHaveCount(0)
-  await page.getByRole('checkbox', { name: 'Owner', exact: true }).check()
-  await page.getByRole('checkbox', { name: 'Date created', exact: true }).check()
-  await page.getByRole('checkbox', { name: 'Tags', exact: true }).check()
+  await expect(page.getByRole('heading', { name: 'Columns', exact: true })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to Docs' }).click()
+  await page.getByRole('button', { name: 'Choose columns' }).click()
+  const columns = page.getByRole('group', { name: 'Columns', exact: true })
+  await columns.getByRole('checkbox', { name: 'Owner', exact: true }).check()
+  await columns.getByRole('checkbox', { name: 'Date created', exact: true }).check()
+  await columns.getByRole('checkbox', { name: 'Tags', exact: true }).check()
+  await columns.getByRole('button', { name: 'Done' }).click()
   await expect(recents(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
   await expect(
     recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
@@ -305,32 +309,48 @@ test('dark theme tokens and right-to-left layout', async ({ page }) => {
   expect(overflow.scroll <= overflow.width, JSON.stringify(overflow)).toBe(true)
 })
 
-test('name search spans spaces, restores Back state and filters the current folder', async ({
+// Native OpenCloud owns search; column changes remain local to the current page.
+test('column dropdown stays on the home, closes with Escape/outside click, and uses available width', async ({
   page
 }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 })
   await page.goto('/')
-  const search = page.getByRole('searchbox', { name: 'Search files' })
-  await expect(page.getByRole('button', { name: 'Search', exact: true })).toBeEnabled()
-  await search.fill('handbook')
-  await search.press('Enter')
-  await expect(page.getByRole('heading', { name: 'Search results for “handbook”' })).toBeVisible()
-  await expect(page.getByRole('button', file('Team handbook.docx'))).toBeVisible()
-  await page.getByRole('button', { name: 'Clear search' }).click()
-  await expect(recents(page)).toBeVisible()
-  await page.goBack()
-  await expect(page.getByRole('heading', { name: 'Search results for “handbook”' })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Search scope' }).selectOption('folder')
-  await search.fill('Project')
-  await search.press('Enter')
+  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await expect(page.getByRole('searchbox', { name: 'Search files' })).toHaveCount(0)
+  await expect(page.getByRole('combobox', { name: 'Search scope' })).toHaveCount(0)
+  const widths = await page
+    .locator('.office-table-scroll')
+    .evaluateAll((els) => els.map((el) => ({ visible: el.clientWidth, scroll: el.scrollWidth })))
+  expect(
+    widths.every((value) => value.scroll <= value.visible),
+    JSON.stringify(widths)
+  ).toBe(true)
+  const table = await page.locator('.office-table').first().boundingBox()
+  const main = await page.locator('main').boundingBox()
+  expect(table!.width).toBeGreaterThan(main!.width * 0.9)
+  const before = page.url()
+  const trigger = page.getByRole('button', { name: 'Choose columns' })
+  await trigger.click()
+  const columns = page.getByRole('group', { name: 'Columns', exact: true })
+  await expect(columns).toBeVisible()
+  await columns.getByRole('checkbox', { name: 'Owner', exact: true }).check()
+  await page.keyboard.press('Escape')
+  await expect(columns).toBeHidden()
+  await expect(trigger).toBeFocused()
+  expect(page.url()).toBe(before)
   await expect(
-    page
-      .getByRole('region', { name: 'Find office files' })
-      .getByRole('button', file('Project Docs.odt'))
+    recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
+  ).toBeVisible()
+  await trigger.click()
+  await page.getByRole('heading', { name: 'Recent', exact: true }).click()
+  await expect(columns).toBeHidden()
+  await page.reload()
+  await expect(
+    recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
   ).toBeVisible()
   await sidebar(page).getByRole('link', { name: 'Sheets' }).click()
-  await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
   await page.goBack()
-  await expect(page.getByRole('heading', { name: 'Search results for “Project”' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Docs', exact: true })).toBeVisible()
 })
 
 test('visual inspection artifacts for desktop light and mobile dark', async ({ page }) => {
@@ -391,6 +411,17 @@ test('visual inspection artifacts for desktop light and mobile dark', async ({ p
     fullPage: true
   })
   await panel.getByRole('button', file('Cancel')).click()
+  await page.setViewportSize({ width: 1600, height: 1000 })
+  await page.getByRole('button', { name: 'Choose columns' }).click()
+  await expect(page.getByRole('group', { name: 'Columns', exact: true })).toBeVisible()
+  const menuBox = await page.getByRole('group', { name: 'Columns', exact: true }).boundingBox()
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0)
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(1000)
+  await page.screenshot({
+    path: test.info().outputPath('columns-desktop-dark.png'),
+    fullPage: true
+  })
+  await page.keyboard.press('Escape')
   await page.getByRole('link', { name: 'Settings' }).click()
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeFocused()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

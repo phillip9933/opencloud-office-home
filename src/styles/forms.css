@@ -116,24 +116,6 @@
   gap: 0.5rem;
   margin-block: 1.5rem 1rem;
 }
-.office-search-input {
-  display: flex;
-  flex: 1 1 12rem;
-  min-width: 0;
-  position: relative;
-}
-.office-search-input input {
-  padding-inline-end: 2.7rem;
-}
-.office-search-input button {
-  position: absolute;
-  inset-inline-end: 1px;
-  top: 1px;
-  min-height: 38px;
-  border: 0;
-  padding: 0.4rem;
-  background: transparent;
-}
 .office-file-toolbar select {
   width: auto;
   max-width: 100%;
@@ -165,13 +147,56 @@
   .office-cards-row {
     grid-auto-columns: 8rem;
   }
-  .office-search-input {
-    flex-basis: calc(100% - 8rem);
-  }
   .office-create-panel {
     padding: 1rem;
   }
   .office-panel-actions .office-muted {
     flex-basis: 100%;
+  }
+}
+
+.office-column-menu .office-popover-panel {
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(32rem, 70vh);
+  text-align: start;
+}
+.office-column-menu .office-column-order {
+  margin-bottom: 0;
+}
+.office-file-toolbar {
+  justify-content: flex-end;
+}
+/* A hidden action heading must not add scrollable width at the table's far edge. */
+.office-table th:last-child {
+  position: relative;
+}
+.office-table th:last-child .office-visually-hidden {
+  inset-inline-start: 0;
+}
+
+.office-recents > .office-toolbar .office-file-toolbar {
+  margin: 0;
+}
+.office-recents {
+  margin-top: 1.5rem;
+}
+
+.office-file-toolbar .office-segmented button {
+  padding-inline: 0.5rem;
+}
+.office-file-toolbar select {
+  padding-inline: 0.4rem;
+}
+.office-mobile-location {
+  display: none;
+}
+@media (max-width: 700px) {
+  .office-table td:first-child {
+    flex-wrap: wrap;
+  }
+  .office-mobile-location {
+    display: block;
+    flex-basis: 100%;
+    padding-inline-start: 0.25rem;
   }
 }

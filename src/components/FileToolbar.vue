@@ -1,58 +1,14 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import TagFilter from './TagFilter.vue'
+import ColumnMenu from './ColumnMenu.vue'
 import type { OfficeContext } from '../app/context'
-import type { HomeLocation } from '../contracts/office'
-const props = defineProps<{ context: OfficeContext; search?: HomeLocation['search'] }>()
-const emit = defineEmits<{ search: [search: HomeLocation['search']] }>()
+const props = defineProps<{ context: OfficeContext }>()
 const preferences = props.context.preferences
 const filter = props.context.recentFilter
-const term = ref('')
-const scope = ref<'all' | 'folder'>('all')
-watch(
-  () => props.search,
-  () => {
-    term.value = props.search?.term ?? ''
-    scope.value = props.search?.scope ?? 'all'
-  },
-  { immediate: true }
-)
 </script>
 <template>
-  <form
-    class="office-file-toolbar"
-    role="search"
-    aria-label="Find and organize files"
-    @submit.prevent="emit('search', term.trim() ? { term: term.trim(), scope } : undefined)"
-  >
-    <div class="office-search-input">
-      <label class="office-visually-hidden" for="office-search-name">Search files</label>
-      <input
-        id="office-search-name"
-        v-model="term"
-        type="search"
-        maxlength="200"
-        placeholder="Search files"
-      />
-      <button type="submit" aria-label="Search" title="Search">
-        <OcIcon name="search" fill-type="line" class="office-icon" />
-      </button>
-    </div>
-    <label class="office-visually-hidden" for="office-search-scope">Search scope</label>
-    <select id="office-search-scope" v-model="scope">
-      <option value="all">All spaces</option>
-      <option value="folder">This folder</option>
-    </select>
-    <button
-      v-if="search"
-      type="button"
-      aria-label="Clear search"
-      title="Clear search"
-      @click="emit('search', undefined)"
-    >
-      <OcIcon name="close" fill-type="line" class="office-icon" />
-    </button>
+  <div class="office-file-toolbar" role="group" aria-label="File filters and view">
     <button
       v-if="context.services.filters.favorites"
       type="button"
@@ -95,12 +51,6 @@ watch(
         <OcIcon name="gallery-view-2" fill-type="none" class="office-icon" />
       </button>
     </div>
-    <RouterLink
-      :to="{ name: 'office-settings', hash: '#recent-columns' }"
-      class="office-icon-button office-column-link"
-      aria-label="Choose columns"
-      title="Choose columns"
-      ><OcIcon name="layout-column" fill-type="line" class="office-icon"
-    /></RouterLink>
-  </form>
+    <ColumnMenu :context="context" />
+  </div>
 </template>

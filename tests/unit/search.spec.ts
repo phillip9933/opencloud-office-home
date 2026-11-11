@@ -1,39 +1,34 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import SearchFiles from '../../src/components/SearchFiles.vue'
+import FolderPicker from '../../src/components/FolderPicker.vue'
 import { createOfficeContext } from '../../src/app/context'
 import { fixtureServices } from '../../src/fixtures/services'
 import { ok, type FileRecord, type Page, type Result } from '../../src/contracts/office'
 
-it('discards late search metadata after clearing or switching a query', async () => {
+// The app search UI was removed in favor of the native host search. Keep stale-read
+// coverage at the remaining interactive folder-picker boundary.
+it('discards folder metadata that arrives after cancelling the picker', async () => {
   const services = fixtureServices()
   let finish!: (result: Result<Page<FileRecord>>) => void
-  const search = vi.spyOn(services.catalog, 'search').mockImplementation(
+  const list = vi.spyOn(services.catalog, 'list').mockImplementation(
     () =>
       new Promise((resolve) => {
         finish = resolve
       })
   )
-  const wrapper = mount(SearchFiles, {
-    props: {
-      context: createOfficeContext(services),
-      kind: 'docs',
-      ready: true,
-      opening: false,
-      folderRows: [],
-      folderPartial: false,
-      search: { term: 'old query', scope: 'all' }
-    }
+  const wrapper = mount(FolderPicker, {
+    props: { catalog: services.catalog, title: 'Choose save folder' }
   })
-  expect(wrapper.text()).toContain('Searching…')
-  await wrapper.setProps({ search: undefined })
+  await flushPromises()
+  expect(wrapper.text()).toContain('Loading folders…')
+  wrapper.unmount()
   finish(
     ok({
       items: [
         {
           ref: { spaceId: 'old', itemId: 'private' },
-          name: 'Stale private metadata.odt',
-          kind: 'file',
+          name: 'Stale private folder',
+          kind: 'folder',
           access: { read: true, write: false, createChild: false }
         }
       ],
@@ -41,9 +36,7 @@ it('discards late search metadata after clearing or switching a query', async ()
     })
   )
   await flushPromises()
-  expect(wrapper.text()).not.toContain('Stale private metadata')
-  expect(search.mock.calls[0]![2].aborted).toBe(true)
-  wrapper.unmount()
+  expect(list.mock.calls[0]![0].signal.aborted).toBe(true)
 })
 
 describe('authenticated context disposal', () => {

@@ -131,7 +131,6 @@ export interface HomeLocation {
   folder: FileRef | null
   trail: { name: string; ref: FileRef }[]
   scroll: number
-  search?: { term: string; scope: 'all' | 'folder' }
 }
 export interface EditorGateway {
   open(input: {
