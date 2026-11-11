@@ -78,5 +78,5 @@ Scan scope: source/configuration, native spike, native test and preview output. 
 - **Release behaviour:** A template container creates a complete independent editable document through the configured native integration.
 - **Resolution:** Implement conversion with interrupted-operation recovery and test real content fidelity. Ordinary same-format document COPY is available for initial testing.
 - **Verification:** A template-container request must refuse before dispatch; ordinary COPY must use overwrite false and preserve the source.
-- **Tested build and result:** Isolated boundary tests pass; live copy/conversion acceptance pending.
+- **Tested build and result:** Isolated boundary tests pass. Native test commit `3d34f1a`: ordinary ODT/ODS/ODP copies downloaded byte-identical to their synthetic sources, with new copy identities and preserved source identities/bytes. Template-container conversion and editor rendering acceptance remain pending.
 - **Status:** open
