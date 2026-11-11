@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, ref, toRaw, watch } from 'vue'
 import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
 import CreatePanel from '../components/CreatePanel.vue'
-import FileBrowser from '../components/FileBrowser.vue'
 import RecentFiles from '../components/RecentFiles.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
@@ -23,9 +22,7 @@ const nouns: Record<OfficeKind, string> = {
   sheets: 'spreadsheet',
   slides: 'presentation'
 }
-const browseOpen = ref(false)
 const createPanel = ref<InstanceType<typeof CreatePanel>>()
-const browser = ref<InstanceType<typeof FileBrowser>>()
 const viewport = ref<HTMLElement>()
 const heading = ref<HTMLHeadingElement>()
 const openCreated = ref<HTMLButtonElement>()
@@ -46,11 +43,6 @@ function persist() {
       : props.context.lastView.get(props.kind)
   if (id) props.context.views.set(id, snapshot())
 }
-async function navigate(location: HomeLocation) {
-  persist()
-  const id = props.context.saveView(location)
-  await router.push({ path: `/office/${props.kind}`, query: { view: id } })
-}
 async function remember(extension: string, folder: FileRef) {
   props.context.rememberCreation(props.kind, extension, folder)
   await nextTick()
@@ -58,48 +50,8 @@ async function remember(extension: string, folder: FileRef) {
 }
 function act(action: FileMenuAction, file: FileRecord) {
   // Opening keeps the existing view-state persistence before the editor takes over.
-  if (action === 'open' && file.kind === 'folder') return activate(file)
   if (action === 'open' || action === 'openReadOnly') persist()
   void model.value.runAction(action, file)
-}
-function chooseSpace(id: string) {
-  const space = state.value.spaces.find((space) => space.id === id)
-  if (space)
-    void navigate({
-      ...defaultLocation(props.kind),
-      spaceId: id,
-      folder: space.root
-    })
-}
-function activate(file: FileRecord) {
-  if (file.kind === 'file') {
-    persist()
-    void model.value.open(file)
-    return
-  }
-  void navigate({
-    ...snapshot(),
-    folder: { ...file.ref },
-    scroll: 0,
-    trail: [
-      ...state.value.location.trail.map((part) => ({
-        name: part.name,
-        ref: { ...part.ref }
-      })),
-      { name: file.name, ref: { ...file.ref } }
-    ]
-  })
-}
-function breadcrumb(index: number) {
-  const space = state.value.spaces.find((space) => space.id === state.value.location.spaceId)
-  if (!space) return
-  const trail = state.value.location.trail.slice(0, index + 1)
-  void navigate({
-    ...snapshot(),
-    folder: index < 0 ? space.root : trail[index]!.ref,
-    trail,
-    scroll: 0
-  })
 }
 const destination = computed(() =>
   [
@@ -143,7 +95,6 @@ watch(
     const saved = props.context.views.get(id)
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
-    browseOpen.value ||= location.trail.length > 0
     await activeModel.load(location)
     if (revision !== navigation) return
     if (id === rememberedView && state.value.error) {
@@ -164,7 +115,7 @@ watch(
   },
   { immediate: true }
 )
-// Refresh Recent without changing the browse folder.
+// Refresh Recent without changing the creation destination.
 watch(
   () => [props.context.recentFilter.favorites, ...props.context.recentFilter.tags],
   () => void model.value.refreshRecent()
@@ -211,20 +162,6 @@ onBeforeUnmount(() => {
           :note="state.recentNote"
           :opening="state.opening"
           @action="act"
-        />
-        <FileBrowser
-          ref="browser"
-          :kind="kind"
-          :state="state"
-          :services="context.services"
-          :expanded="browseOpen"
-          @toggle="browseOpen = !browseOpen"
-          @choose-space="chooseSpace"
-          @activate="activate"
-          @action="act"
-          @breadcrumb="breadcrumb"
-          @reload="model.load(snapshot())"
-          @more="model.load(snapshot(), true)"
         />
       </div>
     </main>

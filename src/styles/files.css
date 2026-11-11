@@ -1,4 +1,4 @@
-/* Recent, search results, file menus, marks, messages and folder browsing. */
+/* Recent files, file menus, marks, messages and folder-picker breadcrumbs. */
 /* Recent filters */
 .office-popover {
   position: relative;
@@ -124,9 +124,6 @@
   margin-bottom: 0;
   max-width: 18rem;
 }
-.office-file-list .office-file-menu {
-  margin-inline-start: auto;
-}
 .office-toast-region {
   position: fixed;
   inset-inline: 0;
@@ -157,8 +154,7 @@
 }
 
 /* Recent files */
-.office-recents,
-.office-browse {
+.office-recents {
   margin-bottom: 2rem;
 }
 .office-toolbar {
@@ -169,13 +165,6 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-.office .office-inline-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  white-space: nowrap;
 }
 .office-segmented {
   display: flex;
@@ -249,40 +238,7 @@
   color: var(--office-muted);
 }
 
-/* Browse folders */
-.office-browse {
-  border-top: 1px solid var(--office-line);
-  padding-top: 0.75rem;
-}
-.office .office-disclosure {
-  border-color: transparent;
-  background: transparent;
-  font-weight: 600;
-  padding-inline: 0.25rem;
-}
-.office-file-list {
-  list-style: none;
-  margin: 0.75rem 0 0;
-  padding: 0;
-}
-.office-file-list li {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.25rem 0;
-  border-top: 1px solid var(--office-line);
-}
-.office-file-list li > button {
-  text-align: start;
-  border-color: transparent;
-  background: transparent;
-  flex: 1;
-  overflow-wrap: anywhere;
-  min-width: 0;
-}
-.office-file-list li > span:last-child {
-  flex-shrink: 0;
-}
+/* Creation and template folder pickers */
 .office-breadcrumbs {
   display: flex;
   flex-wrap: wrap;

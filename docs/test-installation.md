@@ -6,7 +6,7 @@ This is an opt-in integration test, not a supported production release. It uses 
 
 Run the normal checks in an isolated environment, then `pnpm build:test-instance`. This writes `dist-native-test/`, containing only the native application and its SDK-generated manifest. `pnpm check:artifacts dist-native-test` checks the fixture boundary. Keep dependencies, source, private instructions, previews and browser/test artifacts out of the install. Record the source commit and SHA-256 of every installed file separately.
 
-The test build supports personal/project file browsing, bounded name search and recent changes, browser-scoped opens/preferences, native blank creation, ordinary document template copies, native editor opening and Files/share/download entry points. These are implementation claims until exercised on a pinned host. Received-share aliases, folder completeness, template-container conversion, real account switching and editor save/collaboration acceptance remain open. Default `pnpm build` deliberately fails.
+The test build supports personal/project destination selection and recent changes, browser-scoped opens/preferences, native blank creation, ordinary document template copies, native editor opening and Files/share/download entry points. These are implementation claims until exercised on a pinned host. Received-share aliases, folder completeness, template-container conversion, real account switching and editor save/collaboration acceptance remain open. Default `pnpm build` deliberately fails.
 
 ## Install alongside existing apps
 

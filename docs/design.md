@@ -9,15 +9,16 @@ Docs, Sheets and Slides share one quiet layout, top to bottom:
 1. **Navigation:** the sidebar contains Docs, Sheets, Slides and Settings. The host app menu has one Office entry; family deep routes are retained.
 2. **Start band:** a Blank card followed by pinned templates and other templates in one scrollable row. Template gallery expands categories; a chevron collapses the band. Pins can be reordered by dragging or keyboard buttons.
 3. **Files:** one filter/sort/layout toolbar above Recent. Recent combines browser-opened references and server modification metadata, with explicit source labels. Filters reset each session.
-4. **Browse folders:** a disclosure with spaces, breadcrumbs and authorized folder contents. Creation has a separate inline folder picker so it does not disturb this view.
+
+General folder browsing belongs to native OpenCloud Files. Folder selection appears only when choosing a save destination or personal template folder.
 
 Every file row and card has marks (★ favorite, ⇄ shared, ✎ locked and possibly being edited, each with a text alternative) and a "More actions" menu: Open, Open read-only (when the user can edit), Show in Files, Copy link (OpenCloud's private link, which still needs access), Download and Share…. The menu fetches the file's latest activity line, for example who updated it, only when opened. Messages from actions and creation appear in a status bar at the bottom of the screen with a dismiss button.
 
 Creation uses the inline panel described below. Its default format and save folder come from the last successful creation when still valid. No automatic file is created on opening the panel.
 
-When no format can be created, the band explains why ("New files: …"): no office editor is configured, or the configured editor cannot create this family. Template failures appear separately and never block blank creation or browsing. With no templates, the band says an administrator can add them to the template folder.
+When no format can be created, the band explains why ("New files: …"): no office editor is configured, or the configured editor cannot create this family. Template failures appear separately and never block blank creation or Recent. With no templates, the band says an administrator can add them to the template folder.
 
-The gallery collapses when switching apps. Folder views get opaque session keys for Back/Forward and returning to an app; names and query text stay out of URLs. Reload cannot restore memory-only state yet. The release adapter must prove native editor return and authenticated lifecycle cleanup.
+The gallery collapses when switching apps. Home views get opaque session keys for Back/Forward and returning to an app; names and query text stay out of URLs. Reload cannot restore memory-only state yet. The release adapter must prove native editor return and authenticated lifecycle cleanup.
 
 The application menu and native switcher derive from one reviewed descriptor list. Users can reach Files through the native host. Fixture preview labels explain that Files/editor operations are simulations rather than providing a misleading fallback.
 
@@ -33,13 +34,13 @@ Every color comes from host role tokens (`--oc-role-*`), so the app follows the 
 
 The start band and file sections use the host content pane width with modest responsive side padding; file tables are not constrained to a centered prose column. Hierarchy comes from size, weight and space: a 1.3rem app name, 1.05rem section headings, 0.85rem group labels, with borders only where rows need separating. Cards use a 5:4 thumbnail in the band and 4:3 in recent grids. Familiar office-home placement (create first, history second) follows Jakob's Law; showing five templates before the gallery limits choices on first view (Hick's Law). Controls are at least 40px high with 24px minimum for inline links. Card hover transitions are disabled under reduced motion.
 
-Layout uses logical properties, so right-to-left pages mirror; directional arrows (gallery reordering, the Browse folders disclosure) flip with the page direction. Below 700px the toolbar wraps within the pane, default columns shrink/wrap, and cards shrink to 8rem. The template row scrolls inside the band; the page itself never scrolls sideways.
+Layout uses logical properties, so right-to-left pages mirror; directional arrows (gallery reordering and folder selection) flip with the page direction. Below 700px the toolbar wraps within the pane, default columns shrink/wrap, and cards shrink to 8rem. The template row scrolls inside the band; the page itself never scrolls sideways.
 
 ## States and accessibility
 
 The shell includes loading, empty folder, unavailable integration, not-configured editor, recoverable error, partial result, disabled mutation and explicit launch feedback. Errors use safe messages; names and labels are plain text.
 
-The sidebar uses ordinary labelled links. The template gallery and Browse folders are disclosure buttons with `aria-expanded`. The layout toggle uses pressed-state buttons in a labelled group. The inline creation panel focuses and selects the name; Escape or Cancel closes it and restores focus. Recent files in list view use a table with column headers; each name is a button. The current sidebar design uses ordinary Tab/Enter navigation and has no single-key shortcuts. File menus close with Escape or an outside click and return focus to their button. After navigation the page heading receives focus, unless the user already moved focus while the view was loading. Programmatic heading focus shows no ring; every control keeps a visible focus indicator.
+The sidebar uses ordinary labelled links. The template gallery and new-file section are disclosure buttons with `aria-expanded`. The layout toggle uses pressed-state buttons in a labelled group. The inline creation panel focuses and selects the name; Escape or Cancel closes it and restores focus. Recent files in list view use a table with column headers; each name is a button. The current sidebar design uses ordinary Tab/Enter navigation and has no single-key shortcuts. File menus close with Escape or an outside click and return focus to their button. After navigation the page heading receives focus, unless the user already moved focus while the view was loading. Programmatic heading focus shows no ring; every control keeps a visible focus indicator.
 
 The target remains WCAG 2.2 AA. Browser journeys test keyboard disclosure, creation-panel focus return, Back/Forward, canceled folder requests, text rendering, gallery categories, preview fallback, layout toggle, sorting and 390px reflow. Desktop/mobile screenshots support visual review; they are not evidence of conformance. Browser journeys also cover the file menu and focus return, column selection and Back restoration, the remembered save folder across reloads, dark-theme tokens and right-to-left reflow at 390px. Full automated accessibility analysis, screen-reader use, 200% text scaling, translated RTL text and theme checks inside the real host remain open. No intended-user usability review has occurred.
 

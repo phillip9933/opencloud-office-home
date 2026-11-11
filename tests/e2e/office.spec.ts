@@ -1,12 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
 
-const browse = (page: Page) => page.getByRole('region', { name: 'Browse folders' })
 const recents = (page: Page) => page.getByRole('region', { name: 'Recent', exact: true })
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Office applications' })
 const toast = (page: Page) => page.locator('.office-toast')
 const file = (name: string) => ({ name, exact: true })
 
-test('create, conflict recovery, launch, folder history and full-page settings', async ({
+test('create, conflict recovery, launch, family history and full-page settings', async ({
   page
 }) => {
   const errors: string[] = []
@@ -34,13 +33,13 @@ test('create, conflict recovery, launch, folder history and full-page settings',
   await expect(dialog.getByRole('status')).toContainText('already exists')
   await dialog.getByRole('button', { name: 'Cancel' }).click()
 
-  await page.getByRole('button', { name: 'Browse folders' }).click()
-  await browse(page).getByRole('button', file('Reports')).click()
-  await expect(browse(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
+  await sidebar(page).getByRole('link', { name: 'Sheets' }).click()
+  await expect(page.getByRole('heading', file('Sheets'))).toBeVisible()
   await page.goBack()
-  await expect(browse(page).getByRole('button', file('Reports'))).toBeVisible()
+  await expect(page.getByRole('heading', file('Docs'))).toBeVisible()
   await page.goForward()
-  await expect(browse(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
+  await expect(page.getByRole('heading', file('Sheets'))).toBeVisible()
+  await page.goBack()
 
   // Settings is a page, preserves navigation, and does not expose a history-clear action.
   await expect(recents(page).getByRole('button', file('Shared Docs.docx'))).toBeVisible()
@@ -69,14 +68,17 @@ test('create, conflict recovery, launch, folder history and full-page settings',
 test('sidebar navigation, version, info tip, OpenCloud icons and Back', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByText(/^Office \d+\.\d+\.\d+$/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Browse folders' })).toHaveCount(0)
   await expect(sidebar(page).getByRole('link', { name: 'Docs' })).toHaveAttribute(
     'aria-current',
     'page'
   )
   await sidebar(page).getByRole('link', { name: 'Sheets' }).click()
   await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Browse folders' })).toHaveCount(0)
   await sidebar(page).getByRole('link', { name: 'Slides' }).click()
   await expect(page.getByRole('heading', { name: 'Slides', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Browse folders' })).toHaveCount(0)
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
 
@@ -247,12 +249,16 @@ test('remembers the save folder across reloads and compacts the band after a few
   page
 }) => {
   await page.goto('/#/office/sheets')
-  await page.getByRole('button', { name: 'Browse folders' }).click()
-  await browse(page).getByRole('button', file('Reports')).click()
-  await expect(browse(page).getByRole('button', file('Shared Sheets.xlsx'))).toBeVisible()
   const dialog = page.getByRole('region', { name: 'New spreadsheet', exact: true })
   for (const name of ['Plan A', 'Plan B', 'Plan C']) {
+    if (name !== 'Plan A') await page.reload()
     await page.getByRole('button', file('Blank spreadsheet')).click()
+    if (name === 'Plan A') {
+      await dialog.getByRole('button', { name: 'Choose another folder' }).click()
+      const picker = page.getByRole('region', { name: 'Choose save folder', exact: true })
+      await picker.getByRole('button', file('Reports')).click()
+      await picker.getByRole('button', { name: 'Use this folder' }).click()
+    }
     await expect(dialog).toContainText('Save in Personal files / Reports')
     await dialog.getByRole('textbox', file('Name')).fill(name)
     await dialog.getByRole('button', file('Create')).click()
