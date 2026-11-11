@@ -8,6 +8,10 @@ A later public registry read reports **65 MIME types** under **CollaboraOnline**
 
 `host8.ts` now binds those host composables to `native8.ts`; the original read catalog is connected with a native permission normalizer, and provider formats are connected to the real registry. Isolated tests cover canonical identities, duplicate dispatch prevention, read-only destinations, same-origin creation, ordinary template COPY without overwrite, refusal to rename ODF template containers, account changes and late responses. A build is not proof of live create/save or permission correctness.
 
+Controlled live testing now verifies one native Office menu entry, the three family routes, personal settings, the administration route, authorized recent metadata, writable personal destination selection, inline picker cancellation, native editor launch/return and app disable/re-enable rollback. Exactly one blank file of each ODT, ODS, ODP, DOCX, XLSX and PPTX type was created in a dedicated test folder. The provider remains responsible for populating and saving file content; content save/reopen has not been verified because the supported browser could not operate the editor’s nested welcome controls. Blank creation is not evidence of durable document content.
+
+The current administration implementation has 123 passing isolated unit tests and 13 passing synthetic browser journeys in the aggregate application suites. Its 24-file native test artifact was installed with every served hash checked. The live administrator sees the form, and Save is correctly disabled without a configured policy file. Shared-file ACL provisioning, ordinary-user server denial, conditional saves and real additional-format/handler behavior remain DL-007 acceptance work. Local permission mocks are not live authorization evidence.
+
 The following historical spike matrix records what was known before the native adapter. Live installation and acceptance results belong in the test-installation record; unsupported share aliases, pagination, template-container conversion, real logout cleanup, collaboration and durability remain release gates.
 
 ## Historical spike baseline
@@ -60,7 +64,7 @@ These are upstream facts for the observed release, recorded for the adapter desi
 | Return routing  | `contextRouteNameKey`, `contextRouteParamsKey` and `contextRouteQueryKey` query entries carry the return location through the editor route                                                                                                                      |
 | Templates       | Providers advertise template MIME types with `target_ext`; native "create from template" creates a blank target file in the personal space and opens the editor with the template file ID. The app-registry `template` parameter remains unimplemented in 9.0.0 |
 
-## SDK contract candidates
+## Historical SDK contract candidates
 
 The disconnected catalog uses the SDK's normal-user listMyDrives, listFiles and getFileInfo methods. Its port exposes no mutations or credential handling. Synthetic tests cover identities, malformed data, path-shaped references, family filtering, cancellation, account changes and safe error categories.
 
@@ -85,11 +89,11 @@ The catalog is imported only by tests. The native entry still uses the unavailab
 
 ## Remaining evidence
 
-The only live contract fixture is the public, user-independent empty provider registry. No authenticated response has been captured. Server-side permission enforcement, received shares, provider capabilities, file fidelity, collaboration, native sharing and save durability are **not verified**. Cross-device history/preferences are unverified.
+Public registry metadata and controlled authenticated UI observations support the current status above. No private authenticated API payloads are stored as repository fixtures. Revoked/ordinary-user permission denial, received shares, template copy/conversion fidelity, collaboration, native sharing and content save durability remain **not verified**. Recently opened history and preferences are browser-scoped; cross-device synchronization is not implemented.
 
 The SDK 8.x toolchain requires fresh security and license review before release. A successful build is not a clean advisory scan. Accessibility, screen readers, host themes/lifecycle, user usability, secret/SAST scans, CI, deployment and release reproducibility remain separate gates.
 
-No domain, proxy, DNS, TLS, identity, server installation or deployment changes have been made. The optional development Compose example is manually selected and disposable; it is not production setup or an office-server installer.
+The controlled installation changed only custom app assets and the existing app registry’s Microsoft creation flags, with OpenCloud-only restarts. No domain, proxy, DNS, TLS, identity or office-server installation changes were made. The optional development Compose example is manually selected and disposable; it is not production setup or an office-server installer.
 
 See [upstream foundation](upstream-skeleton.md), [development limits](dev-limits.md), [architecture](architecture.md) and [provisional decisions](decisions/0001-preliminary-spike.md).
 
