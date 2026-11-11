@@ -33,7 +33,22 @@ export interface FileRecord {
   modifiedAt?: number
   favorite?: boolean
   tags?: string[]
+  shared?: boolean
+  // A WOPI/WebDAV lock, typically held while the file is open in an editor.
+  lock?: { owner?: string }
+  // OpenCloud's private link (https), which still requires sign-in and permission to open.
+  link?: string
   access: { read: boolean; write: boolean; createChild: boolean }
+}
+export interface Activity {
+  text: string
+  at?: number
+}
+export interface SearchQuery {
+  text: string
+  kind: OfficeKind
+  filter: RecentFilter
+  signal: AbortSignal
 }
 // Narrows Recent. Tags match when a file has any of them.
 export interface RecentFilter {
@@ -70,6 +85,16 @@ export interface FileCatalog {
   ): Promise<Result<Page<FileRecord>>>
   // Tags the user can filter by; only offered when the server advertises tags.
   listTags(signal: AbortSignal): Promise<Result<string[]>>
+  // Name search across every space the user can reach, through the host's search service.
+  search(query: SearchQuery): Promise<Result<Page<FileRecord>>>
+  // The newest activity-log entry for a file, as plain text; null when none is recorded.
+  latestActivity(ref: FileRef, signal: AbortSignal): Promise<Result<Activity | null>>
+}
+// Native file actions owned by OpenCloud Web; the app only asks the host to perform them.
+export interface FileActions {
+  showInFiles(file: FileRecord): Promise<Result<void>>
+  share(file: FileRecord): Promise<Result<void>>
+  download(file: FileRecord): Promise<Result<void>>
 }
 export const RECENT_CHANGE_DAYS = 30
 export interface Format {
@@ -107,6 +132,8 @@ export interface HomeLocation {
   folder: FileRef | null
   trail: { name: string; ref: FileRef }[]
   text: string
+  // 'all' searches every reachable space; 'folder' filters the browsed folder.
+  scope: 'all' | 'folder'
   scroll: number
 }
 export interface EditorGateway {
@@ -135,6 +162,7 @@ export interface RecentStore {
 export interface OfficeServices {
   mode: 'unconfigured' | 'fixture'
   catalog: FileCatalog
+  actions: FileActions
   creation: FileCreation
   capabilities: OfficeCapabilities
   editor: EditorGateway

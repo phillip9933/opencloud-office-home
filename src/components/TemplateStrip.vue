@@ -174,7 +174,7 @@ function setBand(band: 'row' | 'compact') {
                     :disabled="index === 0"
                     @click="move(template, index - 1)"
                   >
-                    <span aria-hidden="true">←</span>
+                    <span aria-hidden="true" class="office-mirror">←</span>
                   </button>
                   <button
                     type="button"
@@ -182,7 +182,7 @@ function setBand(band: 'row' | 'compact') {
                     :disabled="index === pinned.length - 1"
                     @click="move(template, index + 1)"
                   >
-                    <span aria-hidden="true">→</span>
+                    <span aria-hidden="true" class="office-mirror">→</span>
                   </button>
                 </div>
               </li>

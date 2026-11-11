@@ -45,7 +45,14 @@ export async function attempt<T>(operation: () => Promise<Result<T>>): Promise<R
   }
 }
 export function defaultLocation(kind: OfficeKind): HomeLocation {
-  return { kind, spaceId: '', folder: null, trail: [], text: '', scroll: 0 }
+  return { kind, spaceId: '', folder: null, trail: [], text: '', scope: 'all', scroll: 0 }
+}
+export type FileMenuAction =
+  'open' | 'openReadOnly' | 'showInFiles' | 'copyLink' | 'download' | 'share'
+const simulated: Partial<Record<FileMenuAction, string>> = {
+  showInFiles: 'Simulated: OpenCloud Files would open at this file.',
+  share: 'Simulated: OpenCloud sharing would open for this file.',
+  download: 'Simulated: the file would download through OpenCloud.'
 }
 
 function matchesFilter(file: FileRecord, filter: RecentFilter): boolean {
@@ -79,7 +86,10 @@ export function createHomeModel(
     opening: false,
     uncertain: false,
     destinationWritable: false,
-    created: null as FileRecord | null
+    created: null as FileRecord | null,
+    // All-spaces search results; null when no such search is active.
+    results: null as FileRecord[] | null,
+    resultsNote: ''
   })
   let generation = 0
   let abort = new AbortController()
@@ -169,6 +179,8 @@ export function createHomeModel(
       state.recent = []
       state.next = undefined
       state.partial = false
+      state.results = null
+      state.resultsNote = ''
     }
     const [spaces, formats, templates] = await Promise.all([
       attempt(() => services.catalog.listSpaces(signal)),
@@ -212,27 +224,42 @@ export function createHomeModel(
         ...defaultLocation(kind),
         spaceId: space.id,
         folder: space.root,
-        text: location.text
+        text: location.text,
+        scope: location.scope
       }
     const folder = state.location.folder ?? space.root
     state.location.folder = { ...folder }
     const recentLoad = ++recentRequest
-    const [destination, listing, recent] = await Promise.all([
+    const searching = state.location.scope === 'all' && state.location.text.trim() !== ''
+    const [destination, listing, recent, found] = await Promise.all([
       attempt(() => services.catalog.resolve(folder)),
       attempt(() =>
         services.catalog.list({
           folder,
           kind,
-          text: state.location.text,
+          text: state.location.scope === 'folder' ? state.location.text : '',
           cursor: more ? state.next : undefined,
           signal
         })
       ),
-      loadRecent(signal)
+      loadRecent(signal),
+      searching
+        ? attempt(() =>
+            services.catalog.search({
+              text: state.location.text,
+              kind,
+              filter: structuredClone(toRaw(filter)),
+              signal
+            })
+          )
+        : undefined
     ])
     if (!current()) return
     state.destinationWritable =
       destination.ok && destination.value.kind === 'folder' && destination.value.access.createChild
+    // A remembered folder arrives without a trail; name it from its live metadata.
+    if (destination.ok && !state.location.trail.length && refKey(folder) !== refKey(space.root))
+      state.location.trail = [{ name: destination.value.name, ref: { ...folder } }]
     if (listing.ok) {
       const rows = [...(more ? state.rows : []), ...listing.value.items].filter(
         (file) => file.access.read && belongsTo(file, kind)
@@ -244,6 +271,14 @@ export function createHomeModel(
       state.rows = []
       state.error = errorText[listing.error]
     }
+    if (found) {
+      state.results = found.ok ? found.value.items : []
+      state.resultsNote = !found.ok
+        ? errorText[found.error]
+        : found.value.partial
+          ? 'Showing the first results OpenCloud returned; refine the search to see more.'
+          : ''
+    }
     // A filter change during this load already started a newer Recent request.
     if (recentLoad === recentRequest) {
       state.recent = recent.entries
@@ -252,7 +287,26 @@ export function createHomeModel(
     state.loading = false
   }
 
-  async function open(file: FileRecord) {
+  // Native file actions; the host performs them and enforces permissions.
+  async function runAction(action: FileMenuAction, file: FileRecord) {
+    if (action === 'open' || action === 'openReadOnly') return open(file, action === 'openReadOnly')
+    state.notice = ''
+    if (action === 'copyLink') {
+      try {
+        if (!file.link) throw new Error('No link')
+        await navigator.clipboard.writeText(file.link)
+        state.notice = 'Link copied. People still need access to open it.'
+      } catch {
+        state.notice = 'The link could not be copied. Use Show in Files instead.'
+      }
+      return
+    }
+    const result = await attempt(() => services.actions[action](file))
+    if (!result.ok) state.notice = errorText[result.error]
+    else if (services.mode === 'fixture') state.notice = simulated[action] ?? ''
+  }
+
+  async function open(file: FileRecord, readOnly = false) {
     if (state.opening || state.mutation || file.kind !== 'file') return
     state.opening = true
     state.notice = ''
@@ -268,7 +322,7 @@ export function createHomeModel(
       const launched = await attempt(() =>
         services.editor.open({
           file: resolved.value.ref,
-          mode: resolved.value.access.write ? 'edit' : 'view',
+          mode: resolved.value.access.write && !readOnly ? 'edit' : 'view',
           returnTo
         })
       )
@@ -373,6 +427,6 @@ export function createHomeModel(
       modifiedAt === undefined ? [] : [{ file, modifiedAt }]
     )
   }
-  return { state, load, refreshRecent, deactivate, open, create, clearRecents }
+  return { state, load, refreshRecent, deactivate, open, runAction, create, clearRecents }
 }
 export type HomeModel = ReturnType<typeof createHomeModel>

@@ -7,7 +7,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Type:** placeholder
 - **Purpose:** Establish typed workflows and registration without inventing deployed APIs or credentials.
 - **Location:** `src/adapters/opencloud/unconfigured.ts`, `vite.config.ts`.
-- **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview and native editor services, plus the administrator template folder (proposed `templateFolder` setting), tested against a pinned deployment.
+- **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview, file-action (Show in Files, share, download) and native editor services, plus the administrator template folder (proposed `templateFolder` setting), tested against a pinned deployment.
 - **Resolution:** Implement and verify the adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
 - **Verification:** Default `pnpm build` must fail. `build:spike` is explicit, writes `dist-spike/`, and cannot be mistaken for the default release output.
 - **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; no production behavior has been tested.
@@ -17,7 +17,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 
 - **Type:** placeholder
 - **Purpose:** Exercise the shell and asynchronous workflows without contacting OpenCloud.
-- **Location:** `src/fixtures/services.ts` and `src/fixtures/previews.ts` (locally drawn template preview images and seeded browser history), imported only through `src/preview.ts` and tests.
+- **Location:** `src/fixtures/services.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
 - **Release behaviour:** No synthetic resources, create results, editor acknowledgments or fixture capabilities in the native package.
 - **Resolution:** Keep fixtures in the explicitly invoked preview/test graph; prove exclusion from every eventual release artifact.
 - **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. The preview displays a synthetic-only banner. This is a bounded artifact check, not proof of real service behavior.
@@ -29,7 +29,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Type:** functional / placeholder
 - **Purpose:** Develop metadata discovery against the pinned SDK without assuming a live deployment or enabling writes.
 - **Location:** `src/adapters/opencloud/catalog8.ts`; imported by its unit tests only.
-- **Release behaviour:** Verified native catalog with authorized search (including the recent-changes query with favorite/tag filters and the tag list), personal/project/received-share identity handling, honest completeness and lifecycle integration.
+- **Release behaviour:** Verified native catalog with authorized search (recent changes, all-spaces name search, favorite/tag filters and the tag list), latest-activity lookup, personal/project/received-share identity handling, honest completeness and lifecycle integration.
 - **Resolution:** Match the actual deployment, capture sanitized contract fixtures, verify authorization and SDK cancellation behavior, and complete unsupported discovery before connecting the native entry.
 - **Verification:** The candidate must deny mutation access, reject unsupported search/cursors, discard responses on logout/account changes and reject path-shaped IDs. Its port exposes no mutation methods. Native app and preview entrypoints must not import it while deployment checks are pending.
 - **Tested build and result:** SDK-shaped local tests and strict compilation; no live discovery has been performed.

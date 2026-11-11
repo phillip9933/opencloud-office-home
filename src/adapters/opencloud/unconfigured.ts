@@ -22,7 +22,18 @@ export function unconfiguredServices(): OfficeServices {
       },
       listTags() {
         return Promise.resolve(fail('editorUnavailable'))
+      },
+      search() {
+        return Promise.resolve(fail('editorUnavailable'))
+      },
+      latestActivity() {
+        return Promise.resolve(fail('editorUnavailable'))
       }
+    },
+    actions: {
+      showInFiles: () => Promise.resolve(fail('editorUnavailable')),
+      share: () => Promise.resolve(fail('editorUnavailable')),
+      download: () => Promise.resolve(fail('editorUnavailable'))
     },
     capabilities: {
       creationFormats() {

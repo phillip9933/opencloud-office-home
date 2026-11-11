@@ -5,3 +5,56 @@ body,
   height: 100%;
   margin: 0;
 }
+/* OpenCloud's stock light and dark role tokens. In the native app the host supplies these. */
+:root {
+  color-scheme: light;
+  --oc-role-background: #ffffff;
+  --oc-role-surface: #ffffff;
+  --oc-role-surface-container-lowest: #ffffff;
+  --oc-role-surface-container-low: #fbfcfe;
+  --oc-role-surface-container: #f6f8fa;
+  --oc-role-surface-container-high: #f2f4f5;
+  --oc-role-surface-container-highest: #eceef0;
+  --oc-role-on-surface: #191c1d;
+  --oc-role-on-surface-variant: #40484c;
+  --oc-role-outline: #70787c;
+  --oc-role-outline-variant: #bfc8cc;
+  --oc-role-primary: #e2baff;
+  --oc-role-on-primary: #20434f;
+  --oc-role-secondary: #20434f;
+  --oc-role-on-secondary: #ffffff;
+  --oc-role-secondary-container: #cfe6f1;
+  --oc-role-on-secondary-container: #071e26;
+  --oc-role-inverse-surface: #2e3132;
+  --oc-role-inverse-on-surface: #eff1f2;
+  --oc-role-inverse-primary: #5cd5fb;
+  --oc-role-error: #ba1a1a;
+  --oc-role-on-error: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --oc-role-background: #191c1d;
+    --oc-role-surface: #191c1d;
+    --oc-role-surface-container-lowest: #0c0f10;
+    --oc-role-surface-container-low: #191c1d;
+    --oc-role-surface-container: #1d2021;
+    --oc-role-surface-container-high: #272a2c;
+    --oc-role-surface-container-highest: #323537;
+    --oc-role-on-surface: #e1e3e4;
+    --oc-role-on-surface-variant: #bfc8cc;
+    --oc-role-outline: #8a9296;
+    --oc-role-outline-variant: #40484c;
+    --oc-role-primary: #e2baff;
+    --oc-role-on-primary: #20434f;
+    --oc-role-secondary: #b3cad4;
+    --oc-role-on-secondary: #1e333b;
+    --oc-role-secondary-container: #344a52;
+    --oc-role-on-secondary-container: #cfe6f1;
+    --oc-role-inverse-surface: #e1e3e4;
+    --oc-role-inverse-on-surface: #2e3132;
+    --oc-role-inverse-primary: #00677f;
+    --oc-role-error: #ffb4ab;
+    --oc-role-on-error: #690005;
+  }
+}

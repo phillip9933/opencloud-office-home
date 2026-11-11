@@ -1,0 +1,302 @@
+/* Recent, search results, file menus, marks, messages and folder browsing. */
+/* Recent filters */
+.office-popover {
+  position: relative;
+}
+.office-popover-panel {
+  position: absolute;
+  z-index: 3;
+  inset-inline-end: 0;
+  top: calc(100% + 0.4rem);
+  min-width: 15rem;
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.75rem;
+  background: var(--office-surface);
+  border: 1px solid var(--office-line);
+  border-radius: 0.5rem;
+  box-shadow: 0 8px 24px #153b3020;
+}
+.office-popover-panel fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.office-popover-panel legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.office .office-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 450;
+  min-height: 32px;
+}
+.office .office-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  min-height: 0;
+}
+.office-popover-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.6rem;
+}
+.office .office-toolbar-actions [aria-pressed='true'] {
+  background: var(--office-hover);
+  border-color: var(--office-muted);
+}
+
+/* Status marks, file menu and messages */
+.office-marks {
+  display: inline-flex;
+  gap: 0.3rem;
+  margin-inline-start: 0.4rem;
+  vertical-align: middle;
+}
+.office-mark {
+  font-size: 0.85rem;
+  color: var(--office-muted);
+}
+.office-mark[data-mark='favorite'] {
+  color: var(--office-favorite);
+}
+.office-template-card > .office-marks {
+  position: absolute;
+  top: 0.4rem;
+  inset-inline-start: 0.4rem;
+  margin: 0;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: var(--office-surface);
+}
+.office-table td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.office-table th:last-child,
+.office-actions-cell {
+  width: 3rem;
+  text-align: end;
+}
+.office .office-menu-button {
+  min-width: 40px;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 700;
+}
+.office-template-card > .office-card-menu {
+  position: absolute;
+  top: 0.35rem;
+  inset-inline-end: 0.35rem;
+}
+.office-card-menu .office-menu-button {
+  background: var(--office-surface);
+  border-color: var(--office-line);
+  border-radius: 999px;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0.2rem;
+}
+.office-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.office .office-menu-list button {
+  width: 100%;
+  text-align: start;
+  border-color: transparent;
+  background: transparent;
+}
+.office-menu-activity {
+  border-top: 1px solid var(--office-line);
+  padding-top: 0.5rem;
+  margin-bottom: 0;
+  max-width: 18rem;
+}
+.office-file-list .office-file-menu {
+  margin-inline-start: auto;
+}
+.office-toast-region {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 1rem;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 4;
+  padding-inline: 1rem;
+}
+.office-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  max-width: 40rem;
+  margin: 0;
+  padding-block: 0.6rem;
+  padding-inline: 1rem 0.75rem;
+  border-radius: 0.6rem;
+  background: var(--office-inverse-surface);
+  color: var(--office-inverse-ink);
+  box-shadow: 0 8px 24px #0006;
+}
+.office .office-toast .office-link {
+  color: var(--office-inverse-link);
+}
+.office-search {
+  display: flex;
+  border-radius: 999px;
+  background: var(--office-band);
+}
+.office .office-search select {
+  width: auto;
+  flex-shrink: 0;
+  border-color: transparent;
+  background: transparent;
+  border-start-start-radius: 999px;
+  border-end-start-radius: 999px;
+  padding-inline: 1rem 0.5rem;
+  border-inline-end: 1px solid var(--office-line);
+}
+
+/* Recent files */
+.office-recents,
+.office-browse {
+  margin-bottom: 2rem;
+}
+.office-toolbar {
+  margin-bottom: 0.25rem;
+}
+.office-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.office .office-inline-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.office-segmented {
+  display: flex;
+}
+.office-segmented button {
+  min-width: 40px;
+}
+.office-segmented button:first-child {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.office-segmented button:last-child {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  margin-inline-start: -1px;
+}
+.office .office-segmented [aria-pressed='true'] {
+  background: var(--office-hover);
+  border-color: var(--office-muted);
+}
+.office-recents-scope {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0;
+}
+.office-recent-group {
+  margin-top: 1.25rem;
+}
+.office-recent-group h3 {
+  margin-bottom: 0.5rem;
+}
+.office-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.office-table th {
+  text-align: start;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--office-muted);
+  padding: 0.25rem 0.5rem;
+}
+.office-table th:first-child {
+  width: 55%;
+}
+.office-table td {
+  border-top: 1px solid var(--office-line);
+  padding: 0.15rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+.office .office-row-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  border-color: transparent;
+  background: transparent;
+  text-align: start;
+  padding-inline: 0.25rem;
+}
+.office-cards-files .office-thumb {
+  aspect-ratio: 4 / 3;
+}
+.office-empty {
+  padding: 1.5rem 0;
+  color: var(--office-muted);
+}
+
+/* Browse folders */
+.office-browse {
+  border-top: 1px solid var(--office-line);
+  padding-top: 0.75rem;
+}
+.office .office-disclosure {
+  border-color: transparent;
+  background: transparent;
+  font-weight: 600;
+  padding-inline: 0.25rem;
+}
+.office-file-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+.office-file-list li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--office-line);
+}
+.office-file-list li > button {
+  text-align: start;
+  border-color: transparent;
+  background: transparent;
+  flex: 1;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.office-file-list li > span:last-child {
+  flex-shrink: 0;
+}
+.office-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

@@ -1,9 +1,11 @@
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  activityText,
   createCatalog8,
   catalogError,
   normalizeReadMetadata,
+  searchTerm,
   type ReadPort8
 } from '../../src/adapters/opencloud/catalog8'
 
@@ -62,6 +64,9 @@ function setup() {
     },
     tags: {
       listTags: vi.fn<ReadPort8['tags']['listTags']>().mockResolvedValue(['Finance'])
+    },
+    activities: {
+      listActivities: vi.fn<ReadPort8['activities']['listActivities']>().mockResolvedValue([])
     },
     webdav: {
       listFiles: vi
@@ -295,6 +300,83 @@ describe('8.x SDK catalog candidate', () => {
       'mtime:"last 30 days" AND mediatype:("spreadsheet")',
       expect.anything()
     )
+  })
+  it('searches file names in all spaces with phrase-breaking characters removed', async () => {
+    const test = setup()
+    await test.catalog.listSpaces(test.query.signal)
+    test.port.webdav.search.mockResolvedValue({
+      resources: [{ ...file(), storageId: test.personal.id, highlights: '' }],
+      totalResults: 1
+    })
+    const result = await test.catalog.search({
+      text: ' budget" OR name:"* \\x ',
+      kind: 'docs',
+      filter: noFilter,
+      signal: test.query.signal
+    })
+    expect(result.ok && result.value.items.map((r) => r.name)).toEqual(['Report.odt'])
+    expect(test.port.webdav.search).toHaveBeenLastCalledWith(
+      'name:"*budget OR name: * x*" AND mediatype:("document")',
+      expect.anything()
+    )
+    expect(searchTerm('a\u0000b' + 'c'.repeat(200))).toHaveLength(100)
+    expect(
+      await test.catalog.search({
+        text: ' "" ',
+        kind: 'docs',
+        filter: noFilter,
+        signal: test.query.signal
+      })
+    ).toEqual({ ok: false, error: 'searchUnavailable' })
+  })
+  it('renders the latest activity as plain text and asks only for one entry', async () => {
+    const test = setup()
+    await test.catalog.listSpaces(test.query.signal)
+    test.port.activities.listActivities.mockResolvedValue([
+      {
+        id: 'a',
+        times: { recordedTime: '2026-11-10T08:00:00Z' },
+        template: {
+          message: '{user} updated {resource}',
+          variables: { user: { displayName: '<b>Ana</b>' }, resource: { name: 'Report.odt' } }
+        }
+      }
+    ])
+    expect(
+      await test.catalog.latestActivity(
+        { spaceId: test.personal.id, itemId: 'opaque:item' },
+        test.query.signal
+      )
+    ).toEqual({
+      ok: true,
+      value: { text: '<b>Ana</b> updated Report.odt', at: Date.parse('2026-11-10T08:00:00Z') }
+    })
+    expect(test.port.activities.listActivities).toHaveBeenCalledWith(
+      'itemid:opaque:item AND limit:1 AND sort:desc',
+      { signal: test.query.signal }
+    )
+    expect(activityText({ template: { message: '' } })).toBeNull()
+    expect(
+      await test.catalog.latestActivity({ spaceId: 'unknown', itemId: 'x' }, test.query.signal)
+    ).toEqual({ ok: false, error: 'forbiddenOrMissing' })
+  })
+  it('keeps only https private links and reports sharing and locks', () => {
+    expect(
+      normalizeReadMetadata(
+        's',
+        file('t', {
+          privateLink: 'https://cloud.example/f/t',
+          shareTypes: [0],
+          locked: true,
+          lockOwner: 'Ana'
+        })
+      )
+    ).toMatchObject({
+      ok: true,
+      value: { link: 'https://cloud.example/f/t', shared: true, lock: { owner: 'Ana' } }
+    })
+    const unsafe = normalizeReadMetadata('s', file('t', { privateLink: 'javascript:alert(1)' }))
+    expect(unsafe.ok && unsafe.value).not.toHaveProperty('link')
   })
   it('carries favorite and tag metadata and lists tags from the server, bounded and sorted', async () => {
     const test = setup()

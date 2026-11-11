@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import FamilyIcon from './FamilyIcon.vue'
-import FileThumb from './FileThumb.vue'
+import FileList from './FileList.vue'
 import TagFilter from './TagFilter.vue'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, OfficeKind } from '../contracts/office'
 import { groupRecents, lastActivity, type RecentEntry } from '../services/recentView'
+import type { FileMenuAction } from '../services/home'
 import { RECENT_CHANGE_DAYS } from '../contracts/office'
 
 const props = defineProps<{
@@ -15,7 +15,7 @@ const props = defineProps<{
   note: string
   opening: boolean
 }>()
-const emit = defineEmits<{ open: [file: FileRecord]; clear: [] }>()
+const emit = defineEmits<{ action: [action: FileMenuAction, file: FileRecord]; clear: [] }>()
 const preferences = props.context.preferences
 const filter = props.context.recentFilter
 const filtered = computed(() => filter.favorites || filter.tags.length > 0)
@@ -30,10 +30,6 @@ function activity(entry: RecentEntry) {
   return `${kind === 'opened' ? 'Opened' : 'Changed'} ${when}`
 }
 const hasOpened = computed(() => props.entries.some((entry) => entry.openedAt !== undefined))
-function extension(file: FileRecord) {
-  const dot = file.name.lastIndexOf('.')
-  return dot > 0 ? file.name.slice(dot + 1).toUpperCase() : ''
-}
 </script>
 
 <template>
@@ -111,51 +107,15 @@ function extension(file: FileRecord) {
       :aria-label="group.label || undefined"
     >
       <h3 v-if="group.label">{{ group.label }}</h3>
-      <table v-if="preferences.layout === 'list'" class="office-table">
-        <thead>
-          <tr>
-            <th scope="col">Name</th>
-            <th scope="col" class="office-hide-narrow">Location</th>
-            <th scope="col">Last activity</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="entry in group.entries" :key="entry.file.ref.spaceId + entry.file.ref.itemId">
-            <td>
-              <button
-                type="button"
-                class="office-row-button"
-                :disabled="opening"
-                @click="emit('open', entry.file)"
-              >
-                <FamilyIcon :kind="kind" />
-                <span>{{ entry.file.name }}</span>
-              </button>
-            </td>
-            <td class="office-muted office-hide-narrow">{{ entry.file.path ?? '' }}</td>
-            <td class="office-muted">{{ activity(entry) }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <ul v-else class="office-cards office-cards-files">
-        <li v-for="entry in group.entries" :key="entry.file.ref.spaceId + entry.file.ref.itemId">
-          <button
-            type="button"
-            class="office-card"
-            :disabled="opening"
-            @click="emit('open', entry.file)"
-          >
-            <FileThumb
-              :services="context.services"
-              :kind="kind"
-              :source="entry.file.ref"
-              :label="extension(entry.file)"
-            />
-            <span class="office-card-name">{{ entry.file.name }}</span>
-            <span class="office-muted office-card-meta">{{ activity(entry) }}</span>
-          </button>
-        </li>
-      </ul>
+      <FileList
+        :items="group.entries.map((entry) => ({ file: entry.file, meta: activity(entry) }))"
+        :layout="preferences.layout"
+        meta-heading="Last activity"
+        :kind="kind"
+        :services="context.services"
+        :opening="opening"
+        @action="(action, file) => emit('action', action, file)"
+      />
     </section>
   </section>
 </template>

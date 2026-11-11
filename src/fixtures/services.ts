@@ -56,7 +56,15 @@ const templateFiles: [category: string, file: string, preview: boolean][] = [
 ]
 
 export function fixtureServices(
-  options: { now?: () => number; seedHistory?: boolean } = {}
+  options: {
+    now?: () => number
+    seedHistory?: boolean
+    // Where view preferences live; the preview passes sessionStorage so they survive a reload.
+    preferenceStorage?: {
+      getItem(key: string): string | null
+      setItem(key: string, value: string): void
+    }
+  } = {}
 ): OfficeServices {
   const now = options.now ?? Date.now
   // DEV-LIMIT(DL-002): synthetic, session-only operations for the separate preview entrypoint.
@@ -159,6 +167,7 @@ export function fixtureServices(
     [{ ...team, itemId: 'handbook' }, 1 * DAY],
     [{ ...team, itemId: 'expenses' }, 2 * DAY],
     [{ ...team, itemId: 'training' }, 4 * DAY],
+    [{ ...team, itemId: 'kickoff' }, 3 * DAY],
     [{ ...team, itemId: 'inventory' }, 50 * DAY],
     [{ ...root, itemId: 'docs' }, 6 * DAY]
   ]
@@ -181,6 +190,14 @@ export function fixtureServices(
     const record = records.find((r) => r.kind === 'file' && r.ref.itemId === id)
     if (record) Object.assign(record, favorite ? { favorite } : {}, tags.length ? { tags } : {})
   }
+  // Synthetic sharing, locks and private links; the domain is reserved and never contacted.
+  for (const record of records) {
+    if (record.kind !== 'file') continue
+    record.link = `https://cloud.example/f/${encodeURIComponent(record.ref.itemId)}`
+    if (record.ref.spaceId === team.spaceId) record.shared = true
+  }
+  const kickoff = records.find((r) => r.ref.itemId === 'kickoff')
+  if (kickoff) kickoff.lock = { owner: 'Synthetic colleague' }
   const history = new Map<string, string>()
   if (options.seedHistory)
     history.set(
@@ -248,6 +265,30 @@ export function fixtureServices(
           .sort((a, b) => b.modifiedAt! - a.modifiedAt!)
         return Promise.resolve(ok({ items, partial: false }))
       },
+      search({ text, kind, filter }) {
+        const term = text.trim().toLowerCase()
+        const items = records.filter(
+          (r) =>
+            r.kind === 'file' &&
+            r.ref.spaceId !== templatesRoot.spaceId &&
+            belongsTo(r, kind) &&
+            r.name.toLowerCase().includes(term) &&
+            (!filter.favorites || r.favorite) &&
+            (!filter.tags.length || filter.tags.some((tag) => r.tags?.includes(tag)))
+        )
+        return Promise.resolve(term ? ok({ items, partial: false }) : fail('searchUnavailable'))
+      },
+      latestActivity(ref) {
+        const record = records.find((r) => refKey(r.ref) === refKey(ref))
+        if (!record) return Promise.resolve(fail('forbiddenOrMissing'))
+        return Promise.resolve(
+          ok(
+            record.modifiedAt === undefined
+              ? null
+              : { text: `Synthetic colleague updated ${record.name}`, at: record.modifiedAt }
+          )
+        )
+      },
       listTags() {
         return Promise.resolve(ok([...new Set(records.flatMap((r) => r.tags ?? []))].sort()))
       }
@@ -256,6 +297,11 @@ export function fixtureServices(
       creationFormats(kind) {
         return Promise.resolve(ok([officeApps.find((a) => a.id === kind)!.formats[0]]))
       }
+    },
+    actions: {
+      showInFiles: () => Promise.resolve(ok(undefined)),
+      share: () => Promise.resolve(ok(undefined)),
+      download: () => Promise.resolve(ok(undefined))
     },
     creation: { blank: create, fromTemplate: create },
     editor: {
@@ -280,7 +326,7 @@ export function fixtureServices(
     filters: { favorites: true, tags: true },
     viewPreferences: createViewPreferenceStore(
       { instance: 'fixture', user: 'synthetic-preview' },
-      {
+      options.preferenceStorage ?? {
         getItem: (key) => history.get(key) ?? null,
         setItem: (key, value) => void history.set(key, value)
       }

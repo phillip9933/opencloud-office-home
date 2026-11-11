@@ -1,6 +1,12 @@
 import { reactive, toRaw, watch } from 'vue'
 import { officeApps, validateMenu, type AppDescriptor } from './registry'
-import type { HomeLocation, OfficeKind, OfficeServices, RecentFilter } from '../contracts/office'
+import type {
+  FileRef,
+  HomeLocation,
+  OfficeKind,
+  OfficeServices,
+  RecentFilter
+} from '../contracts/office'
 import { createHomeModel, type HomeModel } from '../services/home'
 
 export function createOfficeContext(
@@ -13,6 +19,9 @@ export function createOfficeContext(
   const views = new Map<string, HomeLocation>()
   const lastView = new Map<OfficeKind, string>()
   let sequence = 0
+  // View keys must not repeat across page loads: a stale key in the URL would otherwise be
+  // replaced by an identical one, which the router treats as no navigation.
+  const session = Math.random().toString(36).slice(2, 8)
   // View choices shared by the three apps, kept in the user's scoped browser store.
   const preferences = reactive(services.viewPreferences.load())
   watch(preferences, () => services.viewPreferences.save(toRaw(preferences)), { deep: true })
@@ -29,8 +38,15 @@ export function createOfficeContext(
       if (!models.has(kind)) models.set(kind, createHomeModel(services, kind, recentFilter))
       return models.get(kind)!
     },
+    rememberCreation(kind: OfficeKind, extension: string, folder: FileRef) {
+      preferences.lastFormat[kind] = extension
+      preferences.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
+    },
+    forgetFolder(kind: OfficeKind) {
+      delete preferences.lastFolder[kind]
+    },
     saveView(location: HomeLocation) {
-      const id = `v${++sequence}`
+      const id = `v${session}.${++sequence}`
       views.set(id, structuredClone(toRaw(location)))
       lastView.set(location.kind, id)
       // Bound session-only navigation metadata; old history falls back safely to the app root.

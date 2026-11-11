@@ -2,6 +2,9 @@ import { createApp, h } from 'vue'
 import { createRouter, createWebHashHistory, RouterView } from 'vue-router'
 import '@opencloud-eu/design-system/dist/design-system.css'
 import './style.css'
+import './styles/chrome.css'
+import './styles/templates.css'
+import './styles/files.css'
 import './preview.css'
 import OfficeHome from './views/OfficeHome.vue'
 import { OcSpinner } from '@opencloud-eu/design-system/components'
@@ -9,7 +12,9 @@ import { officeApps } from './app/registry'
 import { createOfficeContext } from './app/context'
 import { fixtureServices } from './fixtures/services'
 
-const context = createOfficeContext(fixtureServices({ seedHistory: true }))
+const context = createOfficeContext(
+  fixtureServices({ seedHistory: true, preferenceStorage: window.sessionStorage })
+)
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

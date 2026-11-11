@@ -1,0 +1,167 @@
+/* Start band, template gallery, pins and compact mode. */
+/* Start band and template gallery */
+.office-start {
+  background: var(--office-band);
+  padding-block: 1.25rem 1.5rem;
+  margin-block: 0.75rem 1.5rem;
+}
+.office-start-head,
+.office-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.office .office-quiet {
+  border-color: transparent;
+  background: transparent;
+}
+.office-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 1.25rem 1rem;
+}
+.office-cards-row {
+  /* A single scrollable row inside the band; the page itself never scrolls sideways. */
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 9.5rem;
+  overflow-x: auto;
+  padding: 3px 3px 0.5rem;
+  scroll-snap-type: x proximity;
+}
+.office-cards-row > li {
+  scroll-snap-align: start;
+}
+.office .office-card {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: start;
+  min-height: 0;
+}
+.office .office-card:hover:not(:disabled) {
+  background: transparent;
+}
+.office-card:hover:not(:disabled) .office-thumb {
+  border-color: var(--office-family, var(--office-link));
+}
+.office-card-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.office-card-meta {
+  font-size: 0.8rem;
+  margin-top: -0.3rem;
+}
+.office-gallery-group {
+  margin-top: 1.5rem;
+}
+.office-gallery-group h3 {
+  margin-bottom: 0.75rem;
+}
+.office-thumb {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 4;
+  border: 1px solid var(--office-line);
+  border-radius: 0.5rem;
+  background: var(--office-surface);
+  overflow: hidden;
+}
+.office-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.office-thumb-blank > span {
+  font-size: 3.5rem;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--office-family);
+}
+.office-thumb-fallback {
+  display: grid;
+  justify-items: center;
+  gap: 0.3rem;
+}
+.office-thumb-fallback .office-family-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+.office-thumb-label {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  color: var(--office-muted);
+}
+.office-notice {
+  border-inline-start: 3px solid var(--office-link);
+  padding-inline-start: 1rem;
+}
+.office .office-link {
+  border: 0;
+  background: transparent;
+  color: var(--office-link);
+  text-decoration: underline;
+  padding: 0.15rem 0.3rem;
+  min-height: 24px;
+}
+
+/* Compact band, pins and reordering */
+.office-start-compact {
+  padding-block: 0.6rem;
+}
+.office-start-compact .office-start-head {
+  margin-bottom: 0;
+}
+.office-template-card {
+  position: relative;
+}
+.office .office-pin {
+  position: absolute;
+  top: 0.35rem;
+  inset-inline-end: 0.35rem;
+  display: grid;
+  place-items: center;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: var(--office-surface);
+  color: var(--office-muted);
+}
+.office .office-pin[aria-pressed='true'] {
+  color: var(--office-link);
+  border-color: var(--office-link);
+}
+.office-pin svg {
+  width: 1rem;
+  height: 1rem;
+}
+.office-reorder {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+.office .office-reorder button {
+  min-height: 32px;
+  min-width: 40px;
+  padding: 0.2rem 0.5rem;
+}
+li[draggable='true'] {
+  cursor: grab;
+}
+.office-dragging {
+  opacity: 0.5;
+}

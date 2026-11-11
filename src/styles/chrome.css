@@ -1,0 +1,172 @@
+/* Header, family icons, create dialog, application switcher and direction rules. */
+/* Header */
+.office-header {
+  border-bottom: 1px solid var(--office-line);
+}
+.office-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 0.6rem;
+}
+.office .office-app-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.3rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.office-app-name .office-family-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+.office-search {
+  flex: 1;
+  max-width: 40rem;
+  margin-inline: auto;
+}
+.office .office-search input {
+  border-color: transparent;
+  background: transparent;
+  border-radius: 999px;
+  padding-inline: 1.1rem;
+  min-height: 44px;
+}
+.office-banner {
+  border: 1px solid var(--office-line);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.9rem;
+  background: var(--office-note);
+  color: var(--office-on-note);
+  font-size: 0.82rem;
+}
+
+/* Family icons */
+.office[data-kind='docs'],
+.office [data-kind='docs'] {
+  --office-family: var(--office-docs);
+}
+.office[data-kind='sheets'],
+.office [data-kind='sheets'] {
+  --office-family: var(--office-sheets);
+}
+.office[data-kind='slides'],
+.office [data-kind='slides'] {
+  --office-family: var(--office-slides);
+}
+.office-family-icon {
+  width: 1.4rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  fill: var(--office-family, var(--office-link));
+}
+.office-family-icon[data-kind='folder'] {
+  fill: #587dab;
+}
+.office-family-mark {
+  fill: #fff;
+}
+
+/* Create dialog */
+.office-dialog {
+  width: min(28rem, calc(100% - 2rem));
+  border: 1px solid var(--office-line);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  color: var(--office-ink);
+  background: var(--office-surface);
+  box-shadow: 0 16px 48px #0d2a2240;
+}
+.office-dialog::backdrop {
+  background: #0d2a2259;
+}
+.office-dialog form {
+  display: grid;
+  gap: 1rem;
+}
+.office-dialog-location {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.office-dialog-location p {
+  margin: 0;
+}
+.office-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.office .office-primary {
+  background: var(--office-primary);
+  color: var(--office-on-primary);
+  border-color: var(--office-primary);
+  font-weight: 600;
+}
+.office .office-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--office-primary) 85%, var(--office-ink));
+}
+
+/* Application switcher */
+.office-switcher {
+  position: relative;
+}
+.office-switcher nav {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  min-width: 15rem;
+  inset-inline-start: 0;
+  top: calc(100% + 0.5rem);
+  background: var(--office-surface);
+  border: 1px solid var(--office-line);
+  box-shadow: 0 8px 24px #153b3020;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+.office-switcher a,
+.office-switcher nav span {
+  padding: 0.75rem;
+  color: inherit;
+  border-radius: 0.3rem;
+}
+.office-switcher a.router-link-active {
+  background: var(--office-note);
+  color: var(--office-on-note);
+  font-weight: 650;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .office-thumb {
+    transition: border-color 120ms ease-out;
+  }
+}
+@media (max-width: 700px) {
+  .office-header-row {
+    flex-wrap: wrap;
+  }
+  .office-search {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .office-hide-narrow {
+    display: none;
+  }
+  .office-table th:first-child {
+    width: 65%;
+  }
+  .office-cards-row {
+    grid-auto-columns: 8rem;
+  }
+  .office-cards {
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  }
+}
+
+/* Right-to-left: horizontal arrows mirror so "earlier" and "collapsed" point the right way. */
+[dir='rtl'] .office .office-mirror {
+  display: inline-block;
+  transform: scaleX(-1);
+}

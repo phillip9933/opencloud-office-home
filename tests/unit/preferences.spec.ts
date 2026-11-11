@@ -48,6 +48,20 @@ describe('view preferences', () => {
     )
     expect(() => createViewPreferenceStore({ instance: '', user: 'u' })).toThrow()
   })
+  it('remembers creation choices and the shortcut switch, rejecting malformed values', () => {
+    expect(
+      parseViewPreferences({
+        lastFormat: { docs: 'docx', sheets: '../x', slides: 7 },
+        lastFolder: { docs: { spaceId: 's', itemId: 'f' }, sheets: { spaceId: '' }, slides: 'f' },
+        shortcuts: false
+      })
+    ).toMatchObject({
+      lastFormat: { docs: 'docx' },
+      lastFolder: { docs: { spaceId: 's', itemId: 'f' } },
+      shortcuts: false
+    })
+    expect(defaultViewPreferences().shortcuts).toBe(true)
+  })
   it('toggles and reorders pins without duplicates', () => {
     expect(togglePin(['a', 'b'], 'c')).toEqual(['a', 'b', 'c'])
     expect(togglePin(['a', 'b'], 'a')).toEqual(['b'])

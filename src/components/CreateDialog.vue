@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { OcButton } from '@opencloud-eu/design-system/components'
-import type { Template } from '../contracts/office'
+import type { FileRef, Template } from '../contracts/office'
 import type { HomeModel } from '../services/home'
 
-const props = defineProps<{ noun: string; model: HomeModel; destination: string }>()
-const emit = defineEmits<{ chooseFolder: [] }>()
+const props = defineProps<{
+  noun: string
+  model: HomeModel
+  destination: string
+  // The format of the user's last created file, used when it is still creatable.
+  preferred?: string
+}>()
+const emit = defineEmits<{ chooseFolder: []; created: [extension: string, folder: FileRef] }>()
 const dialog = ref<HTMLDialogElement>()
 const nameInput = ref<HTMLInputElement>()
 const template = ref<Template>()
@@ -18,7 +24,11 @@ async function open(choice: Template | undefined, from: HTMLElement) {
   opener = from
   template.value = choice
   name.value = choice?.name ?? `Untitled ${props.noun}`
-  extension.value = choice?.format.extension ?? state.value.formats[0]?.extension ?? ''
+  extension.value =
+    choice?.format.extension ??
+    state.value.formats.find((format) => format.extension === props.preferred)?.extension ??
+    state.value.formats[0]?.extension ??
+    ''
   state.value.notice = ''
   dialog.value?.showModal()
   await nextTick()
@@ -31,7 +41,10 @@ function restoreFocus() {
   opener?.focus()
 }
 async function submit() {
-  await props.model.create(name.value, extension.value, template.value)
+  const folder = state.value.location.folder && { ...state.value.location.folder }
+  const chosen = extension.value
+  await props.model.create(name.value, chosen, template.value)
+  if (state.value.created && folder) emit('created', chosen, folder)
   // Keep the dialog for fixable problems; close once a file exists or the outcome is uncertain.
   if (state.value.created || state.value.uncertain) close()
 }

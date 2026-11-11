@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, toRaw, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppSwitcher from '../components/AppSwitcher.vue'
 import CreateDialog from '../components/CreateDialog.vue'
 import FamilyIcon from '../components/FamilyIcon.vue'
 import FileBrowser from '../components/FileBrowser.vue'
 import RecentFiles from '../components/RecentFiles.vue'
+import SearchResults from '../components/SearchResults.vue'
+import ShortcutHelp from '../components/ShortcutHelp.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
 import type { OfficeContext } from '../app/context'
-import type { FileRecord, HomeLocation, OfficeKind, Template } from '../contracts/office'
-import { defaultLocation, type HomeModel } from '../services/home'
+import type { FileRecord, FileRef, HomeLocation, OfficeKind, Template } from '../contracts/office'
+import { defaultLocation, type FileMenuAction, type HomeModel } from '../services/home'
 
 const props = defineProps<{ kind: OfficeKind; context: OfficeContext }>()
 const route = useRoute()
@@ -24,14 +26,17 @@ const nouns: Record<OfficeKind, string> = {
   slides: 'presentation'
 }
 const query = ref('')
+const scope = ref<HomeLocation['scope']>('all')
 const browseOpen = ref(false)
 const createDialog = ref<InstanceType<typeof CreateDialog>>()
 const browser = ref<InstanceType<typeof FileBrowser>>()
 const viewport = ref<HTMLElement>()
+const searchInput = ref<HTMLInputElement>()
 const heading = ref<HTMLHeadingElement>()
 let activeModel: HomeModel | undefined
 let timer: ReturnType<typeof setTimeout> | undefined
 let navigation = 0
+let rememberedView: string | undefined
 
 function snapshot(): HomeLocation {
   return {
@@ -52,8 +57,22 @@ async function navigate(location: HomeLocation) {
 function search() {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    void navigate({ ...snapshot(), text: query.value, scroll: 0 })
+    void navigate({ ...snapshot(), text: query.value, scope: scope.value, scroll: 0 })
   }, 250)
+}
+function remember(extension: string, folder: FileRef) {
+  props.context.rememberCreation(props.kind, extension, folder)
+}
+function clearSearch() {
+  clearTimeout(timer)
+  query.value = ''
+  void navigate({ ...snapshot(), text: '', scroll: 0 })
+}
+function act(action: FileMenuAction, file: FileRecord) {
+  // Opening keeps the existing view-state persistence before the editor takes over.
+  if (action === 'open' && file.kind === 'folder') return activate(file)
+  if (action === 'open' || action === 'openReadOnly') persist()
+  void model.value.runAction(action, file)
 }
 function chooseSpace(id: string) {
   clearTimeout(timer)
@@ -122,8 +141,20 @@ watch(
     activeModel?.deactivate()
     activeModel = model.value
     const id = typeof route.query.view === 'string' ? route.query.view : ''
-    if (!id) {
-      const initial = props.context.saveView(defaultLocation(props.kind))
+    // Views live in session memory; after a reload an old key starts fresh like a first visit.
+    if (!id || !props.context.views.has(id)) {
+      // Start where the user last created a file; it is revalidated by the load below.
+      const remembered = props.context.preferences.lastFolder[props.kind]
+      const initial = props.context.saveView(
+        remembered
+          ? {
+              ...defaultLocation(props.kind),
+              spaceId: remembered.spaceId,
+              folder: { ...remembered }
+            }
+          : defaultLocation(props.kind)
+      )
+      rememberedView = remembered ? initial : undefined
       await router.replace({
         path: `/office/${props.kind}`,
         query: { view: initial }
@@ -134,9 +165,21 @@ watch(
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
     query.value = location.text
-    browseOpen.value ||= location.trail.length > 0 || location.text !== ''
+    scope.value = location.scope
+    browseOpen.value ||=
+      location.trail.length > 0 || (location.scope === 'folder' && location.text !== '')
     await activeModel.load(location)
     if (revision !== navigation) return
+    if (id === rememberedView && state.value.error) {
+      // The remembered folder is gone or no longer accessible: forget it and start at the root.
+      props.context.forgetFolder(props.kind)
+      rememberedView = undefined
+      await router.replace({
+        path: `/office/${props.kind}`,
+        query: { view: props.context.saveView(defaultLocation(props.kind)) }
+      })
+      return
+    }
     await nextTick()
     if (viewport.value) viewport.value.scrollTop = location.scroll
     // Announce the new view, unless the user already moved focus while it was loading.
@@ -148,9 +191,39 @@ watch(
 // Filters narrow Recent only, so a change reloads that section and leaves the folder view alone.
 watch(
   () => [props.context.recentFilter.favorites, ...props.context.recentFilter.tags],
-  () => void model.value.refreshRecent()
+  // Search results use the same filters, so an active search reloads the view instead.
+  () =>
+    void (state.value.results !== null ? model.value.load(snapshot()) : model.value.refreshRecent())
 )
+// Single-key shortcuts; they never act while the user types or a dialog is open (WCAG 2.1.4).
+function shortcut(event: KeyboardEvent) {
+  if (
+    !props.context.preferences.shortcuts ||
+    event.defaultPrevented ||
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    document.querySelector('dialog[open]')
+  )
+    return
+  const target = event.target instanceof HTMLElement ? event.target : document.body
+  if (target.closest('input, textarea, select, [contenteditable="true"]')) return
+  if (event.key === '/') {
+    event.preventDefault()
+    searchInput.value?.focus()
+  } else if (
+    event.key.toLowerCase() === 'n' &&
+    state.value.formats.length &&
+    !state.value.mutation &&
+    !state.value.uncertain
+  ) {
+    event.preventDefault()
+    start(undefined, target)
+  }
+}
+onMounted(() => window.addEventListener('keydown', shortcut))
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', shortcut)
   clearTimeout(timer)
   navigation++
   activeModel?.deactivate()
@@ -166,15 +239,25 @@ onBeforeUnmount(() => {
           <FamilyIcon :kind="kind" />
           <span>{{ descriptor.label }}</span>
         </h1>
-        <label class="office-search">
-          <span class="office-visually-hidden">Search files in {{ destination }}</span>
+        <div class="office-search" role="search">
+          <label class="office-visually-hidden" for="office-search-scope">Search in</label>
+          <select id="office-search-scope" v-model="scope" @change="search">
+            <option value="all">All files</option>
+            <option value="folder">This folder</option>
+          </select>
+          <label class="office-visually-hidden" for="office-search-text">{{
+            scope === 'all' ? 'Search all files' : `Search files in ${destination}`
+          }}</label>
           <input
+            id="office-search-text"
+            ref="searchInput"
             v-model="query"
             type="search"
-            :placeholder="`Search in ${destination}`"
+            :placeholder="scope === 'all' ? 'Search all files' : `Search in ${destination}`"
             @input="search"
           />
-        </label>
+        </div>
+        <ShortcutHelp :context="context" />
       </div>
     </header>
     <div class="office-inner">
@@ -197,38 +280,41 @@ onBeforeUnmount(() => {
       <p v-if="state.uncertain" role="alert">
         Creation is paused until its outcome is reconciled in Files. Do not submit another copy.
       </p>
-      <p v-if="state.notice" role="status" class="office-notice">
-        {{ state.notice }}
-        <button
-          v-if="state.created"
-          type="button"
-          class="office-link"
-          :disabled="state.opening || state.mutation"
-          @click="model.open(state.created)"
-        >
-          Open created file
-        </button>
-      </p>
     </TemplateStrip>
 
     <div class="office-inner">
+      <SearchResults
+        v-if="state.location.scope === 'all' && state.location.text.trim()"
+        :kind="kind"
+        :context="context"
+        :text="state.location.text"
+        :results="state.results ?? []"
+        :note="state.resultsNote"
+        :loading="state.loading"
+        :opening="state.opening"
+        @action="act"
+        @clear="clearSearch"
+      />
       <RecentFiles
+        v-else
         :kind="kind"
         :context="context"
         :entries="state.recent"
         :note="state.recentNote"
         :opening="state.opening"
-        @open="activate"
+        @action="act"
         @clear="model.clearRecents"
       />
       <FileBrowser
         ref="browser"
         :kind="kind"
         :state="state"
+        :services="context.services"
         :expanded="browseOpen"
         @toggle="browseOpen = !browseOpen"
         @choose-space="chooseSpace"
         @activate="activate"
+        @action="act"
         @breadcrumb="breadcrumb"
         @reload="model.load(snapshot())"
         @more="model.load(snapshot(), true)"
@@ -239,7 +325,31 @@ onBeforeUnmount(() => {
       :noun="nouns[kind]"
       :model="model"
       :destination="destination"
+      :preferred="context.preferences.lastFormat[kind]"
+      @created="remember"
       @choose-folder="showBrowser"
     />
+    <div class="office-toast-region" role="status">
+      <p v-if="state.notice" class="office-toast">
+        <span>{{ state.notice }}</span>
+        <button
+          v-if="state.created"
+          type="button"
+          class="office-link"
+          :disabled="state.opening || state.mutation"
+          @click="model.open(state.created)"
+        >
+          Open created file
+        </button>
+        <button
+          type="button"
+          class="office-link"
+          aria-label="Dismiss message"
+          @click="state.notice = ''"
+        >
+          <span aria-hidden="true">✕</span>
+        </button>
+      </p>
+    </div>
   </main>
 </template>

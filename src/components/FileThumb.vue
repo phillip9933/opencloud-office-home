@@ -40,7 +40,7 @@ onBeforeUnmount(release)
 <template>
   <span class="office-thumb" :data-kind="kind">
     <img v-if="preview" :src="preview.url" alt="" @error="release" />
-    <span v-else class="office-thumb-fallback">
+    <span v-else class="office-thumb-fallback" aria-hidden="true">
       <FamilyIcon :kind="kind" />
       <span class="office-thumb-label">{{ label }}</span>
     </span>

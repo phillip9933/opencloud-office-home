@@ -10,6 +10,8 @@ import {
   type FileCatalog,
   type FileRecord,
   type OfficeKind,
+  type Activity,
+  type Page,
   type RecentFilter,
   type Result
 } from '../../contracts/office'
@@ -18,6 +20,7 @@ import {
 export interface ReadPort8 {
   drives: Pick<Graph['drives'], 'listMyDrives'>
   tags: Pick<Graph['tags'], 'listTags'>
+  activities: Pick<Graph['activities'], 'listActivities'>
   webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo' | 'search'>
 }
 
@@ -30,7 +33,9 @@ const MEDIA_TYPE: Record<OfficeKind, string> = {
   slides: 'presentation'
 }
 // The server ranks matches by score, not date, and truncates at its page size.
-const RECENT_CHANGE_LIMIT = 200
+const SEARCH_LIMIT = 200
+const MAX_SEARCH_LENGTH = 100
+const MAX_ACTIVITY_LENGTH = 300
 const MAX_TAGS = 100
 const MAX_TAG_LENGTH = 100
 
@@ -40,13 +45,58 @@ function validTag(tag: unknown): tag is string {
 
 // Tags are user text inside a KQL phrase. Ones containing quote or escape characters are not
 // sent; the caller still filters by them locally, so they narrow results but never the query.
-function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
-  const parts = [RECENT_CHANGE_QUERY, `mediatype:("${MEDIA_TYPE[kind]}")`]
+function filterClauses(filter: RecentFilter): string[] {
+  const parts: string[] = []
   if (filter.favorites) parts.push('is:favorite')
   const tags = filter.tags.filter((tag) => validTag(tag) && !/["\\]/.test(tag))
   if (tags.length && tags.length === filter.tags.length)
     parts.push(`tag:(${tags.map((tag) => `"${tag}"`).join(' OR ')})`)
-  return parts.join(' AND ')
+  return parts
+}
+
+function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
+  return [RECENT_CHANGE_QUERY, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
+    ' AND '
+  )
+}
+
+// Web 8.2.1 sends user text unescaped inside name:"*…*". Characters that could end the phrase or
+// act as escapes are replaced, so input can only ever narrow the name match.
+export function searchTerm(text: string): string {
+  return Array.from(text)
+    .map((char) => (char.charCodeAt(0) < 32 || '"\\'.includes(char) ? ' ' : char))
+    .join('')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, MAX_SEARCH_LENGTH)
+}
+
+function nameQuery(term: string, kind: OfficeKind, filter: RecentFilter): string {
+  return [`name:"*${term}*"`, `mediatype:("${MEDIA_TYPE[kind]}")`, ...filterClauses(filter)].join(
+    ' AND '
+  )
+}
+
+// Activity messages are templates such as "{user} updated {resource}"; values become plain text.
+export function activityText(activity: {
+  template?: { message?: unknown; variables?: unknown }
+  times?: { recordedTime?: unknown }
+}): Activity | null {
+  const message = activity.template?.message
+  if (typeof message !== 'string' || !message) return null
+  const variables = record(activity.template?.variables) ?? {}
+  const text = message
+    .replace(/\{(\w+)\}/g, (_match, name: string) => {
+      const value = record(variables[name])
+      const label = value?.displayName ?? value?.name
+      return typeof label === 'string' ? label : ''
+    })
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_ACTIVITY_LENGTH)
+  const at =
+    typeof activity.times?.recordedTime === 'string' ? Date.parse(activity.times.recordedTime) : NaN
+  return text ? { text, ...(Number.isFinite(at) ? { at } : {}) } : null
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -80,6 +130,16 @@ export function catalogError(error: unknown): AppError {
   return 'unknown'
 }
 
+// Only https links are offered for copying; anything else is dropped rather than shown.
+function privateLink(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 2048) return undefined
+  try {
+    return new URL(value).protocol === 'https:' ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function modifiedAt(value: unknown): number | undefined {
   const time = typeof value === 'string' ? Date.parse(value) : NaN
   return Number.isFinite(time) ? time : undefined
@@ -107,6 +167,16 @@ export function normalizeReadMetadata(spaceId: string, resource: Resource): Resu
     ...(typeof resource.mimeType === 'string' ? { mimeType: resource.mimeType } : {}),
     ...(modifiedAt(resource.mdate) !== undefined ? { modifiedAt: modifiedAt(resource.mdate) } : {}),
     ...(resource.starred === true ? { favorite: true } : {}),
+    ...(resource.shareTypes?.length ? { shared: true } : {}),
+    ...(resource.locked === true
+      ? {
+          lock:
+            typeof resource.lockOwner === 'string' && resource.lockOwner
+              ? { owner: resource.lockOwner.slice(0, 200) }
+              : {}
+        }
+      : {}),
+    ...(privateLink(resource.privateLink) ? { link: privateLink(resource.privateLink) } : {}),
     ...(Array.isArray(resource.tags) && resource.tags.length
       ? { tags: resource.tags.filter(validTag).slice(0, MAX_TAGS) }
       : {}),
@@ -142,6 +212,46 @@ export function createCatalog8(
   function interrupted(key: string, signal?: AbortSignal): AppError | undefined {
     if (currentSession() !== key) return 'unauthenticated'
     if (signal?.aborted) return 'cancelled'
+  }
+  // Maps search hits to known spaces by storage ID, as Web does; shares mounted elsewhere
+  // are skipped and reported as partial rather than guessed.
+  async function searchHits(
+    query: string,
+    kind: OfficeKind,
+    signal: AbortSignal,
+    newestFirst: boolean
+  ): Promise<Result<Page<FileRecord>>> {
+    const key = currentSession()
+    if (!key) return fail('unauthenticated')
+    if (signal.aborted) return fail('cancelled')
+    try {
+      const found = await port.webdav.search(query, { searchLimit: SEARCH_LIMIT, signal })
+      const stopped = interrupted(key, signal)
+      if (stopped) return fail(stopped)
+      const items = new Map<string, FileRecord>()
+      let skipped = 0
+      for (const resource of found.resources) {
+        const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
+        const item = space ? normalizeReadMetadata(space.id, resource) : undefined
+        if (!item?.ok || (newestFirst && item.value.modifiedAt === undefined)) {
+          skipped++
+          continue
+        }
+        // The server's media groups include non-office types such as plain text.
+        if (item.value.kind === 'file' && belongsTo(item.value, kind))
+          items.set(refKey(item.value.ref), item.value)
+      }
+      const list = [...items.values()]
+      return ok({
+        items: newestFirst ? list.sort((a, b) => b.modifiedAt! - a.modifiedAt!) : list,
+        partial:
+          skipped > 0 ||
+          typeof found.totalResults !== 'number' ||
+          found.totalResults > found.resources.length
+      })
+    } catch (error) {
+      return fail(interrupted(key, signal) ?? catalogError(error))
+    }
   }
   return {
     dispose() {
@@ -238,38 +348,27 @@ export function createCatalog8(
         return fail(interrupted(key, signal) ?? catalogError(error))
       }
     },
-    async recentlyChanged(kind, signal, filter) {
+    recentlyChanged(kind, signal, filter) {
+      return searchHits(recentQuery(kind, filter), kind, signal, true)
+    },
+    search({ text, kind, filter, signal }) {
+      const term = searchTerm(text)
+      if (!term) return Promise.resolve(fail('searchUnavailable'))
+      return searchHits(nameQuery(term, kind, filter), kind, signal, false)
+    },
+    async latestActivity(ref, signal) {
       const key = currentSession()
       if (!key) return fail('unauthenticated')
-      if (signal.aborted) return fail('cancelled')
+      if (!opaqueSegment(ref.itemId) || !spaces.has(ref.spaceId)) return fail('forbiddenOrMissing')
       try {
-        const found = await port.webdav.search(recentQuery(kind, filter), {
-          searchLimit: RECENT_CHANGE_LIMIT,
-          signal
-        })
+        // Same query shape as the Files activity panel in Web 8.2.1.
+        const [latest] = await port.activities.listActivities(
+          `itemid:${ref.itemId} AND limit:1 AND sort:desc`,
+          { signal }
+        )
         const stopped = interrupted(key, signal)
         if (stopped) return fail(stopped)
-        const items = new Map<string, FileRecord>()
-        let skipped = 0
-        for (const resource of found.resources) {
-          // Web maps a search hit to its space by storage ID; shares mounted elsewhere are skipped.
-          const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
-          const item = space ? normalizeReadMetadata(space.id, resource) : undefined
-          if (!item?.ok || item.value.modifiedAt === undefined) {
-            skipped++
-            continue
-          }
-          // The server's media groups include non-office types such as plain text.
-          if (item.value.kind === 'file' && belongsTo(item.value, kind))
-            items.set(refKey(item.value.ref), item.value)
-        }
-        return ok({
-          items: [...items.values()].sort((a, b) => b.modifiedAt! - a.modifiedAt!),
-          partial:
-            skipped > 0 ||
-            typeof found.totalResults !== 'number' ||
-            found.totalResults > found.resources.length
-        })
+        return ok(latest ? activityText(latest) : null)
       } catch (error) {
         return fail(interrupted(key, signal) ?? catalogError(error))
       }

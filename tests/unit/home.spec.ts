@@ -165,6 +165,29 @@ describe('home workflow', () => {
     expect(home.state.recent.map((e) => e.file.name)).toEqual(['Team handbook.docx'])
     expect(list).not.toHaveBeenCalled()
   })
+  it('searches all spaces, opens read-only on request, and simulates native file actions', async () => {
+    const home = createHomeModel(services, 'docs')
+    await home.load({ ...defaultLocation('docs'), text: 'shared' })
+    expect(home.state.results?.map((f) => f.name)).toEqual(['Shared Docs.docx'])
+    // An all-spaces search leaves the browsed folder unfiltered.
+    expect(home.state.rows.map((f) => f.name)).toContain('Reports')
+    const launch = vi.spyOn(services.editor, 'open')
+    const editable = home.state.rows.find((f) => f.name === 'Project Docs.odt')!
+    await home.runAction('openReadOnly', editable)
+    expect(launch.mock.calls[0]![0].mode).toBe('view')
+    await home.runAction('share', editable)
+    expect(home.state.notice).toContain('Simulated')
+    vi.spyOn(services.actions, 'download').mockResolvedValue(fail('forbiddenOrMissing'))
+    await home.runAction('download', editable)
+    expect(home.state.notice).toContain('no longer have access')
+  })
+  it('names a remembered folder from live metadata when it has no trail', async () => {
+    const home = createHomeModel(services, 'docs')
+    const reports = { spaceId: 'fixture-personal', itemId: 'reports' }
+    await home.load({ ...defaultLocation('docs'), spaceId: reports.spaceId, folder: reports })
+    expect(home.state.location.trail).toEqual([{ name: 'Reports', ref: reports }])
+    expect(home.state.destinationWritable).toBe(true)
+  })
   it('keeps browser history and explains when recent changes cannot be loaded', async () => {
     services.recents.record({ spaceId: 'fixture-personal', itemId: 'docs' }, 'docs')
     vi.spyOn(services.catalog, 'recentlyChanged').mockResolvedValue(fail('network'))

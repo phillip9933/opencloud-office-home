@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import FamilyIcon from './FamilyIcon.vue'
-import type { FileRecord, OfficeKind } from '../contracts/office'
-import type { HomeModel } from '../services/home'
+import FileMarks from './FileMarks.vue'
+import FileMenu from './FileMenu.vue'
+import type { FileRecord, OfficeKind, OfficeServices } from '../contracts/office'
+import type { FileMenuAction, HomeModel } from '../services/home'
 
-defineProps<{ kind: OfficeKind; state: HomeModel['state']; expanded: boolean }>()
+defineProps<{
+  kind: OfficeKind
+  state: HomeModel['state']
+  services: OfficeServices
+  expanded: boolean
+}>()
 const emit = defineEmits<{
   toggle: []
   chooseSpace: [id: string]
   activate: [file: FileRecord]
+  action: [action: FileMenuAction, file: FileRecord]
   breadcrumb: [index: number]
   reload: []
   more: []
@@ -29,7 +37,10 @@ defineExpose({ focus: () => toggleButton.value?.focus() })
           aria-controls="office-browse-body"
           @click="emit('toggle')"
         >
-          <span aria-hidden="true">{{ expanded ? '▾' : '▸' }}</span> Browse folders
+          <span aria-hidden="true" :class="{ 'office-mirror': !expanded }">{{
+            expanded ? '▾' : '▸'
+          }}</span>
+          Browse folders
         </button>
       </h2>
       <label v-if="expanded" class="office-inline-label"
@@ -75,9 +86,17 @@ defineExpose({ focus: () => toggleButton.value?.focus() })
           <button type="button" :disabled="state.opening" @click="emit('activate', file)">
             {{ file.name }}
           </button>
+          <FileMarks :file="file" />
           <span class="office-muted">{{
             file.kind === 'folder' ? 'Folder' : file.access.write ? 'Can edit' : 'Read only'
           }}</span>
+          <FileMenu
+            v-if="file.kind === 'file'"
+            :file="file"
+            :services="services"
+            :disabled="state.opening"
+            @action="(action, item) => emit('action', action, item)"
+          />
         </li>
       </ul>
       <p v-if="state.partial" role="status">Partial results. More files may be available.</p>

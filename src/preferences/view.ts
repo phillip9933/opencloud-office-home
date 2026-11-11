@@ -1,4 +1,4 @@
-import type { OfficeKind } from '../contracts/office'
+import type { FileRef, OfficeKind } from '../contracts/office'
 import type { RecentSort } from '../services/recentView'
 
 export type TemplateBand = 'row' | 'compact'
@@ -8,6 +8,11 @@ export interface ViewPreferences {
   band: TemplateBand
   // Template IDs in the user's order; IDs are opaque and revalidated against the live gallery.
   pinned: Record<OfficeKind, string[]>
+  // Last successful creation choices; the folder is revalidated before it is used again.
+  lastFormat: Partial<Record<OfficeKind, string>>
+  lastFolder: Partial<Record<OfficeKind, FileRef>>
+  // Single-key shortcuts can be switched off (WCAG 2.1.4).
+  shortcuts: boolean
 }
 interface StoragePort {
   getItem(key: string): string | null
@@ -24,7 +29,10 @@ export function defaultViewPreferences(): ViewPreferences {
     sort: 'activity',
     layout: 'list',
     band: 'row',
-    pinned: { docs: [], sheets: [], slides: [] }
+    pinned: { docs: [], sheets: [], slides: [] },
+    lastFormat: {},
+    lastFolder: {},
+    shortcuts: true
   }
 }
 
@@ -45,6 +53,26 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
   if (value.band === 'row' || value.band === 'compact') result.band = value.band
   const pinned = value.pinned && typeof value.pinned === 'object' ? value.pinned : {}
   for (const kind of KINDS) result.pinned[kind] = pins((pinned as Record<string, unknown>)[kind])
+  const formats = (value.lastFormat ?? {}) as Record<string, unknown>
+  const folders = (value.lastFolder ?? {}) as Record<string, unknown>
+  for (const kind of KINDS) {
+    const format = formats[kind]
+    if (typeof format === 'string' && /^[a-z0-9]{1,8}$/.test(format))
+      result.lastFormat[kind] = format
+    const folder = folders[kind] as Record<string, unknown> | undefined
+    if (
+      folder &&
+      typeof folder === 'object' &&
+      typeof folder.spaceId === 'string' &&
+      typeof folder.itemId === 'string' &&
+      folder.spaceId.length > 0 &&
+      folder.itemId.length > 0 &&
+      folder.spaceId.length <= MAX_ID_LENGTH &&
+      folder.itemId.length <= MAX_ID_LENGTH
+    )
+      result.lastFolder[kind] = { spaceId: folder.spaceId, itemId: folder.itemId }
+  }
+  if (typeof value.shortcuts === 'boolean') result.shortcuts = value.shortcuts
   return result
 }
 
