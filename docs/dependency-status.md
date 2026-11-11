@@ -54,6 +54,21 @@ pass, but that does not establish full compatibility. Changing the host SDK or f
 versions just to silence peer warnings would exceed the verified baseline. Resolve these upstream
 and repeat real-host acceptance before release.
 
-The inherited Apache-2.0 skeleton notices remain intact. New application-code licensing and the
-OpenCloud AGPL dependency/contribution requirements still need a release decision. No public license
-or support claim is introduced by this maintenance.
+## Recheck on 2026-11-12
+
+The npm registry still lists `deepmerge` 4.3.1 and `vue3-gettext` 4.0.1 as latest. The
+[reviewed deepmerge advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4) still lists no
+patched version and rates the finding low. The bundled gettext CLI finding remains outside the
+lockfile advisory count. Neither finding is fixed or accepted by documenting its limited use here.
+
+The latest federation DTS plugin (2.9.3) now declares TypeScript 6 support, but the pinned
+OpenCloud extension SDK's federation plugin resolves DTS 2.3.1. Replacing only that internal plugin
+would need a separate parent/child compatibility check; it is not a verified drop-in repair.
+The latest focus-trap-vue 4.1.0 still declares focus-trap 7. The host-owned focus-trap and Tiptap
+mismatches remain pending an aligned host baseline. Do not upgrade the live server merely to
+silence local peer diagnostics.
+
+Office Home code is now AGPL-3.0-only and the inherited Apache-2.0 skeleton notices remain intact.
+See [licensing and source availability](licensing.md). License selection is resolved; release
+packaging, source availability for installation users and outstanding dependency findings still
+need to satisfy their respective checks before a public release.

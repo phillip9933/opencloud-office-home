@@ -29,8 +29,11 @@ exception has been added. Branch protections and required checks have not been c
 
 CI has a 20-minute validation timeout and 10-minute audit timeout to bound setup/network failures;
 these are provisional job ceilings, not performance targets. Local tests are much shorter, but a
-hosted-runner baseline must be measured before making performance or Node 24 compatibility claims.
-A workflow file does not prove its jobs have run successfully.
+hosted-runner timing baseline is not yet adopted as a performance target. Hosted validation on
+Node 24 and 26 passed in [run 43043288983](https://github.com/phillip9933/opencloud-office-home/actions/runs/43043288983),
+including the aggregate check, native build/artifact checks and browser tests. Its dependency-audit
+job failed on the remaining advisory. This evidence is specific to that run, not an assertion that
+all later commits or other platforms have passed.
 
 The axe Playwright dependency is test-only (MPL-2.0, official Deque package). It checks the home,
 creation form, folder dialog and settings in light/dark mobile layouts using WCAG A/AA rules.

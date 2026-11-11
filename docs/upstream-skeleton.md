@@ -14,6 +14,7 @@ Project-specific changes are deliberate:
 - The skeleton's Docker example is adapted into an explicitly selected disposable development profile under `dev/`, with a required pinned image, required disposable password and loopback-only binding. It is never started automatically and is not a production or office-server installer.
 - The native release-build block remains until real integration, licensing and security gates pass.
 
-The development toolchain is the starter's OpenCloud SDK 8.x baseline. A deployment compatibility claim still requires a matching server/Web/editor inventory and live acceptance evidence. The read-only catalog candidate is compiled against the installed SDK declarations and remains disconnected.
+The development toolchain is the starter's OpenCloud SDK 8.x baseline. A deployment compatibility claim still requires a matching server/Web/editor inventory and live acceptance evidence. The native catalog is connected through Web 8.2.1 services in the controlled test build; see
+[compatibility](compatibility.md) for the installed revision, observed workflows and remaining limits.
 
 For an eventual contribution to `opencloud-eu/web-extensions`, follow that repository's own instructions and package layout in a separate contribution checkout. Retaining skeleton history does not itself establish upstream acceptance or permission to publish. Private local guidance and user-specific material do not belong in an upstream contribution.

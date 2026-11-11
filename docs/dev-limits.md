@@ -53,8 +53,8 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Location:** `src/adapters/opencloud/providers8.ts`; connected by the native test adapter.
 - **Release behaviour:** Native creation formats come from the host's app registry, intersected with tested provider support, with distinct not-configured, unsupported-format and launch-failure states.
 - **Resolution:** The port is wired to host services; verify against a deployment with a registered provider.
-- **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The earlier empty registry is a captured test case; the current host advertises CollaboraOnline with 65 MIME types. Fixture preview services remain separate; real creation and editor saves still need acceptance.
-- **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Controlled host tests created the six office formats and launched the native editor; content save/reopen remains unverified.
+- **Verification:** Unknown or disabled capabilities and an empty registry must refuse creation; contradictory, unnamed and malformed registry entries must not be offered; a provider removed after loading must block creation. The earlier empty registry is a captured test case; the current host advertises CollaboraOnline with 65 MIME types. Fixture preview services remain separate; real creation has controlled host evidence; broader editor-save acceptance remains pending.
+- **Tested build and result:** Strict compilation and unit tests against the SDK 8.2.1 declarations matching the observed host. Controlled host tests created the six office formats and launched the native editor. A basic ODT edit/save/close/reopen passed on 2026-11-12 with manual input and browser-confirmed reopen; other formats and collaboration remain unverified.
 - **Status:** open
 
 ## DL-004: Disposable local development server example
