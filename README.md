@@ -33,3 +33,7 @@ these workflows could fit into OpenCloud Files.
 
 Office Home is [AGPL-3.0-only](LICENSE-AGPL-3.0). The original app skeleton remains
 [Apache-2.0](LICENSE); see [third-party notices](THIRD_PARTY_NOTICES.md).
+
+## AI usage and license
+
+I use AI tools to help with development, including analysis, code, tests and documentation. Validation records distinguish checks actually run from checks still required. Source review and automated tests are not security certification.
