@@ -20,8 +20,8 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Location:** `src/adapters/opencloud/policy8.ts`, `src/administration/`, `src/views/OfficeAdministration.vue`.
 - **Release behaviour:** Administrator policy saves through a dedicated OpenCloud configuration file; normal users can read but cannot write/delete/move or change its access. Conflicts, loss of access and uncertain writes are recoverable without duplicate mutations.
 - **Resolution:** Provision and verify the explicit configuration file/parent ACLs, exercise writes and stale ETags as an administrator, and prove server denial as an ordinary user. Custom app/type/handler preferences have been removed; they are outside current scope.
-- **Verification:** Isolated adapter tests cover identity, permission gates, revision preconditions, missing metadata, account changes, repeated saves and uncertain responses. Browser tests cover ordinary-user refusal, policy persistence and enforced personal-template controls. These do not establish the live ACL or transport behavior.
-- **Tested build and result:** Local administration implementation under test; live policy file is not provisioned.
+- **Verification:** Isolated adapter tests cover identity, permission gates, revision preconditions, missing metadata, account changes, repeated saves and uncertain responses. Browser tests cover ordinary-user refusal, policy persistence and enforced personal-template controls. Live setup verifies the dedicated space/file, two manager/four reader membership roles and inherited file permissions. Administrator conditional save/readback, reload persistence and stale-revision refusal passed; an independent native download confirms the restored policy. Ordinary-user transport denial remains unverified.
+- **Tested build and result:** Native test installation with connected shared policy storage; ordinary-user server write denial pending an existing user session.
 - **Status:** open
 
 ## DL-002: Synthetic preview services
