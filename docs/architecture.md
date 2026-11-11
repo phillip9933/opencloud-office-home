@@ -2,9 +2,10 @@
 
 The intended product is one native OpenCloud Web package with three home routes and one declarative
 app menu. The native test adapter binds those workflows to the host Web 8.2.1 composables. Full
-deployment acceptance is still pending. The project tier and eventual audience/distribution are
-unconfirmed. Apply the web application profile; use OWASP ASVS 5.0 as a security review reference,
-without claiming conformance.
+deployment acceptance is still pending. Source is shared publicly for developer review; the product
+remains a prototype with no supported production release. It uses the web application security
+profile and OWASP ASVS 5.0 as a review reference, without claiming conformance. Manual screen-reader
+and broader deployment acceptance remain unverified; see the compatibility document.
 
 ## System and feature map
 

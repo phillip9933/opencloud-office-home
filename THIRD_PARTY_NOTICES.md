@@ -16,5 +16,4 @@ original material; subsequent changes are recorded in Git history.
 Dependencies retain their own licenses. OpenCloud Web/SDK packages declare AGPL-3.0. Their original
 copyright and license notices must be retained with redistributed material. Test-only dependencies
 are not part of the native app entrypoint. See [licensing](docs/licensing.md) for source-availability
-and packaging requirements. No public release or upstream submission is represented by this
-private development checkout.
+and packaging requirements. Source availability does not imply a production release or upstream acceptance.

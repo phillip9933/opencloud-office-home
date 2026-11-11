@@ -1,13 +1,21 @@
 # Office Home for OpenCloud
 
-Based on the official [OpenCloud app skeleton](https://github.com/opencloud-eu/web-app-skeleton),
-with upstream history and shared tooling preserved. See [upstream
-foundation](docs/upstream-skeleton.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
+**Developer prototype — feedback and contributions welcome.**
 
-Preliminary TypeScript/Vue application for three OpenCloud home screens: Docs, Sheets and Slides.
-Each shares navigation, file discovery, creation and editor services. The native adapter now uses
-OpenCloud Web 8.2.1 services. An explicit test-instance build is available for controlled
-integration testing; full releases remain blocked pending live acceptance and security review.
+Office Home adds Docs, Sheets and Slides landing pages inside OpenCloud: recent files, favorites,
+managed templates and an inline creation flow that opens the new file in the configured editor.
+Each family has a direct route for optional friendly-domain redirects to the canonical OpenCloud host.
+
+It is one TypeScript/Vue Web app, using OpenCloud's existing storage, permissions and office
+integration. No additional backend or container is needed. It is based on the official
+[OpenCloud app skeleton](https://github.com/opencloud-eu/web-app-skeleton), with upstream history
+and [original notices](THIRD_PARTY_NOTICES.md) preserved.
+
+Controlled testing has covered OpenCloud 9.0.0 / Web 8.2.1 with Collabora. Production releases remain
+blocked by outstanding compatibility, accessibility and dependency checks. Start with the synthetic
+preview below, or read [test installation](docs/test-installation.md) for an isolated integration
+evaluation. [Compatibility](docs/compatibility.md) distinguishes verified behavior from remaining
+work; [contributing](CONTRIBUTING.md) explains how to review or propose changes.
 
 ## Supported platforms
 
@@ -18,9 +26,12 @@ server/editor pairing is supported yet.
 
 ## Quick start
 
-From this directory, in a disposable environment without user credentials:
+Use Node >=24 and pnpm 11.27.0. Clone the repository, then run the preview in a disposable
+environment without production credentials:
 
 ```sh
+git clone https://github.com/phillip9933/opencloud-office-home.git
+cd opencloud-office-home
 pnpm install --frozen-lockfile --ignore-scripts
 pnpm dev
 ```
@@ -31,7 +42,7 @@ In this preview, templates come from synthetic folders with drawn images. Native
 use OpenCloud COPY for ordinary document templates; see [compatibility](docs/compatibility.md) for
 verified behavior and the unsupported template-container formats.
 
-For local agent execution on Linux, use the reviewed Bubblewrap wrapper:
+For isolated local execution on Linux, the repository includes a Bubblewrap wrapper:
 
 ```sh
 OFFICE_PNPM_PACKAGE=/absolute/tooling/node_modules/pnpm \
@@ -101,8 +112,9 @@ Apache-2.0 terms. [Third-party notices](THIRD_PARTY_NOTICES.md) describe the sco
 attribution; dependencies retain their own licenses. See [licensing and source availability](docs/licensing.md)
 before distributing or operating a modified version for other users.
 
-Dependency advisories remain a release blocker. A vulnerability-reporting channel has not yet been
-established. Do not include confidential findings or credentials in source or issue text.
+Dependency advisories remain a release blocker; see [dependency status](docs/dependency-status.md).
+Use [SECURITY.md](SECURITY.md) to report vulnerabilities privately. General feedback and reproducible
+non-security bugs belong in [Issues](https://github.com/phillip9933/opencloud-office-home/issues).
 
 Installation-wide template and creation defaults are configured in the app's administrator-owned
 configuration file. See [installation configuration](docs/configuration.md) and its minimal JSON

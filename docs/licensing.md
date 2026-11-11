@@ -18,12 +18,12 @@ needed to reproduce the installed version, under the applicable license terms. S
 AGPL requires a prominent opportunity for remote users of a modified version to obtain its
 corresponding source at no charge. Read the full license for the exact obligations.
 
-A private GitHub URL only provides source to people with access; it is not a working source offer
-for other installation users. Before widening deployment, provide an accessible source archive or
-repository for the installed version and expose its link in the application. Keep private workspace
-instructions, credentials, user documents and operational backups out of that archive. The current
-private test installation is not a public release, and this document does not claim that future
-binary packaging or source distribution has already been completed.
+The [source repository](https://github.com/phillip9933/opencloud-office-home) contains the application
+and its build instructions. A deployment must identify the source corresponding to its installed
+version and make that source accessible to its users, including local modifications. Before wider
+hosted use, expose a source link in the application. Do not include private workspace instructions,
+credentials, user documents or operational backups in source archives. Publishing this repository
+does not constitute a supported binary release or complete every deployment's license obligations.
 
 ## Upstream contribution
 
@@ -35,5 +35,5 @@ No upstream submission or acceptance is implied.
 
 The general [OpenCloud contribution guidance](https://github.com/opencloud-eu/opencloud/blob/main/CONTRIBUTING.md#licensing-and-cla)
 states that no CLA is required for public OpenCloud code. Recheck the destination repository's
-current contribution requirements before a submission; this is not permission to sign agreements,
-change upstream repositories or publish this private repository.
+current contribution requirements before a submission. No upstream submission or acceptance is
+implied by publishing this standalone prototype.
