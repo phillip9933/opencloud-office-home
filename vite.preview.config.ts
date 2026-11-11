@@ -6,6 +6,10 @@ import vue from '@vitejs/plugin-vue'
 // OpenCloud Web serves the design system's icons at /icons; the preview serves only the ones
 // this app uses, from the installed design-system package.
 const ICONS = [
+  'arrow-up-line',
+  'arrow-right-s-line',
+  'close-line',
+  'folder-line',
   'gallery-view-2',
   'layout-column-line',
   'file-text-line',

@@ -1,6 +1,5 @@
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import { describe, expect, it, vi } from 'vitest'
-import { defaultPolicy, policyApplications } from '../../src/administration/policy'
 import {
   activityText,
   createCatalog8,
@@ -450,51 +449,5 @@ it('uses bounded literal filename search and refuses KQL metacharacters', async 
   await test.catalog.search('docs', 'Quarterly report', test.query.signal)
   expect(test.port.webdav.search.mock.calls[0]![0]).toBe(
     'name:"*Quarterly report*" AND mediatype:("document")'
-  )
-})
-
-it('includes configured additional extensions in recent search and still rejects contradictory MIME metadata', async () => {
-  const t = setup()
-  const policy = {
-    ...defaultPolicy(),
-    additionalFormats: { docs: [{ extension: 'txt', mimeType: 'text/plain' }] }
-  }
-  const catalog = createCatalog8(
-    t.port,
-    () => 'policy-session',
-    undefined,
-    policyApplications(policy)
-  )
-  await catalog.listSpaces(t.query.signal)
-  t.port.webdav.search.mockResolvedValue({
-    resources: [
-      {
-        ...file('text-file', {
-          storageId: t.personal.id,
-          name: 'Notes.txt',
-          mimeType: 'text/plain',
-          mdate: '2026-01-01T00:00:00Z'
-        }),
-        highlights: ''
-      },
-      {
-        ...file('wrong-type', {
-          storageId: t.personal.id,
-          name: 'Other.txt',
-          mimeType: 'application/octet-stream',
-          mdate: '2026-01-01T00:00:00Z'
-        }),
-        highlights: ''
-      }
-    ],
-    totalResults: 2
-  })
-  const result = await catalog.recentlyChanged('docs', t.query.signal, {
-    favorites: false,
-    tags: []
-  })
-  expect(result.ok && result.value.items.map((item) => item.name)).toEqual(['Notes.txt'])
-  expect(t.port.webdav.search.mock.calls[0]![0]).toContain(
-    '(mediatype:("document") OR name:"*.txt")'
   )
 })

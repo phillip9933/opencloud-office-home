@@ -47,27 +47,6 @@
   background: transparent;
   color: var(--office-link);
 }
-.office-folder-picker {
-  padding: 1rem;
-  border: 1px solid var(--office-line);
-  border-radius: 0.45rem;
-  background: var(--office-surface);
-}
-.office-folder-picker h3 {
-  margin-bottom: 0.75rem;
-}
-.office-folder-choices {
-  list-style: none;
-  padding: 0;
-  max-height: 15rem;
-  overflow: auto;
-}
-.office-folder-choices button {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  margin-block: 0.2rem;
-}
 .office-settings-page {
   padding-block: 1.5rem 3rem;
 }
@@ -206,41 +185,37 @@
   margin: 0;
   min-width: 0;
 }
-.office-admin-fields {
+/* Tabs establish section hierarchy; options do not repeat section divider lines. */
+.office-admin-tabs {
   display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-block: 0.75rem;
+  gap: 0.4rem;
+  margin-block: 1.25rem;
+  border-bottom: 1px solid var(--office-line);
+  overflow: auto;
 }
-.office-admin-fields label {
-  display: grid;
-  flex: 1 1 12rem;
-  gap: 0.35rem;
-  min-width: 0;
+.office-admin-tabs button {
+  border: 0;
+  border-radius: 0.4rem 0.4rem 0 0;
+  background: transparent;
+  white-space: nowrap;
 }
-.office-admin-fields input,
-.office-admin-fields select {
-  width: 100%;
-  min-width: 0;
+.office-admin-tabs button[aria-selected='true'] {
+  background: var(--office-note);
+  color: var(--office-on-note);
+  box-shadow: inset 0 -3px 0 var(--office-link);
 }
-.office-admin-entries {
-  list-style: none;
+.office-admin-panel {
+  max-width: 48rem;
+  min-height: 12rem;
+  padding-block: 0.5rem 1.5rem;
+}
+.office-admin-panel .office-settings-section {
+  border: 0;
   margin: 0;
   padding: 0;
 }
-.office-admin-entries li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem;
-  margin-block: 0.5rem;
-  overflow-wrap: anywhere;
-}
-
-/* Admin rows keep each file type and its editor together across reflow widths. */
 .office-admin-summary {
-  margin-block: 1.25rem;
+  margin-block: 1rem;
   padding: 1rem;
   border: 1px solid var(--office-line);
   border-radius: 0.45rem;
@@ -249,33 +224,8 @@
 .office-admin-summary p:last-child {
   margin-bottom: 0;
 }
-.office-admin-summary summary {
-  cursor: pointer;
-  min-height: 24px;
-}
-.office-admin-entries .office-admin-entry {
-  justify-content: space-between;
-  padding-block: 0.75rem;
-  border-bottom: 1px solid var(--office-line);
-}
-.office-admin-type {
-  flex: 1 1 13rem;
-  min-width: 0;
-}
-.office-admin-type small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.office-editor-choice {
-  flex: 1 1 14rem;
-  min-width: 0;
-  display: grid;
-  gap: 0.35rem;
-}
-.office-editor-choice select {
-  width: 100%;
-  min-width: 0;
-}
-.office-integration-refresh {
-  margin-top: 1.5rem;
+.office-admin-save {
+  padding-top: 1rem;
+  border-top: 1px solid var(--office-line);
+  max-width: 48rem;
 }

@@ -1,120 +1,24 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
-import PolicyIntegrations from '../../src/administration/PolicyIntegrations.vue'
 import PolicyCreation from '../../src/administration/PolicyCreation.vue'
 import OfficeAdministration from '../../src/views/OfficeAdministration.vue'
 import { defaultPolicy } from '../../src/administration/policy'
-import { fixtureIntegrations } from '../../src/fixtures/integrations'
+import { fixtureCreationOptions } from '../../src/fixtures/creation'
 import { fixtureServices } from '../../src/fixtures/services'
 import { createOfficeContext } from '../../src/app/context'
 import { fail, ok } from '../../src/contracts/office'
 import { describeFolder } from '../../src/services/folderLabel'
 
-function integrations() {
-  const view = mount(PolicyIntegrations, {
-    props: {
-      draft: defaultPolicy(),
-      directory: fixtureIntegrations(),
-      loading: false,
-      error: '',
-      disabled: false,
-      'onUpdate:draft': (value: ReturnType<typeof defaultPolicy>) => {
-        void view.setProps({ draft: value })
-      }
-    }
-  })
-  return view
-}
 describe('admin configuration workflows', () => {
-  it('keeps an invalid app URL error in the app section and clears it when corrected', async () => {
-    const wrapper = integrations()
-    await wrapper.find('input[maxlength="80"]').setValue('Test app')
-    await wrapper.find('input[maxlength="2048"]').setValue('http://example.org')
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add app')!
-      .trigger('click')
-    expect(wrapper.find('#admin-apps-heading').element.closest('section')!.textContent).toContain(
-      'HTTPS URL'
-    )
-    expect(
-      wrapper.find('#admin-formats-heading').element.closest('section')!.textContent
-    ).not.toContain('HTTPS URL')
-    await wrapper.find('input[maxlength="2048"]').setValue('https://example.org')
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false)
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add app')!
-      .trigger('click')
-    await flushPromises()
-    expect(wrapper.text()).toContain('Website shortcut · no file integration')
-    wrapper.unmount()
-  })
-  it('maps a discovered type to its installed editor and keeps shortcuts out of the choices', async () => {
-    const wrapper = integrations()
-    const select = wrapper
-      .findAll('select')
-      .find((select) => select.element.parentElement?.textContent?.includes('Backend file type'))!
-    await select.setValue('txt:text/plain')
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add file type')!
-      .trigger('click')
-    await flushPromises()
-    const editor = wrapper.find('select[aria-label="Editor for Docs TXT"]')
-    expect(editor.text()).toContain('Synthetic Text')
-    expect(editor.text()).not.toContain('https://')
-    await editor.setValue('editor-synthetic-text')
-    await flushPromises()
-    expect(wrapper.props('draft').handlers).toContainEqual({
-      extension: 'txt',
-      mimeType: 'text/plain',
-      action: 'editor-synthetic-text'
-    })
-    await editor.setValue('')
-    expect(wrapper.props('draft').handlers).toEqual([])
-    wrapper.unmount()
-  })
-  it('requests an extension for MIME-only backend types while keeping the advertised MIME fixed', async () => {
-    const wrapper = integrations()
-    const directory = fixtureIntegrations()
-    directory.formats.push({
-      extension: '',
-      mimeType: 'application/pdf',
-      label: 'PDF',
-      providers: ['PDF reader'],
-      canCreate: false
-    })
-    await wrapper.setProps({ directory })
-    const select = wrapper
-      .findAll('select')
-      .find((select) => select.element.parentElement?.textContent?.includes('Backend file type'))!
-    await select.setValue(':application/pdf')
-    expect(wrapper.find('input[placeholder="text/plain"]').exists()).toBe(false)
-    await wrapper.find('input[placeholder="txt"]').setValue('.PDF')
-    await wrapper
-      .findAll('button')
-      .find((button) => button.text() === 'Add file type')!
-      .trigger('click')
-    await flushPromises()
-    expect(wrapper.props('draft').additionalFormats.docs).toContainEqual({
-      extension: 'pdf',
-      mimeType: 'application/pdf'
-    })
-    wrapper.unmount()
-  })
   it('offers creation only for backend-advertised formats and refreshes provider loss', async () => {
-    const directory = fixtureIntegrations()
+    const formats = fixtureCreationOptions()
     const view = mount(PolicyCreation, {
-      props: { draft: defaultPolicy(), directory, loading: false, error: '', disabled: false }
+      props: { draft: defaultPolicy(), formats, loading: false, error: '', disabled: false }
     })
     expect(view.find('input[aria-label="ODT"]').exists()).toBe(true)
     expect(view.find('input[aria-label="DOCX"]').exists()).toBe(false)
     await view.setProps({
-      directory: {
-        ...directory,
-        formats: directory.formats.map((format) => ({ ...format, canCreate: false }))
-      }
+      formats: formats.map((format) => ({ ...format, canCreate: false }))
     })
     expect(view.findAll('input[type="checkbox"]')).toHaveLength(0)
     expect(view.text()).toContain('No creation formats are advertised')
@@ -172,6 +76,41 @@ describe('admin configuration workflows', () => {
     expect(view.find('button[type="submit"]').attributes('disabled')).toBeDefined()
     await view.find('form').trigger('submit')
     expect(save).not.toHaveBeenCalled()
+    view.unmount()
+    context.dispose()
+  })
+  it('switches sections by keyboard and preserves a draft across tabs and capability refresh', async () => {
+    const services = fixtureServices()
+    services.administration = {
+      configured: true,
+      permitted: () => true,
+      load: vi
+        .fn()
+        .mockResolvedValue(ok({ policy: defaultPolicy(), revision: '"one"', writable: true })),
+      save: vi.fn()
+    }
+    const context = createOfficeContext(services)
+    const view = mount(OfficeAdministration, {
+      props: { context },
+      attachTo: document.body,
+      global: { stubs: { AppSidebar: true, RouterLink: true } }
+    })
+    await flushPromises()
+    await view.find('input[type="checkbox"]').setValue(false)
+    await view.find('[role="tablist"]').trigger('keydown', { key: 'ArrowRight' })
+    expect(view.find('#admin-tab-1').attributes('aria-selected')).toBe('true')
+    expect(document.activeElement?.id).toBe('admin-tab-1')
+    await view
+      .findAll('button')
+      .find((button) => button.text() === 'Refresh capabilities')!
+      .trigger('click')
+    await flushPromises()
+    await view.find('[role="tablist"]').trigger('keydown', { key: 'End' })
+    expect(view.find('#admin-tab-2').attributes('aria-selected')).toBe('true')
+    await view.find('[role="tablist"]').trigger('keydown', { key: 'Home' })
+    expect((view.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false)
+    expect(view.find('button[type="submit"]').attributes('disabled')).toBeUndefined()
+    expect(view.text()).not.toContain('App shortcuts')
     view.unmount()
     context.dispose()
   })

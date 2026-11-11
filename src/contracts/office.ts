@@ -163,9 +163,7 @@ export interface OfficeServices {
   policy?: OfficePolicy
   applications?: readonly AppDescriptor[]
   administration?: Administration
-  integrations?: () => Promise<
-    Result<import('../administration/integrations').IntegrationDirectory>
-  >
+  creationOptions?: () => Promise<Result<import('../administration/creation').CreationFormat[]>>
   catalog: FileCatalog
   actions: FileActions
   creation: FileCreation

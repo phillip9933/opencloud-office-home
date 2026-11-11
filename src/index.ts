@@ -6,6 +6,7 @@ import './styles/chrome.css'
 import './styles/templates.css'
 import './styles/files.css'
 import './styles/forms.css'
+import './styles/folders.css'
 import { officeApps } from './app/registry'
 import { useNativeOffice8 } from './adapters/opencloud/host8'
 const OfficeHome = defineAsyncComponent(() => import('./views/OfficeHome.vue'))

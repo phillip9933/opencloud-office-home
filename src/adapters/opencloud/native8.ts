@@ -24,10 +24,10 @@ import {
 import { createProviderCapabilities8, type ProviderPort8 } from './providers8'
 import { nativeAccess8 } from './access8'
 import { canonicalRootDrives8 } from './roots8'
-import { defaultPolicy, policyApplications, type OfficePolicy } from '../../administration/policy'
+import { defaultPolicy, type OfficePolicy } from '../../administration/policy'
 import type { Administration } from '../../administration/store'
-import type { RegisteredEditor } from '../../administration/integrations'
-import { integrationDirectory8 } from './integrations8'
+import { officeApps } from '../../app/registry'
+import { creationOptions8 } from './creationOptions8'
 
 export interface NativeResource8 {
   space: SpaceResource
@@ -36,7 +36,6 @@ export interface NativeResource8 {
 }
 export interface NativePort8 extends ReadPort8, ProviderPort8 {
   refreshProviders?: () => Promise<void>
-  editorRegistrations?: () => RegisteredEditor[]
   webdav: ReadPort8['webdav'] & Pick<WebDAV, 'copyFiles' | 'getPathForFileId'>
   // Host-authenticated request and native routes; no credential values enter this adapter.
   requestNew(url: string): Promise<{ status: number }>
@@ -77,7 +76,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
   const policy = options.policy ?? defaultPolicy()
-  const applications = policyApplications(policy)
+  const applications = officeApps
   const catalog = createCatalog8(
     { ...port, drives: canonicalRootDrives8(port) },
     session,
@@ -245,7 +244,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   }
 
   const services: OfficeServices = {
-    integrations: integrationDirectory8(port, session),
+    creationOptions: creationOptions8(port, session),
     mode: 'native',
     policy,
     applications,

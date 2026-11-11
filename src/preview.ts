@@ -6,12 +6,12 @@ import './styles/chrome.css'
 import './styles/templates.css'
 import './styles/files.css'
 import './styles/forms.css'
+import './styles/folders.css'
 import './preview.css'
 import OfficeHome from './views/OfficeHome.vue'
 import OfficeSettings from './views/OfficeSettings.vue'
 import OfficeAdministration from './views/OfficeAdministration.vue'
 import { fixtureAdministration } from './fixtures/administration'
-import { policyApplications } from './administration/policy'
 import { OcSpinner } from '@opencloud-eu/design-system/components'
 import { officeApps } from './app/registry'
 import { createOfficeContext } from './app/context'
@@ -25,7 +25,6 @@ services.administration = fixtureAdministration(
 const policySnapshot = await services.administration.load()
 if (policySnapshot.ok) {
   services.policy = policySnapshot.value.policy
-  services.applications = policyApplications(policySnapshot.value.policy)
   services.templateFolderDefault = services.policy.templateFolder ?? services.templateFolderDefault
 }
 const context = createOfficeContext(services)

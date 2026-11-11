@@ -39,6 +39,42 @@ it('discards folder metadata that arrives after cancelling the picker', async ()
   expect(list.mock.calls[0]![0].signal.aborted).toBe(true)
 })
 
+it('permits read-only template folders but blocks them as save destinations', async () => {
+  const services = fixtureServices()
+  const wrapper = mount(FolderPicker, {
+    props: {
+      catalog: services.catalog,
+      title: 'Templates',
+      start: { spaceId: 'fixture-templates', itemId: 'root' }
+    }
+  })
+  await flushPromises()
+  const choose = () =>
+    wrapper.findAll('button').find((button) => button.text() === 'Use this folder')!
+  await vi.waitFor(() => expect(choose().attributes('disabled')).toBeUndefined())
+  await wrapper.setProps({ writable: true })
+  expect(choose().attributes('disabled')).toBeDefined()
+  expect(wrapper.text()).toContain('Choose a writable folder')
+  wrapper.unmount()
+})
+it('resumes a nested folder honestly and returns to its space root', async () => {
+  const services = fixtureServices()
+  const wrapper = mount(FolderPicker, {
+    props: {
+      catalog: services.catalog,
+      title: 'Save',
+      start: { spaceId: 'fixture-personal', itemId: 'reports' }
+    }
+  })
+  await flushPromises()
+  await vi.waitFor(() => expect(wrapper.find('[aria-label="Earlier folders"]').exists()).toBe(true))
+  expect(wrapper.find('footer strong').text()).toBe('Personal files / Reports')
+  await wrapper.find('[aria-label="Go to space root"]').trigger('click')
+  await flushPromises()
+  await vi.waitFor(() => expect(wrapper.find('footer strong').text()).toBe('Personal files'))
+  expect(wrapper.find('[aria-label="Earlier folders"]').exists()).toBe(false)
+  wrapper.unmount()
+})
 describe('authenticated context disposal', () => {
   it('clears cached private metadata and stops preference writes on logout', async () => {
     const services = fixtureServices()

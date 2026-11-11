@@ -39,12 +39,6 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
             <span>{{ app.label }}</span>
           </RouterLink>
         </li>
-        <li v-for="shortcut in context.services.policy?.shortcuts ?? []" :key="shortcut.id">
-          <a :href="shortcut.href" target="_blank" rel="noopener noreferrer"
-            >{{ shortcut.label }}
-            <span class="office-muted" aria-label="opens in a new tab">↗</span></a
-          >
-        </li>
       </ul>
     </nav>
     <div class="office-sidebar-footer">

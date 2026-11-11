@@ -11,8 +11,7 @@ import {
   useFolderLink,
   usePreviewService,
   useUserStore,
-  useRouter,
-  useAppsStore
+  useRouter
 } from '@opencloud-eu/web-pkg'
 import { createOfficeContext, type OfficeContext } from '../../app/context'
 import { createNativeServices8 } from './native8'
@@ -34,7 +33,6 @@ export function useNativeOffice8(applicationConfig: unknown) {
   const { getParentFolderLink } = useFolderLink()
   const { downloadFile } = useDownloadFile()
   const router = useRouter()
-  const apps = useAppsStore()
   const context = shallowRef<OfficeContext>()
   const status = ref('Waiting for OpenCloud sign-in…')
   let generation = 0
@@ -110,23 +108,8 @@ export function useNativeOffice8(applicationConfig: unknown) {
           appProviders: providers,
           capabilities,
           refreshProviders: () => providers.loadData(),
-          editorRegistrations: () =>
-            apps.fileExtensions.flatMap((extension) => {
-              const route = extension.routeName || extension.app
-              if (!extension.app || !route || !router.hasRoute(route)) return []
-              const label =
-                typeof extension.label === 'function' ? extension.label() : extension.label
-              return [
-                {
-                  action: `editor-${extension.app}`,
-                  label: label || apps.apps[extension.app]?.name || extension.app,
-                  extension: extension.extension?.toLowerCase(),
-                  mimeType: extension.mimeType?.toLowerCase()
-                }
-              ]
-            }),
           requestNew: (url) => client.httpAuthenticated.post(url),
-          open: (item, mode) => openNativeEditor8(actions, router, item, mode, policy.handlers),
+          open: (item, mode) => openNativeEditor8(actions, router, item, mode),
           async files({ resource }, sharing) {
             const route = getParentFolderLink(resource)
             if (!route.name || !router.hasRoute(route.name)) return false

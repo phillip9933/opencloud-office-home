@@ -2,12 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import TemplateStrip from '../../src/components/TemplateStrip.vue'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
-import {
-  defaultPolicy,
-  parsePolicy,
-  policyApplications,
-  shortcutHref
-} from '../../src/administration/policy'
+import { defaultPolicy, parsePolicy } from '../../src/administration/policy'
+import { officeApps } from '../../src/app/registry'
 import { createPolicyStore8, type PolicyPort8 } from '../../src/adapters/opencloud/policy8'
 import { createProviderCapabilities8 } from '../../src/adapters/opencloud/providers8'
 import { createOfficeContext } from '../../src/app/context'
@@ -43,18 +39,14 @@ describe('administrator configuration validation and enforcement', () => {
     expect(templates).toHaveBeenCalledWith('docs', undefined)
     context.dispose()
   })
-  it('allows additional formats without overriding the server creation allow-list', async () => {
-    const policy = parsePolicy({
-      ...defaultPolicy(),
-      additionalFormats: { docs: [{ extension: 'txt', mimeType: 'text/plain' }] },
-      creationFormats: { docs: ['txt'] }
-    })
+  it('keeps creation restrictions within built-in families and the backend allow-list', async () => {
+    const policy = parsePolicy({ ...defaultPolicy(), creationFormats: { docs: ['odt'] } })
     const registry = [
       {
-        mime_type: 'text/plain',
-        ext: 'txt',
+        mime_type: 'application/vnd.oasis.opendocument.text',
+        ext: 'odt',
         allow_creation: false,
-        app_providers: [{ name: 'Native text', icon: '', secure_view: false }]
+        app_providers: [{ name: 'Office', icon: '', secure_view: false }]
       }
     ]
     const capabilities = createProviderCapabilities8(
@@ -62,45 +54,40 @@ describe('administrator configuration validation and enforcement', () => {
         appProviders: { mimeTypes: registry },
         capabilities: { filesAppProviders: [{ enabled: true, new_url: '/app/new' }] }
       },
-      policyApplications(policy),
+      officeApps,
       policy.creationFormats
     )
     expect(await capabilities.creationFormats('docs')).toEqual({ ok: true, value: [] })
     registry[0]!.allow_creation = true
     expect(await capabilities.creationFormats('docs')).toEqual({
       ok: true,
-      value: [{ extension: 'txt', mimeType: 'text/plain' }]
+      value: [{ extension: 'odt', mimeType: registry[0]!.mime_type }]
     })
-  })
-  it.each([
-    'javascript:alert(1)',
-    'data:text/html,x',
-    'http://example.org',
-    'https://user:secret@example.org',
-    'https://example.org/?access_token=secret',
-    '//example.org',
-    '/\\example.org'
-  ])('refuses executable, credential-bearing or insecure shortcut %s', (href) => {
-    expect(() => shortcutHref(href)).toThrow()
-  })
-  it('normalizes safe links and refuses duplicate formats and remote executable fields', () => {
-    expect(shortcutHref('https://example.org')).toBe('https://example.org/')
-    expect(shortcutHref('/photos?view=grid')).toBe('/photos?view=grid')
-    expect(() =>
-      parsePolicy({
-        ...defaultPolicy(),
-        additionalFormats: { docs: [{ extension: 'odt', mimeType: 'text/plain' }] }
-      })
-    ).toThrow()
+    expect(() => parsePolicy({ ...defaultPolicy(), creationFormats: { docs: ['txt'] } })).toThrow()
     expect(() =>
       parsePolicy({ ...defaultPolicy(), module: 'https://example.org/code.js' })
     ).toThrow()
-    expect(() =>
+  })
+  it('migrates only empty retired settings and refuses to discard saved customizations', () => {
+    expect(
       parsePolicy({
         ...defaultPolicy(),
-        handlers: [{ extension: 'txt', mimeType: 'text/plain', action: 'https://example.org' }]
+        schemaVersion: 1,
+        shortcuts: [],
+        additionalFormats: {},
+        handlers: []
       })
-    ).toThrow()
+    ).toEqual(defaultPolicy())
+    for (const retired of [
+      { shortcuts: [{ id: 'old' }] },
+      { additionalFormats: { docs: [] } },
+      { handlers: [{ action: 'old' }] }
+    ]) {
+      expect(() => parsePolicy({ ...defaultPolicy(), schemaVersion: 1, ...retired })).toThrow(
+        'retired custom-app settings'
+      )
+      expect(() => parsePolicy({ ...defaultPolicy(), ...retired })).toThrow('unsupported field')
+    }
   })
 })
 

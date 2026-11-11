@@ -4,8 +4,7 @@ import {
   discoverProviderFormats8,
   createProviderCapabilities8
 } from '../../src/adapters/opencloud/providers8'
-import { integrationDirectory8 } from '../../src/adapters/opencloud/integrations8'
-import { matchingEditors } from '../../src/administration/integrations'
+import { creationOptions8 } from '../../src/adapters/opencloud/creationOptions8'
 const odt = {
   ext: 'odt',
   mime_type: 'application/vnd.oasis.opendocument.text',
@@ -61,10 +60,10 @@ describe('installed integration inventory', () => {
       { ...odt, ext: 'other', app_providers: [{ name: '', icon: '', secure_view: false }] }
     )
     let session: string | undefined = 'one'
-    const directory = integrationDirectory8(p, () => session)
+    const directory = creationOptions8(p, () => session)
     expect(await directory()).toMatchObject({
       ok: true,
-      value: { editors: [], formats: [{ extension: 'odt' }, { extension: 'pdf' }] }
+      value: [{ extension: 'odt' }, { extension: 'pdf' }]
     })
     session = undefined
     expect(await directory()).toEqual({ ok: false, error: 'unauthenticated' })
@@ -73,7 +72,7 @@ describe('installed integration inventory', () => {
     const p = port()
     let current: string | undefined = 'one'
     let complete: () => void = () => undefined
-    const directory = integrationDirectory8(
+    const directory = creationOptions8(
       {
         ...p,
         refreshProviders: () =>
@@ -87,7 +86,7 @@ describe('installed integration inventory', () => {
     current = 'two'
     complete()
     expect(await pending).toEqual({ ok: false, error: 'unauthenticated' })
-    const refreshed = integrationDirectory8(
+    const refreshed = creationOptions8(
       {
         ...p,
         refreshProviders: () => {
@@ -97,32 +96,6 @@ describe('installed integration inventory', () => {
       },
       () => current
     )
-    expect(await refreshed()).toEqual({ ok: true, value: { formats: [], editors: [] } })
-  })
-  it('matches registered editor types, excludes mismatches and deduplicates action choices', () => {
-    const directory = {
-      formats: [],
-      editors: [
-        { action: 'editor-text', label: 'Text', extension: 'txt', mimeType: 'text/plain' },
-        { action: 'editor-text', label: 'Text duplicate', extension: 'txt' },
-        { action: 'editor-pdf', label: 'PDF', extension: 'pdf' },
-        { action: 'editor-image', label: 'Image', mimeType: 'image' }
-      ]
-    }
-    expect(
-      matchingEditors(directory, { extension: 'txt', mimeType: 'text/plain' }).map(
-        (editor) => editor.action
-      )
-    ).toEqual(['editor-text'])
-    expect(
-      matchingEditors(directory, { extension: 'png', mimeType: 'image/png' }).map(
-        (editor) => editor.action
-      )
-    ).toEqual(['editor-image'])
-    expect(
-      matchingEditors(directory, { extension: 'txt', mimeType: 'application/pdf' }).map(
-        (editor) => editor.action
-      )
-    ).toEqual(['editor-text'])
+    expect(await refreshed()).toEqual({ ok: true, value: [] })
   })
 })

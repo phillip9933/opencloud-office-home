@@ -31,8 +31,8 @@ assert(
   'Synthetic template folder or drawn previews leaked into the native spike artifact'
 )
 assert(
-  !native.includes('editor-synthetic-'),
-  'Synthetic integration inventory leaked into the native artifact'
+  !native.includes('Synthetic Office'),
+  'Synthetic backend capabilities leaked into the native artifact'
 )
 const manifest = JSON.parse(await readFile(`${directory}/manifest.json`, 'utf8'))
 assert.equal(typeof manifest.entrypoint, 'string')

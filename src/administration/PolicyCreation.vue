@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { OfficeKind } from '../contracts/office'
-import { policyApplications, type OfficePolicy } from './policy'
-import { formatKey, type IntegrationDirectory } from './integrations'
+import type { OfficePolicy } from './policy'
+import { officeApps } from '../app/registry'
+import { formatKey, type CreationFormat } from './creation'
 const props = defineProps<{
-  directory: IntegrationDirectory
+  formats: CreationFormat[]
   loading: boolean
   error: string
   disabled: boolean
 }>()
 const draft = defineModel<OfficePolicy>('draft', { required: true })
 const families = computed(() =>
-  policyApplications(draft.value).map((app) => ({
+  officeApps.map((app) => ({
     ...app,
     formats: app.formats.flatMap((candidate) => {
-      const advertised = props.directory.formats.find(
+      const advertised = props.formats.find(
         (format) =>
           format.canCreate &&
           format.mimeType === candidate.mimeType &&
@@ -38,11 +39,12 @@ function choose(kind: OfficeKind, extension: string, checked: boolean) {
     <h2 id="admin-create-heading">Creation formats</h2>
     <p>
       These choices come from OpenCloud’s backend and its configured providers. Uncheck a supported
-      format to hide it in Office. Adding a file type above does not enable backend creation.
+      format to hide it in Office. Only formats supported by your installed office integration are
+      offered.
     </p>
     <p v-if="loading" role="status">Loading backend creation capabilities…</p>
     <p v-else-if="error" role="alert">
-      Creation capabilities could not be loaded. Refresh integrations to try again.
+      Creation capabilities could not be loaded. Refresh capabilities to try again.
     </p>
     <template v-else>
       <fieldset
@@ -60,8 +62,8 @@ function choose(kind: OfficeKind, extension: string, checked: boolean) {
             type="checkbox"
             :aria-label="format.extension.toUpperCase()"
             :checked="
-              !draft.creationFormats[app.id] ||
-              draft.creationFormats[app.id]?.includes(format.extension)
+              !draft.creationFormats[app.id as OfficeKind] ||
+              draft.creationFormats[app.id as OfficeKind]?.includes(format.extension)
             "
             @change="
               choose(
@@ -77,7 +79,7 @@ function choose(kind: OfficeKind, extension: string, checked: boolean) {
         >
         <p
           v-if="
-            draft.creationFormats[app.id]?.some(
+            draft.creationFormats[app.id as OfficeKind]?.some(
               (extension) => !app.formats.some((format) => format.extension === extension)
             )
           "
@@ -87,10 +89,10 @@ function choose(kind: OfficeKind, extension: string, checked: boolean) {
           offered for creation.
         </p>
         <button
-          v-if="draft.creationFormats[app.id]"
+          v-if="draft.creationFormats[app.id as OfficeKind]"
           type="button"
           :aria-label="`Use backend defaults for ${app.label}`"
-          @click="delete draft.creationFormats[app.id]"
+          @click="delete draft.creationFormats[app.id as OfficeKind]"
         >
           Use backend defaults
         </button>

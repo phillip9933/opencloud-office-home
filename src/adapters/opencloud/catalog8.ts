@@ -53,24 +53,11 @@ function filterClauses(filter: RecentFilter): string[] {
   return parts
 }
 
-function familyQuery(kind: OfficeKind, apps: readonly AppDescriptor[]): string {
-  const baseline: readonly string[] = officeApps
-    .find((app) => app.id === kind)!
-    .formats.map((format) => format.extension)
-  const additional = apps
-    .find((app) => app.id === kind)!
-    .formats.filter((format) => !baseline.includes(format.extension))
-  const media = `mediatype:("${MEDIA_TYPE[kind]}")`
-  return additional.length
-    ? `(${[media, ...additional.map((format) => `name:"*.${format.extension}"`)].join(' OR ')})`
-    : media
+function familyQuery(kind: OfficeKind): string {
+  return `mediatype:("${MEDIA_TYPE[kind]}")`
 }
-function recentQuery(
-  kind: OfficeKind,
-  filter: RecentFilter,
-  apps: readonly AppDescriptor[]
-): string {
-  return [RECENT_CHANGE_QUERY, familyQuery(kind, apps), ...filterClauses(filter)].join(' AND ')
+function recentQuery(kind: OfficeKind, filter: RecentFilter): string {
+  return [RECENT_CHANGE_QUERY, familyQuery(kind), ...filterClauses(filter)].join(' AND ')
 }
 
 // Activity messages are templates such as "{user} updated {resource}"; values become plain text.
@@ -385,13 +372,13 @@ export function createCatalog8(
       if (!phrase || phrase.length > 200 || /["\\*?\u0000-\u001f]/.test(phrase))
         return Promise.resolve(fail('invalidSearch'))
       return searchHits(
-        [`name:"*${phrase}*"`, familyQuery(kind, apps), ...filterClauses(filter)].join(' AND '),
+        [`name:"*${phrase}*"`, familyQuery(kind), ...filterClauses(filter)].join(' AND '),
         kind,
         signal
       )
     },
     recentlyChanged(kind, signal, filter) {
-      return searchHits(recentQuery(kind, filter, apps), kind, signal)
+      return searchHits(recentQuery(kind, filter), kind, signal)
     },
     async latestActivity(ref, signal) {
       const key = currentSession()

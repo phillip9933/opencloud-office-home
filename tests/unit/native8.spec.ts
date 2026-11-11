@@ -205,18 +205,6 @@ describe('native SDK integration boundaries', () => {
       query: { nativeContext: 'kept' }
     })
     router.push.mockClear()
-    const preferences = [{ extension: 'odt', mimeType: format.mimeType, action: 'missing-editor' }]
-    expect(
-      await openNativeEditor8(
-        actions,
-        router,
-        { ...item, file: { ...item.file, mimeType: format.mimeType } },
-        'edit',
-        preferences
-      )
-    ).toBe(false)
-    expect(router.push).not.toHaveBeenCalled()
-    router.push.mockClear()
     expect(await openNativeEditor8(actions, router, item, 'view')).toBe(false)
     expect(router.push).not.toHaveBeenCalled()
     const external = {

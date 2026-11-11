@@ -19,7 +19,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 - **Purpose:** Implement administrator configuration without assuming a global settings-write API or adding another authentication system.
 - **Location:** `src/adapters/opencloud/policy8.ts`, `src/administration/`, `src/views/OfficeAdministration.vue`.
 - **Release behaviour:** Administrator policy saves through a dedicated OpenCloud configuration file; normal users can read but cannot write/delete/move or change its access. Conflicts, loss of access and uncertain writes are recoverable without duplicate mutations.
-- **Resolution:** Provision and verify the explicit configuration file/parent ACLs, exercise writes and stale ETags as an administrator, and prove server denial as an ordinary user. Validate additional-format queries and native handlers on the pinned deployment.
+- **Resolution:** Provision and verify the explicit configuration file/parent ACLs, exercise writes and stale ETags as an administrator, and prove server denial as an ordinary user. Custom app/type/handler preferences have been removed; they are outside current scope.
 - **Verification:** Isolated adapter tests cover identity, permission gates, revision preconditions, missing metadata, account changes, repeated saves and uncertain responses. Browser tests cover ordinary-user refusal, policy persistence and enforced personal-template controls. These do not establish the live ACL or transport behavior.
 - **Tested build and result:** Local administration implementation under test; live policy file is not provisioned.
 - **Status:** open
@@ -28,7 +28,7 @@ No full release is permitted while an applicable entry remains open. An explicit
 
 - **Type:** placeholder
 - **Purpose:** Exercise the shell and asynchronous workflows without contacting OpenCloud.
-- **Location:** `src/fixtures/services.ts`, `src/fixtures/integrations.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
+- **Location:** `src/fixtures/services.ts`, `src/fixtures/creation.ts` and `src/fixtures/previews.ts` (locally drawn template preview images, seeded browser history, synthetic favorites, tags, shares, locks, links and activity, and simulated file actions), imported only through `src/preview.ts` and tests.
 - **Release behaviour:** No synthetic resources, create results, editor acknowledgments or fixture capabilities in the native package.
 - **Resolution:** Keep fixtures in the explicitly invoked preview/test graph; prove exclusion from every eventual release artifact.
 - **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. Preview creation/editor feedback identifies simulated actions. This is a bounded artifact check, not proof of real service behavior.

@@ -8,11 +8,15 @@ Office Home remains a static OpenCloud Web app. Personal view choices are separa
 - Users can change their own columns, layout, template display and personal template-folder override. Those scoped browser preferences cannot register an editor, change the installation default, or grant file access.
 - Editor/file-type registrations and creation allow-lists belong to OpenCloud's app registry. The native editor bridge retains authorization, file identity, editor sessions and saving.
 
-The administration page is `/office/admin`. **Installation template default** sets the shared gallery folder; **Personal template folder** in Settings is a per-browser override and is available only when administrators allow it. The selected folder’s display name is resolved through authorized metadata, including ID-addressed DAV responses whose path is `/`.
+The administration page is `/office/admin`, with three keyboard-accessible tabs:
 
-**App shortcuts** adds sidebar links. **File types and editors** groups each landing-page type with a selector of matching installed OpenCloud editors. Extension and MIME metadata come from the backend picker, with an explicit custom-type option for discovery-only formats. When the backend supplies a MIME type without an extension, the picker asks for that extension and retains the advertised MIME. A shortcut cannot be selected as an editor. Saved mappings outside the current landing pages remain visible for removal rather than silently disappearing.
+- **Templates** sets the installation gallery folder and whether personal overrides are allowed. Users still need read access to its files. Personal Settings only changes the current user's browser preference.
+- **Creation formats** lists the built-in office formats the backend currently advertises as creatable, with provider names. Administrators can narrow that list or return to backend defaults. Refresh capabilities rereads the registry without discarding the draft; opening-only formats are never offered for creation.
+- **Storage** explains shared saving, access and installation setup.
 
-**Creation formats** lists only types the backend currently advertises as creatable, intersected with each page’s formats. Provider names accompany choices; opening-only types do not become creation checkboxes. Restrictions can narrow this list or be reset to backend defaults. Refresh integrations rereads the native provider registry without discarding the configuration draft; native editor registrations still require installed routes, and newly installed apps may require a host reload.
+The folder chooser uses a locations sidebar, breadcrumbs, folder rows and an explicit selection footer. It permits readable template folders and requires writable creation destinations. It does not create files on navigation or cancellation.
+
+Custom app links, additional file types and editor overrides are not supported. Files open through OpenCloud's ordered native editor actions. Install and configure editors through OpenCloud itself.
 
 Changes are marked as an unsaved draft until a shared save is confirmed. The save action explains disconnected storage, read-only access or uncertain results beside the button. A failed configuration reload clears stale write state. Download draft produces a configuration file for manual installation and never claims it was applied. Reloading a changed policy is explicitly labelled Discard draft and reload.
 
@@ -46,33 +50,19 @@ Before enabling saving on a shared installation, verify ordinary-user denial dir
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "allowPersonalTemplates": true,
-  "shortcuts": [],
-  "additionalFormats": {},
-  "creationFormats": {},
-  "handlers": []
+  "creationFormats": {}
 }
 ```
 
-| Key                      | Behavior                                                                                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `templateFolder`         | Optional `{ "spaceId": "…", "itemId": "…" }` installation default. Template access still follows OpenCloud ACLs.                                                                                                                            |
-| `allowPersonalTemplates` | `false` enforces the installation folder in Office and ignores existing personal overrides. Defaults to `true`.                                                                                                                             |
-| `shortcuts`              | Up to 20 `{ "id", "label", "href" }` app links. HTTPS URLs or same-host absolute paths only; opens in a separate tab without file parameters or credentials.                                                                                |
-| `additionalFormats`      | Optional `docs`, `sheets`, `slides` lists of `{ "extension", "mimeType" }`, added to the existing family formats.                                                                                                                           |
-| `creationFormats`        | Optional family lists of allowed extensions. An omitted family keeps all its supported formats; an empty list hides creation for that family. This only narrows the native provider's creation capability.                                  |
-| `handlers`               | Up to 50 `{ "extension", "mimeType", "action" }` preferences selecting an installed native file-action ID. Both MIME and extension must match. A missing preferred action refuses the launch rather than silently selecting another editor. |
+| Key                      | Behavior                                                                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `templateFolder`         | Optional canonical `{ "spaceId": "…", "itemId": "…" }` installation default. OpenCloud permissions still control access.                                                                                     |
+| `allowPersonalTemplates` | `false` enforces the installation folder and ignores personal overrides. Defaults to `true`.                                                                                                                 |
+| `creationFormats`        | Optional `docs`, `sheets`, `slides` lists of built-in extensions. Omitted families retain backend-supported defaults; an empty list disables creation for that family. This only narrows backend capability. |
 
-For example, `"additionalFormats": { "docs": [{ "extension": "txt", "mimeType": "text/plain" }] }` includes text documents on Docs. It does not install a text editor or grant creation permission. Additional extensions are included in the bounded authorized recent query; contradictory MIME metadata is still rejected.
-
-The policy is schema-versioned, size-bounded and rejects unknown fields, executable URLs, embedded credentials and remote module definitions. These are Office presentation/integration preferences; upstream file ACLs and provider authorization remain authoritative. Users can still use native Files workflows permitted by OpenCloud.
-
-## Additional apps and file handlers
-
-An external website shortcut and a file editor are different integration contracts. Administrator-configured native Web menu extensions can link to approved internal routes or external HTTPS sites. Registering a website URL alone does not give it a secure open/save integration with OpenCloud files.
-
-To add an editor, install/register its supported OpenCloud Web app or app-provider integration and advertise its supported MIME types. Office Home delegates opening to the host’s native file handlers; an administrator can prefer a specific registered action. It must not load arbitrary remote JavaScript or append session credentials/document URLs to arbitrary websites. The existing three landing pages can include additional formats; additional app links can lead to other installed applications or approved websites. Creating an entirely new fourth landing-page implementation is outside this policy schema.
+Version 1 files migrate only when retired `shortcuts`, `additionalFormats` and `handlers` fields are absent or empty. Nonempty retired settings cause an explicit configuration failure, preserving the original file for deliberate backup and migration. Version 2 rejects those fields. Configuration is size-bounded and rejects unknown fields; it contains no executable app or URL definitions.
 
 ## Microsoft creation formats
 

@@ -255,7 +255,7 @@ test('remembers the save folder across reloads and compacts the band after a few
     await page.getByRole('button', file('Blank spreadsheet')).click()
     if (name === 'Plan A') {
       await dialog.getByRole('button', { name: 'Choose another folder' }).click()
-      const picker = page.getByRole('region', { name: 'Choose save folder', exact: true })
+      const picker = page.getByRole('dialog', { name: 'Choose save folder', exact: true })
       await picker.getByRole('button', file('Reports')).click()
       await picker.getByRole('button', { name: 'Use this folder' }).click()
     }
@@ -445,7 +445,7 @@ test('visual inspection artifacts for desktop light and mobile dark', async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
-test('choose a save folder inline, cancel safely, and configure a personal template folder', async ({
+test('choose a save folder in the file dialog, cancel safely, and configure a personal template folder', async ({
   page
 }) => {
   await page.goto('/')
@@ -454,7 +454,7 @@ test('choose a save folder inline, cancel safely, and configure a personal templ
   await expect(panel.getByRole('combobox', { name: 'Format' })).toHaveCount(0)
   await panel.getByRole('textbox', file('Name')).fill('Chosen destination')
   await panel.getByRole('button', { name: 'Choose another folder' }).click()
-  const picker = page.getByRole('region', { name: 'Choose save folder', exact: true })
+  const picker = page.getByRole('dialog', { name: 'Choose save folder', exact: true })
   await picker.getByRole('button', file('Reports')).click()
   await picker.getByRole('button', { name: 'Use this folder' }).click()
   await expect(panel).toContainText('Save in Personal files / Reports')
@@ -464,8 +464,11 @@ test('choose a save folder inline, cancel safely, and configure a personal templ
   await expect(toast(page)).toHaveCount(0)
   await page.getByRole('link', { name: 'Settings' }).click()
   await page.getByRole('button', { name: 'Choose template folder' }).click()
-  const templates = page.getByRole('region', { name: 'Choose template folder', exact: true })
-  await templates.getByRole('combobox', { name: 'Space' }).selectOption('fixture-templates')
+  const templates = page.getByRole('dialog', { name: 'Choose template folder', exact: true })
+  await templates
+    .getByRole('navigation', { name: 'Folder locations' })
+    .getByRole('button', { name: 'Templates', exact: true })
+    .click()
   await templates.getByRole('button', { name: 'Use this folder' }).click()
   await expect(page.getByText('Your template folder:', { exact: false })).toBeVisible()
   await page.getByRole('link', { name: 'Back to Docs' }).click()
@@ -485,7 +488,7 @@ test('administration refuses ordinary users and protects personal settings', asy
   ).toBeVisible()
 })
 
-test('administrator saves approved app links, format choices and template policy across reload', async ({
+test('administrator saves template policy and backend format restrictions across reload', async ({
   page
 }) => {
   await page.goto('/?admin=1#/office/admin')
@@ -495,61 +498,39 @@ test('administrator saves approved app links, format choices and template policy
     exact: true
   })
   await defaultFolder.click()
-  await expect(
-    page.getByRole('region', { name: 'Choose installation template folder', exact: true })
-  ).toBeVisible()
+  const picker = page.getByRole('dialog', {
+    name: 'Choose installation template folder',
+    exact: true
+  })
+  await expect(picker).toBeVisible()
+  await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
+  await picker.screenshot({ path: test.info().outputPath('folder-desktop.png') })
   await page.keyboard.press('Escape')
-  await expect(
-    page.getByRole('region', { name: 'Choose installation template folder', exact: true })
-  ).toHaveCount(0)
+  await expect(picker).toHaveCount(0)
   await expect(defaultFolder).toBeFocused()
-  await page.getByRole('textbox', { name: 'App name', exact: true }).fill('Photo workspace')
-  await page.getByRole('textbox', { name: 'App URL', exact: true }).fill('javascript:alert(1)')
-  await page.getByRole('button', { name: 'Add app', exact: true }).click()
-  await expect(page.getByRole('alert')).toContainText('HTTPS URL')
-  await page
-    .getByRole('textbox', { name: 'App URL', exact: true })
-    .fill('https://photos.example.org')
-  await page.getByRole('button', { name: 'Add app', exact: true }).click()
-  await page
-    .getByRole('combobox', { name: 'Backend file type', exact: true })
-    .selectOption('txt:text/plain')
-  await page.getByRole('button', { name: 'Add file type', exact: true }).click()
-  await expect(page.getByRole('checkbox', { name: 'TXT', exact: true })).toBeChecked()
-  await page
-    .getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
-    .selectOption('editor-synthetic-text')
-  await expect(page.getByRole('checkbox', { name: 'DOCX', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Refresh integrations', exact: true }).click()
-  await expect(
-    page.getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
-  ).toHaveValue('editor-synthetic-text')
   await page
     .getByRole('checkbox', {
       name: 'Allow users to choose a personal template folder',
       exact: true
     })
     .uncheck()
+  await page.getByRole('tab', { name: 'Templates', exact: true }).press('ArrowRight')
+  await expect(page.getByRole('tab', { name: 'Creation formats', exact: true })).toBeFocused()
+  await expect(page.getByRole('checkbox', { name: 'DOCX', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: 'ODT', exact: true }).uncheck()
+  await page.getByRole('button', { name: 'Refresh capabilities', exact: true }).click()
+  await expect(page.getByRole('checkbox', { name: 'ODT', exact: true })).not.toBeChecked()
   await page.getByRole('button', { name: 'Save configuration', exact: true }).click()
   await expect(page.getByRole('status').filter({ hasText: 'Configuration saved' })).toBeVisible()
   await page.getByRole('button', { name: 'Reload Office', exact: true }).click()
-  await expect(page.getByRole('link', { name: /Photo workspace/ })).toHaveAttribute(
-    'href',
-    'https://photos.example.org/'
-  )
-  await expect(page.getByRole('link', { name: /Photo workspace/ })).toHaveAttribute(
-    'rel',
-    'noopener noreferrer'
-  )
-  await expect(
-    page.getByRole('combobox', { name: 'Editor for Docs TXT', exact: true })
-  ).toHaveValue('editor-synthetic-text')
   await expect(
     page.getByRole('checkbox', {
       name: 'Allow users to choose a personal template folder',
       exact: true
     })
   ).not.toBeChecked()
+  await page.getByRole('tab', { name: 'Creation formats', exact: true }).click()
+  await expect(page.getByRole('checkbox', { name: 'ODT', exact: true })).not.toBeChecked()
   await page.getByRole('link', { name: 'Personal settings', exact: true }).click()
   await expect(
     page.getByText('Your administrator manages the template folder for this installation.')
@@ -558,27 +539,24 @@ test('administrator saves approved app links, format choices and template policy
     page.getByRole('button', { name: 'Choose template folder', exact: true })
   ).toHaveCount(0)
   await page.getByRole('link', { name: 'Administration', exact: true }).click()
-  await page.setViewportSize({ width: 390, height: 844 })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await page.screenshot({ path: test.info().outputPath('admin-mobile.png'), fullPage: true })
-  await page.setViewportSize({ width: 1280, height: 900 })
-  await page.screenshot({ path: test.info().outputPath('admin-desktop.png'), fullPage: true })
+  await expect(page.getByRole('textbox', { name: 'App URL' })).toHaveCount(0)
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 900 })
-    await page
-      .getByRole('heading', { name: 'File types and editors', exact: true })
-      .evaluate((element) => element.scrollIntoView({ block: 'start' }))
-    await page.screenshot({
-      path: test.info().outputPath(`admin-mappings-${width}.png`),
-      fullPage: true
-    })
-    await page
-      .getByRole('heading', { name: 'Creation formats', exact: true })
-      .evaluate((element) => element.scrollIntoView({ block: 'start' }))
-    await page.screenshot({
-      path: test.info().outputPath(`admin-creation-${width}.png`),
-      fullPage: true
-    })
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    for (const name of ['Templates', 'Creation formats', 'Storage']) {
+      await page.getByRole('tab', { name, exact: true }).click()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true
+      )
+      await page.screenshot({
+        path: test.info().outputPath(`admin-${name.replace(' ', '-')}-${width}.png`),
+        fullPage: true
+      })
+    }
   }
+  await page.getByRole('tab', { name: 'Templates', exact: true }).click()
+  await defaultFolder.click()
+  await expect(picker).toBeVisible()
+  await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
+  await picker.screenshot({ path: test.info().outputPath('folder-mobile.png') })
+  await page.keyboard.press('Escape')
 })

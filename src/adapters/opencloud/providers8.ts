@@ -2,7 +2,7 @@ import type { AppProviderCapability } from '@opencloud-eu/web-client/ocs'
 import type { AppProviderService } from '@opencloud-eu/web-pkg'
 import { officeApps, type AppDescriptor } from '../../app/registry'
 import { fail, ok, type Format, type OfficeCapabilities } from '../../contracts/office'
-import type { RegisteredFormat } from '../../administration/integrations'
+import type { CreationFormat } from '../../administration/creation'
 
 // These shapes come from the installed 8.x SDK. Web 8.2.1 loads `mimeTypes` from the
 // unauthenticated app-registry list at boot, so the values describe the server, not a user.
@@ -39,11 +39,11 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
 /** Installation inventory before Office's presentation restrictions are applied. */
 export function discoverProviderFormats8(port: ProviderPort8) {
   const registry: unknown = port.appProviders.mimeTypes
-  if (!Array.isArray(registry)) return fail<RegisteredFormat[]>('unknown')
+  if (!Array.isArray(registry)) return fail<CreationFormat[]>('unknown')
   const creation = record(port.capabilities.filesAppProviders[0])
   const enabled =
     creation?.enabled === true && typeof creation.new_url === 'string' && !!creation.new_url.trim()
-  const formats = new Map<string, RegisteredFormat>()
+  const formats = new Map<string, CreationFormat>()
   for (const value of registry) {
     const entry = record(value)
     if (!entry || !hasNamedProvider(entry)) continue
