@@ -7,7 +7,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 - **Type:** placeholder
 - **Purpose:** Establish typed workflows and registration without inventing deployed APIs or credentials.
 - **Location:** `src/adapters/opencloud/unconfigured.ts`, `vite.config.ts`.
-- **Release behaviour:** Real authenticated catalog, capability, creation, copy and native editor services, tested against a pinned deployment.
+- **Release behaviour:** Real authenticated catalog, capability, creation, copy, preview and native editor services, plus the administrator template folder (proposed `templateFolder` setting), tested against a pinned deployment.
 - **Resolution:** Implement and verify the adapter; complete the source/deployment matrix, permissions, native return and file durability checks.
 - **Verification:** Default `pnpm build` must fail. `build:spike` is explicit, writes `dist-spike/`, and cannot be mistaken for the default release output.
 - **Tested build and result:** Preliminary 0.1.0 spike. Final command evidence is recorded in workspace outputs; no production behavior has been tested.
@@ -17,7 +17,7 @@ No release is permitted while an applicable entry remains open. Current artifact
 
 - **Type:** placeholder
 - **Purpose:** Exercise the shell and asynchronous workflows without contacting OpenCloud.
-- **Location:** `src/fixtures/services.ts`, imported only through `src/preview.ts` and tests.
+- **Location:** `src/fixtures/services.ts` and `src/fixtures/previews.ts` (locally drawn template preview images and seeded browser history), imported only through `src/preview.ts` and tests.
 - **Release behaviour:** No synthetic resources, create results, editor acknowledgments or fixture capabilities in the native package.
 - **Resolution:** Keep fixtures in the explicitly invoked preview/test graph; prove exclusion from every eventual release artifact.
 - **Verification:** `check:artifacts` scans the native spike tree for distinctive fixture identities and requires its manifest. The preview displays a synthetic-only banner. This is a bounded artifact check, not proof of real service behavior.

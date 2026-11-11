@@ -26,7 +26,8 @@ describe('administrator-reviewed catalog', () => {
       icon: 'image',
       route: 'photo-home',
       order: 40,
-      formats: []
+      formats: [],
+      templateFormats: []
     }
     expect(validateMenu([...officeApps, photo], new Set([...routes, 'photo-home']))).toHaveLength(4)
   })
@@ -38,7 +39,8 @@ describe('administrator-reviewed catalog', () => {
     { schemaVersion: 2 },
     { order: -1 },
     { icon: '<svg onload=evil>' },
-    { formats: [{ extension: '../bad', mimeType: 'text/plain' }] }
+    { formats: [{ extension: '../bad', mimeType: 'text/plain' }] },
+    { templateFormats: [{ extension: 'ott', mimeType: 'text/plain', creates: 'exe' }] }
   ])('rejects unapproved fields or destinations %j', (change) => {
     expect(() => validateMenu([{ ...officeApps[0], ...change }], routes)).toThrow()
   })

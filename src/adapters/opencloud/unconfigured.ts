@@ -36,6 +36,7 @@ export function unconfiguredServices(): OfficeServices {
       }
     },
     templates: () => Promise.resolve(fail('editorUnavailable')),
+    preview: () => Promise.resolve(fail('editorUnavailable')),
     recents: createRecentStore({
       instance: 'unconfigured',
       user: 'unconfigured'

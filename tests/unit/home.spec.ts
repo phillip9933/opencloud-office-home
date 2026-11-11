@@ -148,6 +148,7 @@ describe('home workflow', () => {
     )
     await creating
     expect(home.state.created?.name).toBe('Pending.odt')
-    expect(home.state.rows).toEqual([])
+    expect(home.state.rows.length).toBeGreaterThan(0)
+    expect(home.state.rows.map((row) => row.name)).not.toContain('Pending.odt')
   })
 })

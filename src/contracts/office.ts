@@ -41,7 +41,8 @@ export interface Page<T> {
 }
 export interface CatalogQuery {
   folder: FileRef
-  kind: OfficeKind
+  // 'any' lists every child, for template folders that hold companion preview images.
+  kind: OfficeKind | 'any'
   text: string
   cursor?: string
   signal: AbortSignal
@@ -66,7 +67,10 @@ export interface Template {
   name: string
   kind: OfficeKind
   source: FileRef
+  // The editable format a new file gets; a template container such as .ott creates .odt.
   format: Format
+  category: string
+  preview?: FileRef
 }
 export interface FileCreation {
   blank(input: CreationRequest): Promise<Result<FileRecord>>
@@ -96,6 +100,11 @@ export interface RecentRef {
   kind: OfficeKind
   openedAt: number
 }
+// An authorized preview image. Callers release it when the image leaves the screen.
+export interface Preview {
+  url: string
+  release(): void
+}
 export interface RecentStore {
   list(kind: OfficeKind): RecentRef[]
   record(ref: FileRef, kind: OfficeKind): void
@@ -110,6 +119,7 @@ export interface OfficeServices {
   editor: EditorGateway
   recents: RecentStore
   templates(kind: OfficeKind): Promise<Result<Template[]>>
+  preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
 }
 export function refKey(ref: FileRef): string {
   return JSON.stringify([ref.spaceId, ref.itemId])

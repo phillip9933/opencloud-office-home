@@ -9,7 +9,7 @@ import { officeApps } from './app/registry'
 import { createOfficeContext } from './app/context'
 import { fixtureServices } from './fixtures/services'
 
-const context = createOfficeContext(fixtureServices())
+const context = createOfficeContext(fixtureServices({ seedHistory: true }))
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

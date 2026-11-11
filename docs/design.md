@@ -4,30 +4,45 @@ The intended task is to find, create and reopen office files while retaining Ope
 
 ## Screens and journeys
 
-Docs, Sheets and Slides use the same layout: app disclosure navigation, current family heading, folder search, new-file form with visible destination, template starting point, recently opened references, and space/folder browsing. Folder entries remain visible across file-family filtering.
+Docs, Sheets and Slides share one quiet layout, top to bottom:
+
+1. **Header:** application menu, the family name with its icon (the page heading), and a search field whose placeholder names the folder it searches.
+2. **Start band:** a tinted strip titled "Start a new document/spreadsheet/presentation". A Blank card comes first, followed by up to five templates in one horizontally scrollable row. "Template gallery" expands the band to every template, grouped by category.
+3. **Recently opened in this browser:** history grouped as Today, Previous 7 days, Previous 30 days and Earlier, with a Sort by control (Last opened or Name), a list/grid layout toggle and a folder shortcut. Name order drops the date groups.
+4. **Browse folders:** a collapsed disclosure at the bottom with the space selector, breadcrumbs and folder listing. It opens automatically when the view is inside a subfolder or has a search, and the folder shortcut or "Choose another folder" opens and focuses it.
+
+Choosing Blank or a template opens a small dialog: name, format (fixed and shown for templates), and the save location with "Choose another folder". Nothing is created until Create is pressed, so the destination is always visible first. Create is disabled without a known writable destination or a supported format, and repeated activation is locked. Fixable problems such as a name conflict keep the dialog open with the message; once a file exists, the dialog closes and the start band shows the result with "Open created file". Uncertain outcomes close the dialog and pause creation until reconciliation.
+
+When no format can be created, the band explains why ("New files: …"): no office editor is configured, or the configured editor cannot create this family. Template failures appear separately and never block blank creation or browsing. With no templates, the band says an administrator can add them to the template folder.
+
+The gallery collapses when switching apps. Folder/search views get opaque session keys for Back/Forward and returning to an app; names and query text stay out of URLs. Reload cannot restore memory-only state yet. The release adapter must prove native editor return and authenticated lifecycle cleanup.
 
 The application menu and native switcher derive from one reviewed descriptor list. Users can reach Files through the native host. Fixture preview labels explain that Files/editor operations are simulations rather than providing a misleading fallback.
 
-Choose a folder before creation. The form shows name, starting point and format. Creation is disabled without a known writable destination or supported format. A "New files" line states why no format is offered: no office editor configured, or a configured editor that cannot create this family. Repeated activation is locked. A completed create offers an explicit Open created file action; a launch failure retains that resource. Uncertain outcomes pause further creation until reconciliation instead of silently retrying.
+## Templates and previews
 
-Search is folder-scoped in this first preview and debounced. Route changes cancel pending queries. Folder/search views get opaque session keys for Back/Forward and returning to an app; names and query text stay out of URLs. Reload cannot restore memory-only state yet. The release adapter must prove native editor return and proper authenticated lifecycle cleanup.
+Templates come from one administrator-maintained OpenCloud folder (see [templates](templates.md)): files at its root are "General", and each direct subfolder is a category. Collabora/LibreOffice template containers (`.ott`, `.ots`, `.otp`) create the matching editable format; ordinary documents can serve as templates too.
+
+Card previews are images only. A template shows the image an administrator stored next to it with the same name; otherwise, and for every recent file, the card shows the family icon and format label. OpenCloud 9.0.0 does not generate previews for ODF or Microsoft Office documents, so recent files in grid view normally show format cards. The preview port accepts server previews where a deployment provides them; the app never downloads document content to draw one.
 
 ## Visual system
 
-Use version-matched OpenCloud components and host role tokens (`--oc-role-*`) for foreground, primary, outline and surface colors. The create action uses `OcButton`; the preview registers its required spinner. Local fallback colors keep the standalone preview legible; they are not a second theme policy. Native host dark theme and translations remain pending.
+Use version-matched OpenCloud components and host role tokens (`--oc-role-*`) for foreground, primary, outline and surface colors; local fallbacks keep the standalone preview legible. Docs, Sheets and Slides each have a family color used only on icons, the Blank "+" and card hover borders. Labels always accompany color.
 
-The preview uses a restrained system-font hierarchy, white/surface panels, four-column creation controls above 700px and stacked controls below. Local spacing and widths express these layouts rather than introducing a generic token library. Familiar app navigation follows the host convention; grouping by task reduces the number of choices shown at once. Controls have at least 44px height for comfortable targets.
+One centered content column (max 72rem) aligns the header, start band and file sections. Hierarchy comes from size, weight and space: a 1.3rem app name, 1.05rem section headings, 0.85rem group labels, with borders only where rows need separating. Cards use a 5:4 thumbnail in the band and 4:3 in recent grids. Familiar office-home placement (create first, history second) follows Jakob's Law; showing five templates before the gallery limits choices on first view (Hick's Law). Controls are at least 40px high with 24px minimum for inline links. Card hover transitions are disabled under reduced motion.
+
+Below 700px the search moves to its own row, the location column is hidden, and cards shrink to 8rem. The template row scrolls inside the band; the page itself never scrolls sideways.
 
 ## States and accessibility
 
-The shell includes loading, empty folder, no search matches, unavailable integration, recoverable error, partial result, disabled mutation and explicit launch feedback. Errors use safe messages; names and labels are plain text. Color is supplementary, never the only indicator of family or access.
+The shell includes loading, empty folder, no search matches, unavailable integration, not-configured editor, recoverable error, partial result, disabled mutation and explicit launch feedback. Errors use safe messages; names and labels are plain text.
 
-The application disclosure uses ordinary links, an expanded-state button, first-link focus on open and Escape focus recovery. Page headings receive focus after navigation. Forms have visible labels, semantic sections and status/error announcements. Focus rings are visible. No custom motion is used.
+The application disclosure uses ordinary links, an expanded-state button, first-link focus on open and Escape focus recovery. The template gallery and Browse folders are disclosure buttons with `aria-expanded`. The layout toggle uses pressed-state buttons in a labelled group. The create dialog is a native modal: it focuses and selects the name, Escape or Cancel closes it, and focus returns to the card that opened it. Recent files in list view use a table with column headers; each name is a button. After navigation the page heading receives focus, unless the user already moved focus while the view was loading. Programmatic heading focus shows no ring; every control keeps a visible focus indicator.
 
-The target remains WCAG 2.2 AA. Current browser journeys test keyboard disclosure, Back/Forward, canceled searches, text rendering and 390px reflow. Desktop/mobile screenshots support visual review; they are not evidence of accessibility conformance. Full automated accessibility analysis, screen-reader use, 200% text scaling, RTL, long translations and native theme checks remain open. No intended-user usability review has occurred.
+The target remains WCAG 2.2 AA. Browser journeys test keyboard disclosure, dialog focus return, Back/Forward, canceled searches, text rendering, gallery categories, preview fallback, layout toggle, sorting and 390px reflow. Desktop/mobile screenshots support visual review; they are not evidence of conformance. Full automated accessibility analysis, screen-reader use, 200% text scaling, RTL, long translations and native theme checks remain open. No intended-user usability review has occurred.
 
 ## Privacy and flexibility
 
-History is labeled “Recently opened in this browser,” distinct from modified files. The preview states its session-only scope and supports clearing history. No analytics or arbitrary provider URLs are offered. Formats and provider support must be discovered through the native integration rather than implied by a file extension. See [architecture](architecture.md) for data flow and trust boundaries and [development limits](dev-limits.md) for incomplete behavior.
+History is labeled "Recently opened in this browser," distinct from modified files, and offers Clear history. Sort order and list/grid layout are session-only view choices shared by the three apps. No analytics or arbitrary provider URLs are offered. Formats and provider support are discovered through the native integration rather than implied by a file extension. Ownership and "last modified" columns are not shown because the verified catalog does not yet provide them. See [architecture](architecture.md) for data flow and trust boundaries and [development limits](dev-limits.md) for incomplete behavior.
 
 Update this document with reusable interaction changes. Verify screenshots at the chosen breakpoints/themes and record human review separately from agent visual inspection before claiming release quality.

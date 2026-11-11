@@ -1,5 +1,6 @@
 import { reactive, toRaw } from 'vue'
 import { belongsTo, officeApps } from '../app/registry'
+import type { RecentEntry } from './recentView'
 import {
   fail,
   refKey,
@@ -51,7 +52,7 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
     location: defaultLocation(kind),
     spaces: [] as Space[],
     rows: [] as FileRecord[],
-    recent: [] as FileRecord[],
+    recent: [] as RecentEntry[],
     formats: [] as Format[],
     templates: [] as Template[],
     loading: false,
@@ -156,10 +157,10 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
         })
       ),
       Promise.all(
-        services.recents.list(kind).map(async ({ ref }) => {
+        services.recents.list(kind).map(async ({ ref, openedAt }) => {
           const resolved = await attempt(() => services.catalog.resolve(ref))
           if (!resolved.ok && resolved.error === 'forbiddenOrMissing') services.recents.remove(ref)
-          return resolved
+          return { resolved, openedAt }
         })
       )
     ])
@@ -178,9 +179,13 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
       state.error = errorText[listing.error]
     }
     // Failed refreshes show no cached private metadata, including when only one recent failed.
-    state.recent = recent.every((r) => r.ok || r.error === 'forbiddenOrMissing')
-      ? recent.flatMap((r) =>
-          r.ok && r.value.access.read && belongsTo(r.value, kind) ? [r.value] : []
+    state.recent = recent.every(
+      ({ resolved }) => resolved.ok || resolved.error === 'forbiddenOrMissing'
+    )
+      ? recent.flatMap(({ resolved, openedAt }) =>
+          resolved.ok && resolved.value.access.read && belongsTo(resolved.value, kind)
+            ? [{ file: resolved.value, openedAt }]
+            : []
         )
       : []
     state.loading = false
@@ -195,7 +200,7 @@ export function createHomeModel(services: OfficeServices, kind: OfficeKind) {
     const resolved = await attempt(() => services.catalog.resolve(file.ref))
     if (!resolved.ok || !resolved.value.access.read) {
       state.rows = state.rows.filter((r) => refKey(r.ref) !== refKey(file.ref))
-      state.recent = state.recent.filter((r) => refKey(r.ref) !== refKey(file.ref))
+      state.recent = state.recent.filter((r) => refKey(r.file.ref) !== refKey(file.ref))
       services.recents.remove(file.ref)
       state.notice = errorText[resolved.ok ? 'forbiddenOrMissing' : resolved.error]
     } else if (active && request === generation) {

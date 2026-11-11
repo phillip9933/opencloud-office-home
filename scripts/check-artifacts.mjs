@@ -20,6 +20,10 @@ assert(
   !native.includes('fixture-personal'),
   'Synthetic file catalog leaked into the native spike artifact'
 )
+assert(
+  !native.includes('fixture-templates') && !native.includes('data:image/svg+xml'),
+  'Synthetic template folder or drawn previews leaked into the native spike artifact'
+)
 const manifest = JSON.parse(await readFile('dist-spike/manifest.json', 'utf8'))
 assert.equal(typeof manifest.entrypoint, 'string')
 console.log(

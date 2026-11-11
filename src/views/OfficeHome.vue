@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, toRaw, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { OcButton } from '@opencloud-eu/design-system/components'
 import AppSwitcher from '../components/AppSwitcher.vue'
+import CreateDialog from '../components/CreateDialog.vue'
+import FamilyIcon from '../components/FamilyIcon.vue'
+import FileBrowser from '../components/FileBrowser.vue'
+import RecentFiles from '../components/RecentFiles.vue'
+import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord, HomeLocation, OfficeKind, Template } from '../contracts/office'
@@ -14,10 +18,15 @@ const router = useRouter()
 const descriptor = computed(() => officeApps.find((app) => app.id === props.kind)!)
 const model = computed(() => props.context.model(props.kind))
 const state = computed(() => model.value.state)
+const nouns: Record<OfficeKind, string> = {
+  docs: 'document',
+  sheets: 'spreadsheet',
+  slides: 'presentation'
+}
 const query = ref('')
-const name = ref('Untitled')
-const extension = ref('')
-const templateId = ref('')
+const browseOpen = ref(false)
+const createDialog = ref<InstanceType<typeof CreateDialog>>()
+const browser = ref<InstanceType<typeof FileBrowser>>()
 const viewport = ref<HTMLElement>()
 const heading = ref<HTMLHeadingElement>()
 let activeModel: HomeModel | undefined
@@ -46,9 +55,8 @@ function search() {
     void navigate({ ...snapshot(), text: query.value, scroll: 0 })
   }, 250)
 }
-function chooseSpace(event: Event) {
+function chooseSpace(id: string) {
   clearTimeout(timer)
-  const id = (event.target as HTMLSelectElement).value
   const space = state.value.spaces.find((space) => space.id === id)
   if (space)
     void navigate({
@@ -90,25 +98,27 @@ function breadcrumb(index: number) {
     scroll: 0
   })
 }
-function create() {
-  const template: Template | undefined = state.value.templates.find(
-    (t) => t.id === templateId.value
-  )
-  if (templateId.value && !template) {
-    state.value.notice = 'The selected template is unavailable. Choose another starting point.'
-    return
-  }
-  void model.value.create(name.value, extension.value, template)
+const destination = computed(() =>
+  [
+    state.value.spaces.find((space) => space.id === state.value.location.spaceId)?.name ??
+      'Not available',
+    ...state.value.location.trail.map((part) => part.name)
+  ].join(' / ')
+)
+function start(template: Template | undefined, opener: HTMLElement) {
+  void createDialog.value?.open(template, opener)
 }
-watch(templateId, (id) => {
-  const template = state.value.templates.find((t) => t.id === id)
-  if (template) extension.value = template.format.extension
-})
+async function showBrowser() {
+  browseOpen.value = true
+  await nextTick()
+  browser.value?.focus()
+}
 watch(
   () => route.fullPath,
   async () => {
     clearTimeout(timer)
     const revision = ++navigation
+    const focusAtStart = document.activeElement
     activeModel?.deactivate()
     activeModel = model.value
     const id = typeof route.query.view === 'string' ? route.query.view : ''
@@ -124,13 +134,14 @@ watch(
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
     query.value = location.text
-    templateId.value = ''
+    browseOpen.value ||= location.trail.length > 0 || location.text !== ''
     await activeModel.load(location)
     if (revision !== navigation) return
-    extension.value = state.value.formats[0]?.extension ?? ''
     await nextTick()
     if (viewport.value) viewport.value.scrollTop = location.scroll
-    heading.value?.focus({ preventScroll: true })
+    // Announce the new view, unless the user already moved focus while it was loading.
+    if (document.activeElement === focusAtStart || document.activeElement === document.body)
+      heading.value?.focus({ preventScroll: true })
   },
   { immediate: true }
 )
@@ -143,185 +154,87 @@ onBeforeUnmount(() => {
 
 <template>
   <main ref="viewport" class="office" :data-kind="kind" @scroll="persist">
-    <div class="office-topline">
-      <AppSwitcher :context="context" />
-      <span class="office-eyebrow">OpenCloud Office</span>
-    </div>
-    <p v-if="context.services.mode === 'fixture'" class="office-banner" role="note">
-      Interactive preview · Synthetic files only. Create and Open are simulations; nothing is stored
-      in OpenCloud.
-    </p>
-    <p v-else class="office-banner" role="note">
-      Integration pending · OpenCloud file operations require a verified deployment adapter.
-    </p>
-    <header class="office-heading">
-      <div>
-        <p class="office-eyebrow">Your workspace, one file at a time</p>
-        <h1 ref="heading" tabindex="-1">{{ descriptor.label }}</h1>
-        <p class="office-muted">Create something new or pick up where you left off.</p>
+    <header class="office-header">
+      <div class="office-inner office-header-row">
+        <AppSwitcher :context="context" />
+        <h1 ref="heading" tabindex="-1" class="office-app-name">
+          <FamilyIcon :kind="kind" />
+          <span>{{ descriptor.label }}</span>
+        </h1>
+        <label class="office-search">
+          <span class="office-visually-hidden">Search files in {{ destination }}</span>
+          <input
+            v-model="query"
+            type="search"
+            :placeholder="`Search in ${destination}`"
+            @input="search"
+          />
+        </label>
       </div>
-      <label class="office-search"
-        >Search this folder
-        <input v-model="query" type="search" placeholder="Find a file by name" @input="search" />
-      </label>
     </header>
-
-    <section aria-labelledby="create-heading" class="office-panel">
-      <div class="office-section-title">
-        <h2 id="create-heading">Start a new file</h2>
-        <span>Save location is shown below</span>
-      </div>
-      <form class="office-create" @submit.prevent="create">
-        <label
-          >Name<input v-model="name" maxlength="180" :disabled="state.mutation" required
-        /></label>
-        <label
-          >Starting point
-          <select v-model="templateId" :disabled="state.mutation || !state.formats.length">
-            <option value="">Blank file</option>
-            <option v-for="template in state.templates" :key="template.id" :value="template.id">
-              {{ template.name }}
-            </option>
-          </select>
-        </label>
-        <label
-          >Format
-          <select
-            v-model="extension"
-            :disabled="state.mutation || !!templateId || !state.formats.length"
-          >
-            <option v-if="!state.formats.length" value="">Unavailable</option>
-            <option
-              v-for="format in state.formats"
-              :key="format.extension"
-              :value="format.extension"
-            >
-              {{ format.extension.toUpperCase() }}
-            </option>
-          </select>
-        </label>
-        <OcButton
-          class="office-primary"
-          submit="submit"
-          :disabled="
-            !state.destinationWritable ||
-            !extension ||
-            state.mutation ||
-            state.opening ||
-            state.uncertain
-          "
-        >
-          {{ state.mutation ? 'Creating…' : 'Create file' }}
-        </OcButton>
-      </form>
-      <p class="office-muted">
-        Destination:
-        {{ state.spaces.find((s) => s.id === state.location.spaceId)?.name ?? 'Not available'
-        }}<span v-for="part in state.location.trail" :key="part.ref.itemId">
-          / {{ part.name }}</span
-        >
+    <div class="office-inner">
+      <p v-if="context.services.mode === 'fixture'" class="office-banner" role="note">
+        Interactive preview · Synthetic files only. Create and Open are simulations; nothing is
+        stored in OpenCloud.
       </p>
-      <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
-      <p v-if="state.templateError" class="office-muted">Templates: {{ state.templateError }}</p>
+      <p v-else class="office-banner" role="note">
+        Integration pending · OpenCloud file operations require a verified deployment adapter.
+      </p>
+    </div>
+
+    <TemplateStrip
+      :kind="kind"
+      :noun="nouns[kind]"
+      :services="context.services"
+      :state="state"
+      @start="start"
+    >
       <p v-if="state.uncertain" role="alert">
         Creation is paused until its outcome is reconciled in Files. Do not submit another copy.
       </p>
       <p v-if="state.notice" role="status" class="office-notice">
         {{ state.notice }}
-      </p>
-      <button
-        v-if="state.created"
-        type="button"
-        :disabled="state.opening || state.mutation"
-        @click="model.open(state.created)"
-      >
-        Open created file
-      </button>
-    </section>
-
-    <section aria-labelledby="recent-heading" class="office-panel">
-      <div class="office-section-title">
-        <h2 id="recent-heading">Recently opened in this browser</h2>
-        <button type="button" @click="model.clearRecents">Clear history</button>
-      </div>
-      <p class="office-muted">
-        {{
-          context.services.mode === 'fixture'
-            ? 'Preview history lasts for this session.'
-            : 'Only files opened through this app appear here.'
-        }}
-      </p>
-      <ul v-if="state.recent.length" class="office-file-list">
-        <li v-for="file in state.recent" :key="file.ref.spaceId + file.ref.itemId">
-          <button type="button" :disabled="state.opening" @click="activate(file)">
-            {{ file.name }}
-          </button>
-        </li>
-      </ul>
-      <p v-else class="office-muted">No verified recent files to show.</p>
-    </section>
-
-    <section aria-labelledby="browse-heading" class="office-panel" :aria-busy="state.loading">
-      <div class="office-section-title">
-        <h2 id="browse-heading">Browse files</h2>
-        <label
-          >Space<select
-            :value="state.location.spaceId"
-            :disabled="state.loading || !state.spaces.length"
-            @change="chooseSpace"
-          >
-            <option v-if="!state.spaces.length" value="">Unavailable</option>
-            <option v-for="space in state.spaces" :key="space.id" :value="space.id">
-              {{ space.name }}
-            </option>
-          </select></label
-        >
-      </div>
-      <nav v-if="state.location.folder" aria-label="Folder breadcrumbs" class="office-breadcrumbs">
-        <button type="button" @click="breadcrumb(-1)">Root</button>
         <button
-          v-for="(part, index) in state.location.trail"
-          :key="part.ref.itemId"
+          v-if="state.created"
           type="button"
-          @click="breadcrumb(index)"
+          class="office-link"
+          :disabled="state.opening || state.mutation"
+          @click="model.open(state.created)"
         >
-          {{ part.name }}
+          Open created file
         </button>
-      </nav>
-      <p v-if="state.loading" role="status">Loading files…</p>
-      <div v-else-if="state.error" role="alert">
-        <p>{{ state.error }}</p>
-        <button type="button" @click="model.load(snapshot())">Load again</button>
-      </div>
-      <p v-else-if="!state.rows.length" class="office-empty">
-        {{
-          state.location.text
-            ? 'No matching files in this folder.'
-            : 'No files to show in this folder.'
-        }}
       </p>
-      <ul v-else class="office-file-list">
-        <li v-for="file in state.rows" :key="file.ref.spaceId + file.ref.itemId">
-          <span aria-hidden="true" class="office-file-icon">{{
-            file.kind === 'folder' ? '▰' : '▤'
-          }}</span>
-          <button type="button" :disabled="state.opening" @click="activate(file)">
-            {{ file.name }}
-          </button>
-          <span class="office-muted">{{
-            file.kind === 'folder' ? 'Folder' : file.access.write ? 'Can edit' : 'Read only'
-          }}</span>
-        </li>
-      </ul>
-      <p v-if="state.partial" role="status">Partial results. More files may be available.</p>
-      <button
-        v-if="state.next"
-        type="button"
-        :disabled="state.loading"
-        @click="model.load(snapshot(), true)"
-      >
-        Load more
-      </button>
-    </section>
+    </TemplateStrip>
+
+    <div class="office-inner">
+      <RecentFiles
+        :kind="kind"
+        :context="context"
+        :entries="state.recent"
+        :opening="state.opening"
+        @open="activate"
+        @clear="model.clearRecents"
+        @browse="showBrowser"
+      />
+      <FileBrowser
+        ref="browser"
+        :kind="kind"
+        :state="state"
+        :expanded="browseOpen"
+        @toggle="browseOpen = !browseOpen"
+        @choose-space="chooseSpace"
+        @activate="activate"
+        @breadcrumb="breadcrumb"
+        @reload="model.load(snapshot())"
+        @more="model.load(snapshot(), true)"
+      />
+    </div>
+    <CreateDialog
+      ref="createDialog"
+      :noun="nouns[kind]"
+      :model="model"
+      :destination="destination"
+      @choose-folder="showBrowser"
+    />
   </main>
 </template>

@@ -1,7 +1,8 @@
-import { toRaw } from 'vue'
+import { reactive, toRaw } from 'vue'
 import { officeApps, validateMenu, type AppDescriptor } from './registry'
 import type { HomeLocation, OfficeKind, OfficeServices } from '../contracts/office'
 import { createHomeModel, type HomeModel } from '../services/home'
+import type { RecentSort } from '../services/recentView'
 
 export function createOfficeContext(
   services: OfficeServices,
@@ -13,9 +14,12 @@ export function createOfficeContext(
   const views = new Map<string, HomeLocation>()
   const lastView = new Map<OfficeKind, string>()
   let sequence = 0
+  // Session-only view choices shared by the three apps; nothing about files is stored here.
+  const preferences = reactive({ sort: 'opened' as RecentSort, layout: 'list' as 'list' | 'grid' })
   return {
     services,
     menu,
+    preferences,
     views,
     lastView,
     model(kind: OfficeKind) {

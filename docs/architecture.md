@@ -9,7 +9,10 @@ The intended product is one native OpenCloud Web package with three home routes 
 | Native registration   | `src/index.ts`                                          | Three authenticated routes and native app-menu extensions                                    |
 | Shared menu           | `src/app/registry.ts`, `src/components/AppSwitcher.vue` | Validate reviewed descriptors against installed route names; reject executable/remote fields |
 | Session navigation    | `src/app/context.ts`                                    | Per-family models and at most 100 session view snapshots, referenced by opaque URL keys      |
-| Home screens          | `src/views/OfficeHome.vue`                              | Search, destination, creation form, template selector, recents and folder browsing           |
+| Home screens          | `src/views/OfficeHome.vue`                              | Composes header search, start band, recents, folder browsing and the create dialog           |
+| Home components       | `src/components/`                                       | Template strip/gallery, create dialog, recent list/grid, folder browser, preview thumbnails  |
+| Template source       | `src/services/templates.ts`                             | Reads one administrator template folder: categories, result formats and preview images       |
+| Recent presentation   | `src/services/recentView.ts`                            | Sorting and local-day grouping of recently opened entries                                    |
 | Workflow              | `src/services/home.ts`                                  | Request generations, cancellation, permission refresh, create/open guards and recovery       |
 | Integration contracts | `src/contracts/office.ts`                               | Typed, app-owned catalog, capability, creation and gateway boundaries                        |
 | Native adapter        | `src/adapters/opencloud/unconfigured.ts`, `catalog8.ts` | Fail-closed app entry plus a disconnected read-only SDK candidate                            |
@@ -33,6 +36,8 @@ The native host owns authentication, tokens, sharing, resource lifecycle, editor
 
 Search and folder changes abort previous requests and reject late responses even when cancellation is ignored. Loading and failed refreshes remove previous private metadata. A selected space that becomes unavailable is an error; the workflow does not silently switch to another space.
 
+Templates come from one administrator-maintained OpenCloud folder, read through the same catalog port as browsing ([templates](templates.md)). `folderTemplates` lists the root and one level of subfolders with an unfiltered listing so it can pair templates with same-name preview images; it never copies, uploads or edits that folder. Remote template URLs are not accepted. Card previews come only from the `preview` port, which must use the host's authorized preview endpoint and returns a releasable URL; there is no client-side document parsing or external image service. OpenCloud 9.0.0 previews images, plain text, audio and GeoGebra files only, so office documents fall back to format cards.
+
 Creation resolves destination permissions and capabilities immediately before mutation; template operations also resolve source access. Repeated submissions are locked. An uncertain mutation outcome blocks retries pending reconciliation. A successful created resource remains recoverable even when open fails or the user navigates away; it is not inserted into an unrelated folder's list. Real template revision, overwrite and copied-share behavior remain unverified.
 
 Opening re-resolves the resource, selects view mode for read-only access, guards repeated launches, and records history only after gateway acceptance. This does not prove editor readiness or saving. A late resolution after navigation does not launch an obsolete file.
@@ -41,7 +46,7 @@ Opening re-resolves the resource, selects view mode for read-only access, guards
 
 The optional browser recent store contains only resource IDs, family and opened timestamp. Its key includes instance and authenticated user; data is pruned to 100 entries/90 days. Entries are resolved again before display. Clear history removes them. The native adapter must wire logout/account-change cleanup before enabling persistence. Until then only the synthetic preview uses session memory. Cross-device recents are not implemented.
 
-Session navigation snapshots contain query/folder/scroll state in memory, at most 100 entries. URLs carry only a session key, not search strings or names. Reloading loses this state and safely returns to the app root. Cross-user lifecycle cleanup and native editor return need real integration tests before release.
+Sort order and list/grid layout live in session memory on the shared context; they contain no file data. Session navigation snapshots contain query/folder/scroll state in memory, at most 100 entries. URLs carry only a session key, not search strings or names. Reloading loses this state and safely returns to the app root. Cross-user lifecycle cleanup and native editor return need real integration tests before release.
 
 No telemetry, analytics, external image proxy, document contents, credentials or real user data are sent by the preview. Dependency tooling contacts the public npm registry with package metadata during authorized setup/advisory checks; this is separate from product behavior.
 

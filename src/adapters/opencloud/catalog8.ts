@@ -176,7 +176,7 @@ export function createCatalog8(
         const items = new Map<string, FileRecord>()
         for (const resource of page.children ?? []) {
           const item = normalizeReadMetadata(space.id, resource)
-          if (item.ok && belongsTo(item.value, query.kind))
+          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
             items.set(refKey(item.value.ref), item.value)
         }
         // This SDK result has no verified cursor/total/truncation contract. Keep the limit visible.

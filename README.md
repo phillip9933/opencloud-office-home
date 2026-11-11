@@ -17,7 +17,7 @@ pnpm install --frozen-lockfile --ignore-scripts
 pnpm dev
 ```
 
-Open the localhost URL printed by Vite. The explicit preview uses synthetic data, session-only recents and simulated create/open actions. No document bytes are created and no editor is embedded. Managed templates are represented by fixtures, not a verified server-side copy implementation.
+Open the localhost URL printed by Vite. The explicit preview uses synthetic data, session-only recents and simulated create/open actions. No document bytes are created and no editor is embedded. Managed templates come from a synthetic template folder with drawn preview images, not a verified server-side copy implementation.
 
 For local agent execution on Linux, use the reviewed Bubblewrap wrapper:
 
@@ -56,15 +56,15 @@ The aggregate check does not claim real OpenCloud, editor fidelity, authenticati
 ## Repository map
 
 - `src/index.ts`: native application registration and app-switcher entries.
-- `src/views/OfficeHome.vue`: shared Docs/Sheets/Slides home.
+- `src/views/OfficeHome.vue` and `src/components/`: shared Docs/Sheets/Slides home, template gallery, create dialog, recent list/grid and folder browser.
 - `src/app/`: shared catalog and session navigation state.
-- `src/services/`: asynchronous home workflow, cancellation and mutation recovery.
+- `src/services/`: asynchronous home workflow, cancellation, mutation recovery, template-folder reading and recent-file sorting.
 - `src/contracts/`: application-owned service contracts.
 - `src/adapters/opencloud/`: unavailable native adapter plus disconnected SDK 8.x catalog and provider-capability candidates, awaiting deployed API verification.
 - `src/preferences/`: scoped, bounded recent references.
 - `src/fixtures/` and `src/preview.ts`: separate synthetic preview, excluded from native entrypoint.
 - `tests/`: unit boundaries and browser journeys.
-- [Architecture](docs/architecture.md), [design](docs/design.md), [compatibility](docs/compatibility.md), [development limits](docs/dev-limits.md), [provisional decisions](docs/decisions/0001-preliminary-spike.md).
+- [Architecture](docs/architecture.md), [design](docs/design.md), [compatibility](docs/compatibility.md), [development limits](docs/dev-limits.md), [provisional decisions](docs/decisions/0001-preliminary-spike.md), [template folder](docs/templates.md).
 
 ## Releases, security and support
 
