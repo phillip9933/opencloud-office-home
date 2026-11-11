@@ -23,8 +23,6 @@ test('create, conflict recovery, launch, family history and full-page settings',
   await dialog.getByRole('textbox', file('Name')).fill('My report')
   await dialog.getByRole('button', file('Create')).click()
   await expect(dialog).toBeHidden()
-  await expect(toast(page)).toContainText('Created My report.odt')
-  await page.getByRole('button', { name: 'Open created file' }).click()
   await expect(toast(page)).toContainText('Simulated launch accepted')
 
   await page.getByRole('button', { name: 'Blank document' }).click()
@@ -63,6 +61,24 @@ test('create, conflict recovery, launch, family history and full-page settings',
     'Synthetic owner'
   )
   expect(errors).toEqual([])
+})
+
+test('failed automatic launch retries opening the same created file', async ({ page }) => {
+  await page.goto('/tests/e2e/recovery.html?case=editor-failure')
+  await page.getByRole('button', file('Blank document')).click()
+  const panel = page.getByRole('region', file('New document'))
+  await panel.getByRole('textbox', file('Name')).fill('Launch recovery')
+  await panel.getByRole('button', file('Create')).click()
+  await expect(panel).toBeHidden()
+  await expect(toast(page)).toContainText('File actions are unavailable')
+  const retry = page.getByRole('button', file('Open created file'))
+  await expect(retry).toBeFocused()
+  await retry.click()
+  await expect(toast(page)).toContainText('Simulated launch accepted')
+  await page.getByRole('button', file('Blank document')).click()
+  await panel.getByRole('textbox', file('Name')).fill('Launch recovery')
+  await panel.getByRole('button', file('Create')).click()
+  await expect(panel.getByRole('status')).toContainText('already exists')
 })
 
 test('sidebar navigation, version, info tip, OpenCloud icons and Back', async ({ page }) => {
@@ -117,7 +133,7 @@ test('template gallery categories, previews, grid layout and name sorting', asyn
   const dialog = page.getByRole('region', { name: 'New from Household budget', exact: true })
   await expect(dialog).toContainText('ODS file')
   await dialog.getByRole('button', file('Create')).click()
-  await expect(toast(page)).toContainText('Created Household budget.ods')
+  await expect(toast(page)).toContainText('Simulated launch accepted')
 
   await page.getByRole('button', { name: 'Grid view' }).click()
   await expect(page.getByRole('button', { name: 'Grid view' })).toHaveAttribute(
@@ -262,7 +278,7 @@ test('remembers the save folder across reloads and compacts the band after a few
     await expect(dialog).toContainText('Save in Personal files / Reports')
     await dialog.getByRole('textbox', file('Name')).fill(name)
     await dialog.getByRole('button', file('Create')).click()
-    await expect(toast(page)).toContainText(`Created ${name}.ods`)
+    await expect(toast(page)).toContainText('Simulated launch accepted')
   }
   // Automatic mode: after three created files the band becomes a single line.
   await expect(page.getByRole('button', { name: '+ Blank spreadsheet' })).toBeVisible()

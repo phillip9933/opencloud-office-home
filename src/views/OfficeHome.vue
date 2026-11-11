@@ -43,9 +43,13 @@ function persist() {
   if (id) props.context.views.set(id, snapshot())
 }
 async function remember(extension: string, folder: FileRef) {
+  const current = model.value
+  const revision = navigation
   props.context.rememberCreation(props.kind, extension, folder)
+  persist()
+  if (current.state.created) await current.open(current.state.created)
   await nextTick()
-  openCreated.value?.focus()
+  if (revision === navigation && current === model.value) openCreated.value?.focus()
 }
 function act(action: FileMenuAction, file: FileRecord) {
   // Opening keeps the existing view-state persistence before the editor takes over.

@@ -134,9 +134,11 @@ create nothing and restore focus. Pending creation locks repeated submission; co
 form open; unknown outcomes pause creation. Check destination performs a read-only reconciliation
 and never retries the write. A matching accessible file exposes Open created file and receives focus
 for inspection; an absent or unverifiable match keeps creation paused. Finding a match does not
-claim that the editor saved content. A successful creation exposes Open created file and moves focus
-there. This flow does not create an ephemeral editor document or promise Save As will move the
-original.
+claim that the editor saved content. A confirmed successful creation remembers the chosen format
+and destination, preserves the return view, and automatically opens the new file through the native
+editor. If opening fails, Open created file receives focus and retries opening that same file,
+without repeating creation. This flow does not create an ephemeral editor document or promise
+Save As will move the original.
 
 One toolbar above Recent groups favorites, icon-only tag filtering, sort order, layout and a Columns
 dropdown. Search stays in OpenCloud’s persistent host header; there is no second app search or scope
