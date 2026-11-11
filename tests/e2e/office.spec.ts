@@ -178,7 +178,13 @@ test('inline creation focus, cancellation, mobile width, and safe text rendering
   await blank.click()
   await name.fill('<img src=x onerror=alert(1)>')
   await page.getByRole('button', file('Create')).click()
-  await expect(toast(page)).toContainText('<img src=x onerror=alert(1)>.odt')
+  await expect(toast(page)).toContainText('Simulated launch accepted')
+  // Automatic opening replaces the creation message; inspect the persisted name in Recent.
+  await sidebar(page).getByRole('link', { name: 'Sheets', exact: true }).click()
+  await sidebar(page).getByRole('link', { name: 'Docs', exact: true }).click()
+  await expect(
+    recents(page).getByRole('button', file('<img src=x onerror=alert(1)>.odt'))
+  ).toBeVisible()
   expect(await page.locator('main img[src="x"]').count()).toBe(0)
   expect(alerts).toEqual([])
   const overflow = await page.evaluate(() => ({
