@@ -24,10 +24,8 @@ import {
 import { createProviderCapabilities8, type ProviderPort8 } from './providers8'
 import { nativeAccess8 } from './access8'
 import { canonicalRootDrives8 } from './roots8'
-import { defaultPolicy, type OfficePolicy } from '../../administration/policy'
-import type { Administration } from '../../administration/store'
+import { defaultConfiguration, type OfficeConfiguration } from '../../configuration'
 import { officeApps } from '../../app/registry'
-import { creationOptions8 } from './creationOptions8'
 
 export interface NativeResource8 {
   space: SpaceResource
@@ -35,7 +33,6 @@ export interface NativeResource8 {
   file: FileRecord
 }
 export interface NativePort8 extends ReadPort8, ProviderPort8 {
-  refreshProviders?: () => Promise<void>
   webdav: ReadPort8['webdav'] & Pick<WebDAV, 'copyFiles' | 'getPathForFileId'>
   // Host-authenticated request and native routes; no credential values enter this adapter.
   requestNew(url: string): Promise<{ status: number }>
@@ -49,9 +46,7 @@ interface NativeOptions {
   user: string
   session: () => string | undefined
   storage?: Storage
-  templateFolder?: FileRef
-  policy?: OfficePolicy
-  administration?: Administration
+  configuration?: OfficeConfiguration
   filters: OfficeServices['filters']
 }
 
@@ -75,7 +70,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   const session = () =>
     !disposed && options.session() === initialSession ? initialSession : undefined
   let disposed = false
-  const policy = options.policy ?? defaultPolicy()
+  const configuration = options.configuration ?? defaultConfiguration()
   const applications = officeApps
   const catalog = createCatalog8(
     { ...port, drives: canonicalRootDrives8(port) },
@@ -83,7 +78,11 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     nativeAccess8,
     applications
   )
-  const capabilities = createProviderCapabilities8(port, applications, policy.creationFormats)
+  const capabilities = createProviderCapabilities8(
+    port,
+    applications,
+    configuration.creationFormats
+  )
   const pendingNames = new Set<string>()
   const previewUrls = new Set<string>()
   const abort = new AbortController()
@@ -244,12 +243,10 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
   }
 
   const services: OfficeServices = {
-    creationOptions: creationOptions8(port, session),
     mode: 'native',
-    policy,
+    configuration,
     applications,
-    administration: options.administration,
-    templateFolderDefault: options.templateFolder,
+    templateFolderDefault: configuration.templateFolder,
     catalog,
     capabilities,
     filters: options.filters,
@@ -260,7 +257,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       fromTemplate: (input) => create(input, input.template.source)
     },
     templates(kind, selectedFolder) {
-      const folder = selectedFolder ?? options.templateFolder
+      const folder = selectedFolder ?? configuration.templateFolder
       if (!folder) return Promise.resolve(ok([]))
       return folderTemplates(catalog, folder, kind, abort.signal, applications)
     },

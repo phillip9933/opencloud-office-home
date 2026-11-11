@@ -74,3 +74,5 @@ The aggregate check does not claim real OpenCloud, editor fidelity, authenticati
 No production release or support claim exists. The default release build fails closed; opt-in native test artifacts have disclosed functional limits. Installation and rollback are documented separately from production configuration. OpenCloud must remain responsible for identity, authorization, storage and sharing; the configured native editor integration owns sessions and saving.
 
 New-code license selection is pending review of the OpenCloud AGPL-3.0 packages and other dependencies. Dependency advisories remain a release blocker. A vulnerability-reporting channel has not yet been established. Do not include confidential findings or credentials in source or issue text.
+
+Installation-wide template and creation defaults are configured in the app's administrator-owned configuration file. See [installation configuration](docs/configuration.md) and its minimal JSON example. Office has no administration console or configuration-saving service.

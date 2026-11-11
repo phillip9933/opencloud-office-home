@@ -11,7 +11,6 @@ import { officeApps } from './app/registry'
 import { useNativeOffice8 } from './adapters/opencloud/host8'
 const OfficeHome = defineAsyncComponent(() => import('./views/OfficeHome.vue'))
 const OfficeSettings = defineAsyncComponent(() => import('./views/OfficeSettings.vue'))
-const OfficeAdministration = defineAsyncComponent(() => import('./views/OfficeAdministration.vue'))
 
 // All authenticated route wrappers use the same session-aware rendering boundary.
 function authenticatedPage(render: () => VNode) {
@@ -35,16 +34,6 @@ export default defineWebApplication({
               : h('p', { role: 'status' }, status.value)
           ),
           meta: { authContext: 'user', title: 'Office settings' }
-        },
-        {
-          path: '/admin',
-          name: 'administration',
-          component: authenticatedPage(() =>
-            context.value
-              ? h(OfficeAdministration, { key: context.value.id, context: context.value })
-              : h('p', { role: 'status' }, status.value)
-          ),
-          meta: { authContext: 'user', title: 'Office administration' }
         },
         ...officeApps.map((app) => ({
           path: `/${app.id}`,

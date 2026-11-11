@@ -7,7 +7,7 @@ import { officeApps, type AppDescriptor } from '../app/registry'
 import type { OfficeContext } from '../app/context'
 import type { OfficeKind } from '../contracts/office'
 
-const props = defineProps<{ kind: OfficeKind | 'settings' | 'admin'; context: OfficeContext }>()
+const props = defineProps<{ kind: OfficeKind | 'settings'; context: OfficeContext }>()
 const versionLabel = computed(
   () => `Office ${version}${props.context.services.mode === 'native' ? ' · Test' : ''}`
 )
@@ -23,7 +23,7 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
 <template>
   <aside class="office-sidebar">
     <div class="office-sidebar-title" :data-kind="kind">
-      <FamilyIcon v-if="kind !== 'settings' && kind !== 'admin'" :kind="kind" />
+      <FamilyIcon v-if="kind !== 'settings'" :kind="kind" />
       <OcIcon v-else name="file-text" fill-type="line" class="office-icon" />
       <slot>{{ descriptor?.label ?? 'Office' }}</slot>
     </div>
@@ -42,13 +42,6 @@ const isOffice = (id: string): id is OfficeKind => officeApps.some((app) => app.
       </ul>
     </nav>
     <div class="office-sidebar-footer">
-      <RouterLink
-        v-if="context.services.administration?.permitted()"
-        :to="{ name: 'office-administration' }"
-        class="office-quiet office-settings-button"
-        :aria-current="kind === 'admin' ? 'page' : undefined"
-        >Administration</RouterLink
-      >
       <RouterLink
         :to="{ name: 'office-settings' }"
         class="office-quiet office-settings-button"

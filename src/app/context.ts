@@ -55,7 +55,7 @@ export function createOfficeContext(
         models.set(
           kind,
           createHomeModel(services, kind, recentFilter, () =>
-            services.policy?.allowPersonalTemplates === false
+            services.configuration?.allowPersonalTemplates === false
               ? undefined
               : preferences.templateFolder
           )

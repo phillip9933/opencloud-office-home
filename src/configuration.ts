@@ -1,16 +1,14 @@
-import { officeApps } from '../app/registry'
-import type { FileRef, OfficeKind } from '../contracts/office'
+import { officeApps } from './app/registry'
+import type { FileRef, OfficeKind } from './contracts/office'
 
-export interface OfficePolicy {
-  schemaVersion: 2
+export interface OfficeConfiguration {
   templateFolder?: FileRef
   allowPersonalTemplates: boolean
   creationFormats: Partial<Record<OfficeKind, string[]>>
 }
-export const MAX_POLICY_BYTES = 65536
+export const MAX_CONFIGURATION_BYTES = 65536
 const kinds: OfficeKind[] = ['docs', 'sheets', 'slides']
-export const defaultPolicy = (): OfficePolicy => ({
-  schemaVersion: 2,
+export const defaultConfiguration = (): OfficeConfiguration => ({
   allowPersonalTemplates: true,
   creationFormats: {}
 })
@@ -42,32 +40,18 @@ export function configurationRef(value: unknown): FileRef {
     throw new Error('Use canonical OpenCloud space and item IDs.')
   return { spaceId, itemId }
 }
-export function parsePolicy(value: unknown): OfficePolicy {
-  const raw = { ...object(value) }
-  if (new TextEncoder().encode(JSON.stringify(raw)).length > MAX_POLICY_BYTES)
+export function parseConfiguration(value: unknown): OfficeConfiguration {
+  const raw = object(value === undefined ? {} : value)
+  if (new TextEncoder().encode(JSON.stringify(raw)).length > MAX_CONFIGURATION_BYTES)
     throw new Error('Configuration is too large.')
-  // Empty v1 policies can migrate without losing data. Nonempty retired customization
-  // must be removed deliberately from the original file, never silently discarded.
-  if (raw.schemaVersion === 1) {
-    for (const key of ['shortcuts', 'additionalFormats', 'handlers']) {
-      if (
-        raw[key] !== undefined &&
-        (!raw[key] || typeof raw[key] !== 'object' || Object.keys(raw[key]).length)
-      )
-        throw new Error(
-          'This policy contains retired custom-app settings. Back it up and remove those fields before migration.'
-        )
-      delete raw[key]
-    }
-    raw.schemaVersion = 2
-  }
-  keys(raw, ['schemaVersion', 'templateFolder', 'allowPersonalTemplates', 'creationFormats'])
-  if (raw.schemaVersion !== 2) throw new Error('Unsupported configuration version.')
-  const policy = defaultPolicy()
-  if (raw.templateFolder !== undefined) policy.templateFolder = configurationRef(raw.templateFolder)
+  keys(raw, ['templateFolder', 'allowPersonalTemplates', 'creationFormats'])
+  const configuration = defaultConfiguration()
+  if (raw.templateFolder !== undefined)
+    configuration.templateFolder = configurationRef(raw.templateFolder)
   if (raw.allowPersonalTemplates !== undefined) {
-    if (typeof raw.allowPersonalTemplates !== 'boolean') throw new Error('Invalid template policy.')
-    policy.allowPersonalTemplates = raw.allowPersonalTemplates
+    if (typeof raw.allowPersonalTemplates !== 'boolean')
+      throw new Error('Invalid template configuration.')
+    configuration.allowPersonalTemplates = raw.allowPersonalTemplates
   }
   if (raw.creationFormats !== undefined) {
     const entries = object(raw.creationFormats)
@@ -84,8 +68,8 @@ export function parsePolicy(value: unknown): OfficePolicy {
           formats.some((ext) => !known.some((format) => format.extension === ext))
         )
           throw new Error('Creation formats must belong to the office family.')
-        policy.creationFormats[kind] = formats
+        configuration.creationFormats[kind] = formats
       }
   }
-  return policy
+  return configuration
 }

@@ -15,10 +15,6 @@ const directory = process.argv[2] ?? 'dist-spike'
 assert(['dist-spike', 'dist-native-test'].includes(directory), 'Unknown artifact scope')
 const native = await textTree(directory)
 assert(
-  !native.includes('office-preview-policy'),
-  'Synthetic administration storage leaked into the native artifact'
-)
-assert(
   !native.includes('synthetic-preview'),
   'Fixture services leaked into the native spike artifact'
 )
@@ -31,8 +27,10 @@ assert(
   'Synthetic template folder or drawn previews leaked into the native spike artifact'
 )
 assert(
-  !native.includes('Synthetic Office'),
-  'Synthetic backend capabilities leaked into the native artifact'
+  !native.includes('Save configuration') &&
+    !native.includes('Shared configuration storage') &&
+    !native.includes('office-preview-policy'),
+  'Removed administration console or shared settings storage leaked into the native artifact'
 )
 const manifest = JSON.parse(await readFile(`${directory}/manifest.json`, 'utf8'))
 assert.equal(typeof manifest.entrypoint, 'string')

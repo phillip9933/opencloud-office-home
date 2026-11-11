@@ -475,93 +475,40 @@ test('choose a save folder in the file dialog, cancel safely, and configure a pe
   await expect(page.getByRole('button', file('Letterhead'))).toBeVisible()
 })
 
-test('administration refuses ordinary users and protects personal settings', async ({ page }) => {
-  await page.goto('/#/office/admin')
-  await expect(page.getByRole('alert')).toContainText(
-    'requires OpenCloud settings-management permission'
-  )
-  await expect(page.getByRole('button', { name: 'Save configuration', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Administration', exact: true })).toHaveCount(0)
-  await page.getByRole('link', { name: 'Personal settings', exact: true }).click()
-  await expect(
-    page.getByRole('button', { name: 'Choose template folder', exact: true })
-  ).toBeVisible()
-})
-
-test('administrator saves template policy and backend format restrictions across reload', async ({
+test('personal settings keeps the folder chooser and no administration console', async ({
   page
 }) => {
-  await page.goto('/?admin=1#/office/admin')
-  await expect(page.getByRole('heading', { name: 'Administration', exact: true })).toBeVisible()
-  const defaultFolder = page.getByRole('button', {
-    name: 'Choose default template folder',
-    exact: true
-  })
-  // Reproduce the host's global dialog reset, absent from the standalone preview.
+  await page.goto('/#/office/admin')
+  await expect(page.getByRole('heading', { name: 'Docs', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Administration', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save configuration', exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  await expect(page.getByText('default in Administration.', { exact: false })).toHaveCount(0)
+  // Reproduce the real host's dialog reset and retain its centering regression coverage.
   await page.addStyleTag({ content: 'dialog { margin: 0; }' })
-  await defaultFolder.click()
-  const picker = page.getByRole('dialog', {
-    name: 'Choose installation template folder',
-    exact: true
-  })
-  await expect(picker).toBeVisible()
+  const opener = page.getByRole('button', { name: 'Choose template folder', exact: true })
+  await opener.click()
+  const picker = page.getByRole('dialog', { name: 'Choose template folder', exact: true })
   await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
   const box = await picker.boundingBox()
   expect(box!.x).toBeGreaterThan(0)
   expect(Math.abs(box!.x * 2 + box!.width - page.viewportSize()!.width)).toBeLessThan(2)
+  await picker
+    .getByRole('navigation', { name: 'Folder locations', exact: true })
+    .getByRole('button', { name: 'Templates', exact: true })
+    .click()
+  await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
   await picker.screenshot({ path: test.info().outputPath('folder-desktop.png') })
   await page.keyboard.press('Escape')
-  await expect(picker).toHaveCount(0)
-  await expect(defaultFolder).toBeFocused()
-  await page
-    .getByRole('checkbox', {
-      name: 'Allow users to choose a personal template folder',
-      exact: true
-    })
-    .uncheck()
-  await page.getByRole('tab', { name: 'Templates', exact: true }).press('ArrowRight')
-  await expect(page.getByRole('tab', { name: 'Creation formats', exact: true })).toBeFocused()
-  await expect(page.getByRole('checkbox', { name: 'DOCX', exact: true })).toHaveCount(0)
-  await page.getByRole('checkbox', { name: 'ODT', exact: true }).uncheck()
-  await page.getByRole('button', { name: 'Refresh capabilities', exact: true }).click()
-  await expect(page.getByRole('checkbox', { name: 'ODT', exact: true })).not.toBeChecked()
-  await page.getByRole('button', { name: 'Save configuration', exact: true }).click()
-  await expect(page.getByRole('status').filter({ hasText: 'Configuration saved' })).toBeVisible()
-  await page.getByRole('button', { name: 'Reload Office', exact: true }).click()
-  await expect(
-    page.getByRole('checkbox', {
-      name: 'Allow users to choose a personal template folder',
-      exact: true
-    })
-  ).not.toBeChecked()
-  await page.getByRole('tab', { name: 'Creation formats', exact: true }).click()
-  await expect(page.getByRole('checkbox', { name: 'ODT', exact: true })).not.toBeChecked()
-  await page.getByRole('link', { name: 'Personal settings', exact: true }).click()
-  await expect(
-    page.getByText('Your administrator manages the template folder for this installation.')
-  ).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: 'Choose template folder', exact: true })
-  ).toHaveCount(0)
-  await page.getByRole('link', { name: 'Administration', exact: true }).click()
-  await expect(page.getByRole('textbox', { name: 'App URL' })).toHaveCount(0)
-  for (const width of [1280, 390]) {
-    await page.setViewportSize({ width, height: 900 })
-    for (const name of ['Templates', 'Creation formats', 'Storage']) {
-      await page.getByRole('tab', { name, exact: true }).click()
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
-        true
-      )
-      await page.screenshot({
-        path: test.info().outputPath(`admin-${name.replace(' ', '-')}-${width}.png`),
-        fullPage: true
-      })
-    }
-  }
-  await page.getByRole('tab', { name: 'Templates', exact: true }).click()
-  await defaultFolder.click()
-  await expect(picker).toBeVisible()
+  await expect(opener).toBeFocused()
+  await page.screenshot({ path: test.info().outputPath('settings-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await opener.click()
   await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await picker.screenshot({ path: test.info().outputPath('folder-mobile.png') })
   await page.keyboard.press('Escape')
+  await expect(opener).toBeFocused()
+  await page.screenshot({ path: test.info().outputPath('settings-mobile.png'), fullPage: true })
 })

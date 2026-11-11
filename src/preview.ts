@@ -10,33 +10,16 @@ import './styles/folders.css'
 import './preview.css'
 import OfficeHome from './views/OfficeHome.vue'
 import OfficeSettings from './views/OfficeSettings.vue'
-import OfficeAdministration from './views/OfficeAdministration.vue'
-import { fixtureAdministration } from './fixtures/administration'
 import { OcSpinner } from '@opencloud-eu/design-system/components'
 import { officeApps } from './app/registry'
 import { createOfficeContext } from './app/context'
 import { fixtureServices } from './fixtures/services'
 
 const services = fixtureServices({ seedHistory: true, preferenceStorage: window.sessionStorage })
-services.administration = fixtureAdministration(
-  window.sessionStorage,
-  new URL(window.location.href).searchParams.get('admin') === '1'
-)
-const policySnapshot = await services.administration.load()
-if (policySnapshot.ok) {
-  services.policy = policySnapshot.value.policy
-  services.templateFolderDefault = services.policy.templateFolder ?? services.templateFolderDefault
-}
 const context = createOfficeContext(services)
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    {
-      path: '/office/admin',
-      name: 'office-administration',
-      component: OfficeAdministration,
-      props: { context }
-    },
     {
       path: '/office/settings',
       name: 'office-settings',

@@ -16,8 +16,7 @@ import {
 import { createOfficeContext, type OfficeContext } from '../../app/context'
 import { createNativeServices8 } from './native8'
 import { openNativeEditor8 } from './editorRoute8'
-import { configurationRef, defaultPolicy, parsePolicy } from '../../administration/policy'
-import { createPolicyStore8 } from './policy8'
+import { parseConfiguration } from '../../configuration'
 
 /** Bind only to the host's public composables. The app never copies or persists auth tokens. */
 export function useNativeOffice8(applicationConfig: unknown) {
@@ -50,49 +49,22 @@ export function useNativeOffice8(applicationConfig: unknown) {
 
   watch(
     () => [auth.userContextReady, user.user?.id, config.serverUrl],
-    async () => {
+    () => {
       generation++
-      const revision = generation
       context.value?.dispose()
       disposeAdapter?.()
       context.value = undefined
       status.value = 'Waiting for OpenCloud sign-in…'
       if (!auth.userContextReady || !user.user?.id || !config.serverUrl) return
       status.value = 'Loading Office configuration…'
-      let policy
-      let administration
+      let configuration
       try {
-        const raw =
-          applicationConfig && typeof applicationConfig === 'object'
-            ? (applicationConfig as Record<string, unknown>)
-            : {}
-        const templates =
-          raw.templateFolder === undefined ? undefined : configurationRef(raw.templateFolder)
-        const fallback =
-          raw.policy === undefined
-            ? { ...defaultPolicy(), ...(templates ? { templateFolder: templates } : {}) }
-            : parsePolicy(raw.policy)
-        administration = createPolicyStore8(
-          { drives: client.graphAuthenticated.drives, webdav: client.webdav },
-          raw.settingsFile === undefined ? undefined : configurationRef(raw.settingsFile),
-          fallback,
-          () => ability.can('update-all', 'Setting'),
-          session
-        )
-        const loaded = await administration.load()
-        if (revision !== generation) return
-        if (!loaded.ok) {
-          status.value =
-            'Office configuration is unavailable. Ask an administrator to check its file access and contents.'
-          return
-        }
-        policy = loaded.value.policy
+        configuration = parseConfiguration(applicationConfig)
       } catch {
         status.value =
-          'Office configuration is invalid. Ask an administrator to check the app configuration.'
+          'Office configuration is invalid. Ask an administrator to check the app’s config.json.'
         return
       }
-      if (revision !== generation || !auth.userContextReady || !user.user?.id) return
       let storage: Storage | undefined
       try {
         storage = window.localStorage
@@ -107,7 +79,6 @@ export function useNativeOffice8(applicationConfig: unknown) {
           webdav: client.webdav,
           appProviders: providers,
           capabilities,
-          refreshProviders: () => providers.loadData(),
           requestNew: (url) => client.httpAuthenticated.post(url),
           open: (item, mode) => openNativeEditor8(actions, router, item, mode),
           async files({ resource }, sharing) {
@@ -131,9 +102,7 @@ export function useNativeOffice8(applicationConfig: unknown) {
           user: user.user.id,
           session,
           storage,
-          templateFolder: policy.templateFolder,
-          policy,
-          administration,
+          configuration,
           filters: {
             favorites: ability.can('read', 'Favorite'),
             tags: capabilities.filesTags === true

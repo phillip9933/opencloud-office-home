@@ -217,7 +217,7 @@ function setBand(band: TemplateBand) {
       <p v-else-if="!state.loading && !state.templates.length" class="office-muted">
         No templates are available.
         {{
-          context.services.policy?.allowPersonalTemplates === false
+          context.services.configuration?.allowPersonalTemplates === false
             ? 'Ask an administrator to configure the template folder.'
             : 'Choose a template folder in Settings.'
         }}

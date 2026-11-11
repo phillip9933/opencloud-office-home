@@ -17,7 +17,6 @@ import { createRecentStore } from '../preferences/recents'
 import { createViewPreferenceStore } from '../preferences/view'
 import { folderTemplates } from '../services/templates'
 import { syntheticPreview } from './previews'
-import { fixtureCreationOptions } from './creation'
 
 const DAY = 86_400_000
 const access = { read: true, write: true, createChild: true }
@@ -247,7 +246,6 @@ export function fixtureServices(
   }
   const services: OfficeServices = {
     mode: 'fixture',
-    creationOptions: () => Promise.resolve(ok(fixtureCreationOptions())),
     catalog: {
       listSpaces() {
         return Promise.resolve(

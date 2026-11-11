@@ -1,6 +1,5 @@
 import type { ViewPreferenceStore } from '../preferences/view'
-import type { OfficePolicy } from '../administration/policy'
-import type { Administration } from '../administration/store'
+import type { OfficeConfiguration } from '../configuration'
 import type { AppDescriptor } from '../app/registry'
 
 export type OfficeKind = 'docs' | 'sheets' | 'slides'
@@ -160,10 +159,8 @@ export interface RecentStore {
 }
 export interface OfficeServices {
   mode: 'unconfigured' | 'fixture' | 'native'
-  policy?: OfficePolicy
+  configuration?: OfficeConfiguration
   applications?: readonly AppDescriptor[]
-  administration?: Administration
-  creationOptions?: () => Promise<Result<import('../administration/creation').CreationFormat[]>>
   catalog: FileCatalog
   actions: FileActions
   creation: FileCreation

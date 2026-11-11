@@ -25,7 +25,7 @@ async function describeFolder() {
   folderError.value = ''
   folderLabel.value = ''
   const selected =
-    props.context.services.policy?.allowPersonalTemplates === false
+    props.context.services.configuration?.allowPersonalTemplates === false
       ? props.context.services.templateFolderDefault
       : (preferences.templateFolder ?? props.context.services.templateFolderDefault)
   if (!selected) return
@@ -39,7 +39,7 @@ async function describeFolder() {
   else folderError.value = errorText[result.error]
 }
 function chooseTemplateFolder(folder: FileRecord, label: string) {
-  if (props.context.services.policy?.allowPersonalTemplates === false) return
+  if (props.context.services.configuration?.allowPersonalTemplates === false) return
   revision++
   preferences.templateFolder = { ...folder.ref }
   folderLabel.value = label
@@ -76,13 +76,13 @@ onMounted(async () => {
           <h2 id="template-settings-heading">Personal template folder</h2>
           <p>
             This optional override changes only your gallery in this browser. It does not change the
-            installation default in Administration. Files at the folder root appear under General;
-            subfolders become categories.
+            installation default in the app configuration. Files at the folder root appear under
+            General; subfolders become categories.
           </p>
           <p>
             <strong
               >{{
-                context.services.policy?.allowPersonalTemplates !== false &&
+                context.services.configuration?.allowPersonalTemplates !== false &&
                 preferences.templateFolder
                   ? 'Your template folder'
                   : 'Installation default'
@@ -91,7 +91,10 @@ onMounted(async () => {
             {{ folderLabel || 'No folder selected' }}
           </p>
           <p v-if="folderError" role="alert">{{ folderError }}</p>
-          <p v-if="context.services.policy?.allowPersonalTemplates === false" class="office-muted">
+          <p
+            v-if="context.services.configuration?.allowPersonalTemplates === false"
+            class="office-muted"
+          >
             Your administrator manages the template folder for this installation.
           </p>
           <div v-else class="office-panel-actions">
@@ -103,7 +106,9 @@ onMounted(async () => {
             </button>
           </div>
           <FolderPicker
-            v-if="choosingFolder && context.services.policy?.allowPersonalTemplates !== false"
+            v-if="
+              choosingFolder && context.services.configuration?.allowPersonalTemplates !== false
+            "
             :catalog="context.services.catalog"
             title="Choose template folder"
             :start="preferences.templateFolder ?? context.services.templateFolderDefault"
@@ -111,7 +116,7 @@ onMounted(async () => {
             @cancel="choosingFolder = false"
           />
           <p class="office-muted">
-            <span v-if="context.services.policy?.allowPersonalTemplates !== false"
+            <span v-if="context.services.configuration?.allowPersonalTemplates !== false"
               >Your choice applies to Docs, Sheets and Slides in this browser.</span
             >
             An administrator can configure an installation default for all users. Choose ordinary

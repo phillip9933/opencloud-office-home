@@ -24,7 +24,6 @@ describe('Office application registration', () => {
       routes.slice(1).map((route) => [route.name, route.path, route.meta?.authContext])
     ).toEqual([
       ['settings', '/settings', 'user'],
-      ['administration', '/admin', 'user'],
       ['docs', '/docs', 'user'],
       ['sheets', '/sheets', 'user'],
       ['slides', '/slides', 'user']

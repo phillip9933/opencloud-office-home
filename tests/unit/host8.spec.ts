@@ -37,11 +37,26 @@ it.each([true, false])(
   }
 )
 
-it('exposes backend creation capabilities without app-registration customization', async () => {
+it('loads static configuration without a shared-file read or settings-management ability', async () => {
   const scope = effectScope()
-  const { context } = scope.run(() => useNativeOffice8({}))!
-  await vi.waitFor(() => expect(context.value).toBeDefined())
-  expect(await context.value!.services.creationOptions!()).toEqual({ ok: true, value: [] })
+  const configuration = {
+    allowPersonalTemplates: false,
+    templateFolder: { spaceId: 'space', itemId: 'templates' },
+    creationFormats: { docs: ['odt'] }
+  }
+  const { context } = scope.run(() => useNativeOffice8(configuration))!
+  expect(context.value?.services.configuration).toEqual(configuration)
+  expect(context.value?.services.templateFolderDefault).toEqual(configuration.templateFolder)
+  expect(context.value?.services).not.toHaveProperty('administration')
   context.value?.dispose()
+  scope.stop()
+})
+it('fails closed on obsolete shared-file configuration instead of silently ignoring it', () => {
+  const scope = effectScope()
+  const { context, status } = scope.run(() =>
+    useNativeOffice8({ settingsFile: { spaceId: 'space', itemId: 'old' } })
+  )!
+  expect(context.value).toBeUndefined()
+  expect(status.value).toContain('config.json')
   scope.stop()
 })
