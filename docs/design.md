@@ -20,7 +20,7 @@ Every file row and card has marks (★ favorite, ⇄ shared, ✎ locked and poss
 with a text alternative) and a "More actions" menu: Open, Open read-only (when the user can edit),
 Show in Files, Copy link (OpenCloud's private link, which still needs access), Download and Share….
 The menu fetches the file's latest activity line, for example who updated it, only when opened.
-Messages from actions and creation appear in a status bar at the bottom of the screen with a dismiss
+Messages from actions and creation appear inline above Recent with a dismiss
 button.
 
 Creation uses the inline panel described below. Its default format and save folder come from the
@@ -97,8 +97,8 @@ return, Back/Forward, canceled folder requests, text rendering, gallery categori
 fallback, layout toggle, sorting and 390px reflow. Desktop/mobile screenshots support visual review;
 they are not evidence of conformance. Browser journeys also cover the file menu and focus return,
 column selection and Back restoration, the remembered save folder across reloads, dark-theme tokens
-and right-to-left reflow at 390px. Full automated accessibility analysis, screen-reader use, 200%
-text scaling, translated RTL text and theme checks inside the real host remain open. No
+and right-to-left reflow at 390px. Automated axe and 200% text/reflow checks pass in the synthetic preview. Screen-reader use,
+translated RTL text and theme checks inside the real host remain open. No
 intended-user usability review has occurred.
 
 ## Privacy and flexibility
