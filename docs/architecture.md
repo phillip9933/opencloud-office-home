@@ -86,3 +86,5 @@ Optional owner/creation-date columns use per-call DAV metadata (`d:creationdate`
 Native catalog diagnostics serialize only primitive counts and booleans, so inspection tools can read them without expanding runtime objects. They exclude resource identities, names, paths, links, content and credentials.
 
 DAV `Z` is a permission-management capability (DenyGrant), not an access-denied marker. The adapter must not reject owner/manager resources for carrying it. Authenticated SDK access helpers, explicit edit flags, vault exclusion, identity validation and server checks retain their separate roles.
+
+Creation reconciliation diagnostics contain only status, stage flags and equality checks. They identify whether an accepted creation failed its metadata confirmation without exposing filenames, identities, paths or document contents.

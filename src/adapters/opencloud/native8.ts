@@ -171,6 +171,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
         endpoint.searchParams.set('filename', input.name)
         dispatched = true
         const response = await port.requestNew(endpoint.href)
+        console.info('Office creation response', JSON.stringify({ status: response.status }))
         if (response.status !== 200) throw { status: response.status }
       }
       acknowledged = true
@@ -178,12 +179,26 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       const resource = await port.webdav.getFileInfo(destination.value.space, { path })
       if (!session()) return fail('unauthenticated')
       const result = normalizeReadMetadata(destination.value.space.id, resource)
+      console.info(
+        'Office creation resolution',
+        JSON.stringify({
+          normalized: result.ok,
+          nameMatches: result.ok && result.value.name === input.name,
+          mimeMatches: result.ok && result.value.mimeType === input.format.mimeType,
+          mimePresent: !!resource.mimeType,
+          empty: String(resource.size) === '0'
+        })
+      )
       if (!result.ok) return fail('timeout')
       if (result.value.name !== input.name || result.value.mimeType !== input.format.mimeType)
         return fail('timeout')
       result.value.access = nativeAccess8(resource)
       return result
     } catch (error) {
+      console.info(
+        'Office creation failure',
+        JSON.stringify({ acknowledged, dispatched, category: catalogError(error) })
+      )
       return fail(
         acknowledged ? 'timeout' : dispatched ? mutationError(error) : catalogError(error)
       )
