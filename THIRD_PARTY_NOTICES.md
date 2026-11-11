@@ -7,6 +7,14 @@ This project is based on the official OpenCloud Web app skeleton:
 - Original project author: OpenCloud
 - Original license: Apache-2.0, preserved verbatim in `LICENSE`.
 
-The imported Git history and original notices are retained. The Apache license applies to the imported starter material; a license for the new office application code has not yet been selected. The package remains private and declares `UNLICENSED` pending that decision. This is not an assertion that OpenCloud authored the new application.
+The imported Git history and original notices are retained. Apache-2.0 continues to apply to the
+imported starter material. New Office Home application code and modifications to the starter are
+licensed under AGPL-3.0-only, in `LICENSE-AGPL-3.0`. This does not relicense the original starter or
+assert that OpenCloud authored the new application. The imported revision above identifies the
+original material; subsequent changes are recorded in Git history.
 
-Dependencies retain their own licenses. OpenCloud Web/SDK packages include AGPL-3.0 licensing requirements; the dependency and application licensing review remains a release gate. No public release or upstream submission is represented by this private development checkout.
+Dependencies retain their own licenses. OpenCloud Web/SDK packages declare AGPL-3.0. Their original
+copyright and license notices must be retained with redistributed material. Test-only dependencies
+are not part of the native app entrypoint. See [licensing](docs/licensing.md) for source-availability
+and packaging requirements. No public release or upstream submission is represented by this
+private development checkout.

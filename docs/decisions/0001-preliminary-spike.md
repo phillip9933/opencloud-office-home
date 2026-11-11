@@ -12,7 +12,8 @@ Provisional defaults from guide section 15:
 - Use a verified upstream recent-access source if one exists; otherwise clearly label browser-local history. No custom history backend is justified yet.
 - Allow only reviewed installed app integrations; no arbitrary remote URLs, modules or user-installable code.
 - Preserve native sharing; defer specialized anonymous office home screens.
-- Keep a neutral working name and defer license selection until dependency review.
+- The initial license deferral is superseded: Office Home code is AGPL-3.0-only, with the imported
+  Apache-2.0 skeleton preserved. See [licensing](../licensing.md).
 - Redirect friendly aliases to the existing canonical host only after domains, router and proxy are verified.
 
 The SDK baseline follows the observed test deployment (Web 8.2.1, previously 8.0.0); it is not a decision that every deployment must use that release. Alternatives include matching a different installed release or starting from a release-matched skeleton once available. Tradeoff: local contracts can be tested now, but no create/edit/save or permission compatibility claim follows from those passes.

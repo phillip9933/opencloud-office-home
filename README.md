@@ -7,13 +7,12 @@ foundation](docs/upstream-skeleton.md) and [third-party notices](THIRD_PARTY_NOT
 Preliminary TypeScript/Vue application for three OpenCloud home screens: Docs, Sheets and Slides.
 Each shares navigation, file discovery, creation and editor services. The native adapter now uses
 OpenCloud Web 8.2.1 services. An explicit test-instance build is available for controlled
-integration testing; full releases remain blocked pending live acceptance, security and license
-review.
+integration testing; full releases remain blocked pending live acceptance and security review.
 
 ## Supported platforms
 
-Local tooling has been exercised on Linux with Node 26.12.1 and pnpm 11.27.0. The project declares
-Node >=24, but other Node versions and operating systems have not been tested. The lockfile pins
+Local tooling has been exercised on Linux with Node 26.12.1 and pnpm 11.27.0. Hosted CI validation
+also passed on Node 24 and 26; other operating systems have not been tested. The lockfile pins
 OpenCloud Web packages 8.2.1, matching the Web release observed on the test deployment; no
 server/editor pairing is supported yet.
 
@@ -28,8 +27,9 @@ pnpm dev
 
 Open the localhost URL printed by Vite. The explicit preview uses synthetic data, session-only
 recents and simulated create/open actions. No document bytes are created and no editor is embedded.
-Managed templates come from a synthetic template folder with drawn preview images, not a verified
-server-side copy implementation.
+In this preview, templates come from synthetic folders with drawn images. Native test installations
+use OpenCloud COPY for ordinary document templates; see [compatibility](docs/compatibility.md) for
+verified behavior and the unsupported template-container formats.
 
 For local agent execution on Linux, use the reviewed Bubblewrap wrapper:
 
@@ -95,11 +95,14 @@ test artifacts have disclosed functional limits. Installation and rollback are d
 from production configuration. OpenCloud must remain responsible for identity, authorization,
 storage and sharing; the configured native editor integration owns sessions and saving.
 
-The inherited `LICENSE` covers the skeleton under Apache-2.0; `UNLICENSED` in the private package
-does not select a license for new application code. New-code license selection is pending review of
-the OpenCloud AGPL-3.0 packages and other dependencies. Dependency advisories remain a release
-blocker. A vulnerability-reporting channel has not yet been established. Do not include confidential
-findings or credentials in source or issue text.
+Office Home application code is licensed under **AGPL-3.0-only**; see
+[LICENSE-AGPL-3.0](LICENSE-AGPL-3.0). The inherited [LICENSE](LICENSE) preserves the skeleton's
+Apache-2.0 terms. [Third-party notices](THIRD_PARTY_NOTICES.md) describe the scope and retained
+attribution; dependencies retain their own licenses. See [licensing and source availability](docs/licensing.md)
+before distributing or operating a modified version for other users.
+
+Dependency advisories remain a release blocker. A vulnerability-reporting channel has not yet been
+established. Do not include confidential findings or credentials in source or issue text.
 
 Installation-wide template and creation defaults are configured in the app's administrator-owned
 configuration file. See [installation configuration](docs/configuration.md) and its minimal JSON

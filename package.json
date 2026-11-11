@@ -2,7 +2,7 @@
   "name": "web-app-office",
   "version": "0.1.0",
   "description": "Native OpenCloud home screens for Docs, Sheets and Slides.",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "private": true,
   "homepage": "https://github.com/phillip9933/opencloud-office-home",
   "type": "module",
