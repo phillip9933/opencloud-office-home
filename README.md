@@ -1,4 +1,4 @@
-# OpenCloud Office Apps
+# Office Home for OpenCloud
 
 Based on the official [OpenCloud app skeleton](https://github.com/opencloud-eu/web-app-skeleton), with upstream history and shared tooling preserved. See [upstream foundation](docs/upstream-skeleton.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
 

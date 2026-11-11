@@ -4,7 +4,7 @@
   "description": "Native OpenCloud home screens for Docs, Sheets and Slides.",
   "license": "UNLICENSED",
   "private": true,
-  "homepage": "https://github.com/phillip9933/Office_Launcher",
+  "homepage": "https://github.com/phillip9933/opencloud-office-home",
   "type": "module",
   "scripts": {
     "build": "pnpm vite build",
