@@ -33,6 +33,11 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
       - run: pnpm package:release
+        # Container and checkout owners differ; trust only this job's checkout for metadata reads.
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: ${{ github.workspace }}
       - run: pnpm test:e2e
   dependency-audit:
     runs-on: ubuntu-24.04

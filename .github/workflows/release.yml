@@ -27,6 +27,11 @@ jobs:
       - run: pnpm check
       - run: pnpm test:e2e
       - run: pnpm package:release
+        # Container and checkout owners differ; trust only this job's checkout for metadata reads.
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: safe.directory
+          GIT_CONFIG_VALUE_0: ${{ github.workspace }}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: beta-release

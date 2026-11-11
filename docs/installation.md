@@ -13,7 +13,7 @@ Verify and extract the download on Linux:
 
 ```sh
 sha256sum --check SHA256SUMS
-tar -xzf office-home-0.1.0-beta.1.tar.gz
+tar -xzf office-home-0.1.0-beta.2.tar.gz
 ```
 
 Use the filename for your downloaded version. The archive contains one `office-home/` directory.
