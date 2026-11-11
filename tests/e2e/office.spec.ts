@@ -497,6 +497,8 @@ test('administrator saves template policy and backend format restrictions across
     name: 'Choose default template folder',
     exact: true
   })
+  // Reproduce the host's global dialog reset, absent from the standalone preview.
+  await page.addStyleTag({ content: 'dialog { margin: 0; }' })
   await defaultFolder.click()
   const picker = page.getByRole('dialog', {
     name: 'Choose installation template folder',
@@ -504,6 +506,9 @@ test('administrator saves template policy and backend format restrictions across
   })
   await expect(picker).toBeVisible()
   await expect(picker.getByRole('button', { name: 'Use this folder', exact: true })).toBeEnabled()
+  const box = await picker.boundingBox()
+  expect(box!.x).toBeGreaterThan(0)
+  expect(Math.abs(box!.x * 2 + box!.width - page.viewportSize()!.width)).toBeLessThan(2)
   await picker.screenshot({ path: test.info().outputPath('folder-desktop.png') })
   await page.keyboard.press('Escape')
   await expect(picker).toHaveCount(0)

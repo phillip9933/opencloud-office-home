@@ -1,5 +1,8 @@
 /* Standard file-dialog structure; permissions and metadata stay in the catalog port. */
 .office-folder-dialog[open] {
+  /* The host resets dialog margins; explicitly center the top-layer modal. */
+  margin: auto;
+  inset: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(58rem, calc(100vw - 2rem));
