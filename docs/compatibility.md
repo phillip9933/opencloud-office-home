@@ -12,7 +12,7 @@ permissions and configured editor. No additional backend or container is require
 | Pinned OpenCloud SDK packages | 8.2.1                   |
 | Development tooling           | Node >=24, pnpm 11.27.0 |
 
-On 2026-11-18, beta 3 was tested on an existing OpenCloud installation after a Collabora upgrade.
+On 2026-11-18, beta 3 was tested on an existing OpenCloud installation after upgrading Office Home.
 In a test folder, seven files were created, edited, saved and reopened. The edits were still
 present after reopening.
 
@@ -32,6 +32,13 @@ and PPTX, template copies, automatic editor opening, and a basic ODT save and re
 The OpenCloud SDK dependencies in this repository remain pinned to 8.2.1. The installed host
 supplies the shared runtime packages.
 
+## Fresh installation
+
+On a fresh OpenCloud 9.2.0 Linux AMD64 installation, the ZIP was installed as the only custom app.
+After sign-in, Docs, including All files, Sheets, Slides and Draw opened successfully. This check
+used a synthetic account and an installation without an editor integration. Creation and editing
+were verified separately on the existing installation described above.
+
 ## Current limitations
 
 - Template containers (`.ott`, `.ots`, `.otp`) cannot yet be converted into new documents.
@@ -42,7 +49,7 @@ supplies the shared runtime packages.
   search results in pages of 25. Use search in OpenCloud Files if a file is missing.
 - Received-share aliases are not supported in Office discovery; use OpenCloud Files for those items.
 - The template gallery reads one folder level, with up to 20 categories and 200 templates.
-- Fresh installation, other editor integrations, complex document formatting and concurrent
+- Other editor integrations, complex document formatting and concurrent
   collaboration still need verification.
 - Draw uses editable OpenDocument drawings (`.odg`). Creation requires a provider that enables ODG
   creation in OpenCloud.
