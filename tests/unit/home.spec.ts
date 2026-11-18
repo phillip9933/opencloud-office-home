@@ -22,6 +22,22 @@ beforeEach(() => {
 })
 
 describe('home workflow', () => {
+  it('cancels an unfinished template gallery when leaving the page', async () => {
+    const started = deferred<AbortSignal>()
+    const pending = deferred<Awaited<ReturnType<OfficeServices['templates']>>>()
+    vi.spyOn(services, 'templates').mockImplementation((_kind, _folder, signal) => {
+      started.resolve(signal!)
+      return pending.promise
+    })
+    const home = createHomeModel(services, 'docs')
+    const load = home.load(defaultLocation('docs'))
+    const signal = await started.promise
+    home.deactivate()
+    expect(signal.aborted).toBe(true)
+    pending.resolve(fail('cancelled'))
+    await load
+    expect(home.state.templateError).toBe('')
+  })
   it('refuses an unavailable selected space without falling back to personal files', async () => {
     const home = createHomeModel(services, 'docs')
     await home.load({ ...defaultLocation('docs'), spaceId: 'revoked-space' })

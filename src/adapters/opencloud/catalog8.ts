@@ -11,6 +11,7 @@ import {
   ok,
   refKey,
   RECENT_CHANGE_DAYS,
+  FOLDER_ROW_LIMIT,
   type AppError,
   type FileCatalog,
   type FileRecord,
@@ -319,7 +320,11 @@ export function createCatalog8(
         const page = await port.webdav.listFiles(
           space,
           query.folder.itemId === space.root?.id ? { path: '/' } : { fileId: query.folder.itemId },
-          { depth: 1, signal: query.signal, extraProps: ['d:creationdate'] }
+          {
+            depth: 1,
+            signal: AbortSignal.any([query.signal, lifetime.signal]),
+            extraProps: ['d:creationdate']
+          }
         )
         const stopped = interrupted(key, query.signal)
         if (stopped) return fail(stopped)
@@ -327,11 +332,12 @@ export function createCatalog8(
         if (
           !folder.ok ||
           folder.value.kind !== 'folder' ||
+          !folder.value.access.read ||
           refKey(folder.value.ref) !== refKey(query.folder)
         )
           return fail('forbiddenOrMissing')
         const items = new Map<string, FileRecord>()
-        for (const resource of page.children ?? []) {
+        for (const resource of page.children?.slice(0, FOLDER_ROW_LIMIT) ?? []) {
           const item = normalize(space.id, resource)
           if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
             items.set(refKey(item.value.ref), item.value)

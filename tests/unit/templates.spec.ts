@@ -135,7 +135,19 @@ it('reports category and result caps instead of silently presenting a complete g
   const result = await folderTemplates(source, root, 'docs', new AbortController().signal)
   expect(result.ok && result.value.partial).toBe(true)
   expect(result.ok && result.value.items).toHaveLength(200)
-  expect(source.list).toHaveBeenCalledTimes(21)
+  expect(source.list).toHaveBeenCalledTimes(1)
+
+  const categoriesOnly = catalog(
+    Object.fromEntries([
+      [refKey(root), categories],
+      ...categories.map((folder) => [refKey(folder.ref), []])
+    ])
+  )
+  expect(await folderTemplates(categoriesOnly, root, 'docs', signal)).toMatchObject({
+    ok: true,
+    value: { items: [], partial: true }
+  })
+  expect(categoriesOnly.list).toHaveBeenCalledTimes(21)
 })
 it('keeps healthy template categories and reports an unreadable category as partial', async () => {
   const broken = item('broken', 'Broken', undefined, 'folder')

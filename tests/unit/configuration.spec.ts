@@ -31,7 +31,7 @@ describe('static installation configuration', () => {
     const context = createOfficeContext(services)
     context.preferences.templateFolder = { spaceId: 'personal', itemId: 'override' }
     await context.model('docs').load({ kind: 'docs', spaceId: '', folder: null, scroll: 0 })
-    expect(templates).toHaveBeenCalledWith('docs', undefined)
+    expect(templates).toHaveBeenCalledWith('docs', undefined, expect.any(AbortSignal))
     context.dispose()
   })
   it('keeps creation restrictions within built-in families and the backend allow-list', async () => {

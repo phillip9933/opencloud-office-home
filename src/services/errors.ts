@@ -4,6 +4,7 @@ export const errorText: Record<AppError, string> = {
   unauthenticated: 'Sign in again through OpenCloud.',
   forbiddenOrMissing: 'This item is unavailable or you no longer have access.',
   spaceUnavailable: 'This space could not be verified. Retry loading or choose another folder.',
+  folderTooLarge: 'This folder is too large to list in Office. Open it in OpenCloud Files.',
   unsupportedType: 'This format is not supported by the configured editor.',
   editorUnavailable:
     'The OpenCloud integration has not been verified. File actions are unavailable.',

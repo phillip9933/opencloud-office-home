@@ -360,10 +360,10 @@ export function fixtureServices(
       },
       now
     ),
-    templates(kind, folder) {
+    templates(kind, folder, signal = new AbortController().signal) {
       // The template folder is a separate source, so it does not share the browse catalog object.
       const source = { ...services.catalog, list: listChildren }
-      return folderTemplates(source, folder ?? templatesRoot, kind, new AbortController().signal)
+      return folderTemplates(source, folder ?? templatesRoot, kind, signal)
     },
     filters: { favorites: true, tags: true },
     viewPreferences: createViewPreferenceStore(

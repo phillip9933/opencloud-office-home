@@ -118,7 +118,7 @@ export function createHomeModel(
         )
       : []
     const templates = spaces.ok
-      ? await attempt(() => services.templates(kind, templateFolder()))
+      ? await attempt(() => services.templates(kind, templateFolder(), signal))
       : fail(spaces.error)
     if (!current()) return
     state.templates = templates.ok ? templates.value.items.filter((t) => t.kind === kind) : []

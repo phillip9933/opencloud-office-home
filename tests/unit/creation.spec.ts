@@ -32,6 +32,28 @@ async function setup() {
   }
 }
 describe('inline creation', () => {
+  it('blocks creation when the remembered folder no longer permits writing', async () => {
+    const test = await setup()
+    const folder = { spaceId: 'fixture-personal', itemId: 'reports' }
+    test.model.state.location.folder = { ...folder }
+    test.model.state.destinationWritable = true
+    await test.wrapper.setProps({ preferredFolder: folder })
+    vi.spyOn(test.services.catalog, 'resolve').mockResolvedValue(
+      ok({
+        ref: folder,
+        name: 'Reports',
+        kind: 'folder',
+        access: { read: true, write: false, createChild: false }
+      })
+    )
+    const blank = vi.spyOn(test.services.creation, 'blank')
+    await test.wrapper.vm.open(undefined, test.opener)
+    expect(test.wrapper.text()).toContain('Reports')
+    expect(test.wrapper.get('button[type=submit]').attributes('disabled')).toBeDefined()
+    await test.wrapper.get('form').trigger('submit')
+    expect(blank).not.toHaveBeenCalled()
+    test.close()
+  })
   it('creates nothing on open or cancel, hides a single format choice, and returns focus', async () => {
     const test = await setup()
     const blank = vi.spyOn(test.services.creation, 'blank')

@@ -347,7 +347,6 @@ test('remembers the save folder across reloads and compacts the band after a few
   await page.goto('/#/office/sheets')
   const dialog = page.getByRole('region', { name: 'New spreadsheet', exact: true })
   for (const name of ['Plan A', 'Plan B', 'Plan C']) {
-    if (name !== 'Plan A') await page.reload()
     await page.getByRole('button', file('Blank spreadsheet')).click()
     if (name === 'Plan A') {
       await dialog.getByRole('button', { name: 'Choose another folder' }).click()

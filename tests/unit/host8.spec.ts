@@ -3,6 +3,8 @@ import { expect, it, vi } from 'vitest'
 
 const hostPolicy = vi.hoisted(() => ({ favorites: true }))
 vi.mock('@opencloud-eu/web-pkg', () => ({
+  useExtensionRegistry: () => ({}),
+  markVaultStatus: vi.fn(),
   useAbility: () => ({
     can: (action: string, subject: string) =>
       action === 'read' && subject === 'Favorite' && hostPolicy.favorites

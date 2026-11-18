@@ -240,10 +240,11 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       blank: (input) => create(input),
       fromTemplate: (input) => create(input, input.template.source)
     },
-    templates(kind, selectedFolder) {
+    templates(kind, selectedFolder, signal) {
       const folder = selectedFolder ?? configuration.templateFolder
       if (!folder) return Promise.resolve(ok({ items: [], partial: false }))
-      return folderTemplates(catalog, folder, kind, abort.signal)
+      const lifetime = signal ? AbortSignal.any([signal, abort.signal]) : abort.signal
+      return folderTemplates(catalog, folder, kind, lifetime)
     },
     editor: {
       async open(input) {

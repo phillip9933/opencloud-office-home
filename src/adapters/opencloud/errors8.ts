@@ -8,7 +8,10 @@ export class HttpStatusError extends Error {
   }
 }
 
+export class FolderListingLimitError extends Error {}
+
 export function catalogError(error: unknown): AppError {
+  if (error instanceof FolderListingLimitError) return 'folderTooLarge'
   const details = sdkRecord(error)
   if (details?.name === 'AbortError' || details?.code === 'ERR_CANCELED') return 'cancelled'
   const status = sdkRecord(details?.response)?.status ?? details?.statusCode ?? details?.status
@@ -16,7 +19,13 @@ export function catalogError(error: unknown): AppError {
   if (status === 403 || status === 404) return 'forbiddenOrMissing'
   if (status === 409 || status === 412) return 'conflict'
   if (status === 507) return 'quotaExceeded'
-  if (status === 408 || status === 504 || details?.code === 'ECONNABORTED') return 'timeout'
+  if (
+    status === 408 ||
+    status === 504 ||
+    details?.code === 'ECONNABORTED' ||
+    details?.name === 'TimeoutError'
+  )
+    return 'timeout'
   if (details?.code === 'ERR_NETWORK') return 'network'
   return 'unknown'
 }

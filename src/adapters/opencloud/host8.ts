@@ -1,6 +1,8 @@
 import { shallowRef, ref, watch, onScopeDispose } from 'vue'
 import {
   useAppProviderService,
+  useExtensionRegistry,
+  markVaultStatus,
   useAbility,
   useAuthStore,
   useCapabilityStore,
@@ -14,6 +16,7 @@ import {
   useRouter
 } from '@opencloud-eu/web-pkg'
 import { createOfficeContext, type OfficeContext } from '../../app/context'
+import { boundedFolderList8 } from './folderDav8'
 import { createNativeServices8 } from './native8'
 import { openNativeEditor8 } from './editorRoute8'
 import { parseConfiguration } from '../../configuration'
@@ -22,6 +25,7 @@ import { parseConfiguration } from '../../configuration'
 export function useNativeOffice8(applicationConfig: unknown) {
   const client = useClientService()
   const ability = useAbility()
+  const extensions = useExtensionRegistry()
   const config = useConfigStore()
   const auth = useAuthStore()
   const user = useUserStore()
@@ -71,12 +75,20 @@ export function useNativeOffice8(applicationConfig: unknown) {
       } catch {
         /* Host/browser policy can require memory-only choices. */
       }
+      const listFolder = boundedFolderList8(config.serverUrl, () => client.getRequestHeaders())
       const native = createNativeServices8(
         {
           drives: client.graphAuthenticated.drives,
           tags: client.graphAuthenticated.tags,
           activities: client.graphAuthenticated.activities,
-          webdav: client.webdav,
+          webdav: {
+            ...client.webdav,
+            async listFiles(space, target, options) {
+              const page = await listFolder(space, target, options)
+              markVaultStatus(extensions, space, [page.resource, ...(page.children ?? [])])
+              return page
+            }
+          },
           appProviders: providers,
           capabilities,
           requestNew: (url) => client.httpAuthenticated.post(url),

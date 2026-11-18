@@ -203,7 +203,7 @@ describe('8.x SDK catalog candidate', () => {
     expect(test.port.webdav.listFiles).toHaveBeenCalledWith(
       test.personal,
       { path: '/' },
-      { depth: 1, signal: test.query.signal, extraProps: ['d:creationdate'] }
+      { depth: 1, signal: expect.any(AbortSignal), extraProps: ['d:creationdate'] }
     )
   })
   it('discards in-flight metadata after account change and clears previously discovered roots', async () => {

@@ -11,6 +11,7 @@ export type AppError =
   | 'unauthenticated'
   | 'forbiddenOrMissing'
   | 'spaceUnavailable'
+  | 'folderTooLarge'
   | 'unsupportedType'
   | 'editorUnavailable'
   | 'providerNotConfigured'
@@ -64,6 +65,7 @@ export interface Page<T> {
   items: T[]
   partial: boolean
 }
+export const FOLDER_ROW_LIMIT = 512
 export interface CatalogQuery {
   folder: FileRef
   // 'any' lists every child, for template folders that hold companion preview images.
@@ -171,7 +173,11 @@ export interface OfficeServices {
   capabilities: OfficeCapabilities
   editor: EditorGateway
   recents: RecentStore
-  templates(kind: OfficeKind, folder?: FileRef): Promise<Result<Page<Template>>>
+  templates(
+    kind: OfficeKind,
+    folder?: FileRef,
+    signal?: AbortSignal
+  ): Promise<Result<Page<Template>>>
   preview(ref: FileRef, signal: AbortSignal): Promise<Result<Preview>>
   // Host feature availability decides which filters are offered.
   filters: { favorites: boolean; tags: boolean }

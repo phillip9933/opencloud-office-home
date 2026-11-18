@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 import FolderPicker from './FolderPicker.vue'
-import type { FileRecord, FileRef, OfficeServices, Template } from '../contracts/office'
+import {
+  refKey,
+  type FileRecord,
+  type FileRef,
+  type OfficeServices,
+  type Template
+} from '../contracts/office'
+import { attempt } from '../services/errors'
 import type { HomeModel } from '../services/home'
 const props = defineProps<{
   noun: string
@@ -9,6 +16,7 @@ const props = defineProps<{
   services: OfficeServices
   destination: string
   preferred?: string
+  preferredFolder?: FileRef
 }>()
 const emit = defineEmits<{ created: [extension: string, folder: FileRef] }>()
 const visible = ref(false)
@@ -21,7 +29,14 @@ const extension = ref('')
 const target = ref<FileRef>()
 const targetLabel = ref('')
 const targetWritable = ref(false)
+const checkingFolder = ref(false)
 let opener: HTMLElement | undefined
+let lookup: AbortController | undefined
+let mounted = true
+onBeforeUnmount(() => {
+  mounted = false
+  lookup?.abort()
+})
 const state = computed(() => props.model.state)
 const canCreate = computed(
   () =>
@@ -35,6 +50,7 @@ const canCreate = computed(
     !!name.value.trim()
 )
 async function open(choice: Template | undefined, from: HTMLElement) {
+  lookup?.abort()
   opener = from
   template.value = choice
   name.value = choice?.name ?? `Untitled ${props.noun}`
@@ -46,6 +62,15 @@ async function open(choice: Template | undefined, from: HTMLElement) {
   target.value = state.value.location.folder ? { ...state.value.location.folder } : undefined
   targetLabel.value = props.destination
   targetWritable.value = state.value.destinationWritable
+  const remembered = props.preferredFolder
+  const verify = remembered ? new AbortController() : undefined
+  lookup = verify
+  checkingFolder.value = !!remembered
+  if (remembered) {
+    if (!target.value || refKey(remembered) !== refKey(target.value)) targetLabel.value = ''
+    target.value = { ...remembered }
+    targetWritable.value = false
+  }
   choosingFolder.value = false
   state.value.notice = ''
   state.value.created = null
@@ -53,6 +78,24 @@ async function open(choice: Template | undefined, from: HTMLElement) {
   await nextTick()
   heading.value?.scrollIntoView({ block: 'nearest' })
   nameInput.value?.select()
+  if (!verify || !remembered || verify.signal.aborted) return
+  const result = await attempt(() => props.services.catalog.resolve(remembered, verify.signal))
+  if (verify.signal.aborted) return
+  checkingFolder.value = false
+  if (
+    !result.ok ||
+    result.value.kind !== 'folder' ||
+    refKey(result.value.ref) !== refKey(remembered)
+  )
+    return
+  const space = state.value.spaces.find((entry) => entry.id === remembered.spaceId)
+  targetLabel.value = [
+    space?.name,
+    space?.root.itemId === remembered.itemId ? undefined : result.value.name
+  ]
+    .filter(Boolean)
+    .join(' / ')
+  targetWritable.value = result.value.access.createChild
 }
 function escape() {
   if (choosingFolder.value) {
@@ -62,12 +105,15 @@ function escape() {
 }
 function close() {
   if (state.value.mutation) return
+  lookup?.abort()
   visible.value = false
   state.value.notice = ''
   choosingFolder.value = false
   opener?.focus()
 }
 function choose(folder: FileRecord, label: string) {
+  lookup?.abort()
+  checkingFolder.value = false
   target.value = { ...folder.ref }
   targetLabel.value = label
   targetWritable.value = folder.access.createChild
@@ -78,6 +124,7 @@ async function submit() {
   if (!canCreate.value || !target.value) return
   const destination = { ...target.value }
   await props.model.create(name.value, extension.value, template.value, destination)
+  if (!mounted) return
   if (state.value.created) {
     emit('created', extension.value, destination)
     visible.value = false
@@ -120,7 +167,10 @@ defineExpose({ open, isOpen: computed(() => visible.value) })
       </div>
       <div class="office-save-location">
         <span
-          >Save in <strong>{{ targetLabel || 'Choose a folder' }}</strong></span
+          >Save in
+          <strong>{{
+            targetLabel || (checkingFolder ? 'Checking folder…' : 'Choose a folder')
+          }}</strong></span
         >
         <button
           type="button"
@@ -140,7 +190,10 @@ defineExpose({ open, isOpen: computed(() => visible.value) })
         @choose="choose"
         @cancel="choosingFolder = false"
       />
-      <p v-if="!targetWritable && !state.loading && !choosingFolder" class="office-muted">
+      <p
+        v-if="!targetWritable && !checkingFolder && !state.loading && !choosingFolder"
+        class="office-muted"
+      >
         The save location could not be verified as writable. Choose another folder or reload the
         page.
       </p>

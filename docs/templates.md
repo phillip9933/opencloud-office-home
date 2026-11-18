@@ -24,7 +24,7 @@ Supported editable templates are `.odt`, `.docx`, `.ods`, `.xlsx`, `.odp`, `.ppt
 Template containers (`.ott`, `.ots`, `.otp`) cannot yet be converted; save them as ordinary
 editable documents before adding them.
 
-The gallery reads the root and one level of subfolders, up to 20 categories and 200 templates.
+The gallery reads the root and one level of subfolders, up to 20 categories and 200 templates. Each folder listing reads up to 512 entries and accepts a response of up to 2 MiB. Use smaller folders if Office reports that a folder is too large.
 Deeper folders and files the user cannot read are omitted.
 
 Cards use a server preview when available. A same-name PNG, JPEG or WebP image beside the

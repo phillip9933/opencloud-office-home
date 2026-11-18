@@ -168,13 +168,14 @@ onBeforeUnmount(() => {
           </button>
         </p>
         <CreatePanel
-          :key="kind"
+          :key="route.fullPath"
           ref="createPanel"
           :noun="nouns[kind]"
           :model="model"
           :services="context.services"
           :destination="destination"
           :preferred="context.preferences.lastFormat[kind]"
+          :preferred-folder="context.preferences.lastFolder[kind]"
           @created="remember"
         />
         <div class="office-toast-region" role="status">

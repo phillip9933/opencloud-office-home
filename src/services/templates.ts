@@ -1,6 +1,7 @@
 import { resultFormat } from '../app/registry'
 import {
   fail,
+  FOLDER_ROW_LIMIT,
   ok,
   refKey,
   type FileCatalog,
@@ -64,14 +65,33 @@ export async function folderTemplates(
   if (signal.aborted) return fail('cancelled')
   const root = await catalog.list({ folder, kind: 'any', signal })
   if (!root.ok) return root
-  let partial = root.value.partial
-  const templates = templatesIn(root.value.items, kind, GENERAL_CATEGORY)
-  const categories = root.value.items
+  const rootItems = root.value.items.slice(0, FOLDER_ROW_LIMIT)
+  let partial = root.value.partial || root.value.items.length > rootItems.length
+  const templates: Template[] = []
+
+  function append(items: FileRecord[], category: string) {
+    const candidates = templatesIn(items.slice(0, FOLDER_ROW_LIMIT), kind, category)
+    candidates.sort((a, b) => a.name.localeCompare(b.name))
+    const remaining = MAX_TEMPLATES - templates.length
+    partial ||= items.length > FOLDER_ROW_LIMIT || candidates.length > remaining
+    templates.push(...candidates.slice(0, remaining))
+  }
+
+  append(rootItems, GENERAL_CATEGORY)
+  const categories = rootItems
     .filter((item) => item.kind === 'folder' && item.access.read)
-    .sort((a, b) => a.name.localeCompare(b.name))
+    .sort(
+      (a, b) =>
+        Number(b.name === GENERAL_CATEGORY) - Number(a.name === GENERAL_CATEGORY) ||
+        a.name.localeCompare(b.name)
+    )
   partial ||= categories.length > MAX_CATEGORIES
   for (const category of categories.slice(0, MAX_CATEGORIES)) {
     if (signal.aborted) return fail('cancelled')
+    if (templates.length === MAX_TEMPLATES) {
+      partial = true
+      break
+    }
     const listed = await catalog.list({ folder: category.ref, kind: 'any', signal })
     if (!listed.ok) {
       if (listed.error === 'unauthenticated' || listed.error === 'cancelled')
@@ -80,18 +100,16 @@ export async function folderTemplates(
       continue
     }
     partial ||= listed.value.partial
-    templates.push(...templatesIn(listed.value.items, kind, category.name))
+    append(listed.value.items, category.name)
   }
   if (signal.aborted) return fail('cancelled')
   return ok({
-    partial: partial || templates.length > MAX_TEMPLATES,
-    items: templates
-      .sort(
-        (a, b) =>
-          Number(b.category === GENERAL_CATEGORY) - Number(a.category === GENERAL_CATEGORY) ||
-          a.category.localeCompare(b.category) ||
-          a.name.localeCompare(b.name)
-      )
-      .slice(0, MAX_TEMPLATES)
+    partial,
+    items: templates.sort(
+      (a, b) =>
+        Number(b.category === GENERAL_CATEGORY) - Number(a.category === GENERAL_CATEGORY) ||
+        a.category.localeCompare(b.category) ||
+        a.name.localeCompare(b.name)
+    )
   })
 }
