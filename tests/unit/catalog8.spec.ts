@@ -300,6 +300,53 @@ describe('8.x SDK catalog candidate', () => {
       { searchLimit: 200, signal: test.query.signal }
     )
   })
+  it('looks up recent drawings by exact ODG MIME type', async () => {
+    const test = setup()
+    test.port.webdav.search.mockResolvedValue({ resources: [], totalResults: 0 })
+    await test.catalog.listSpaces(test.query.signal)
+    expect(await test.catalog.recentlyChanged('draw', test.query.signal, noFilter)).toEqual({
+      ok: true,
+      value: { items: [], partial: false }
+    })
+    expect(test.port.webdav.search).toHaveBeenCalledWith(
+      'mtime:"last 30 days" AND mediatype:("application/vnd.oasis.opendocument.graphics")',
+      { searchLimit: 200, signal: test.query.signal }
+    )
+  })
+  it('discovers older indexed family files and files without a change date', async () => {
+    const test = setup()
+    const hit = (id: string, overrides: Partial<Resource>) => ({
+      ...file(id),
+      storageId: test.personal.id,
+      highlights: '',
+      ...overrides
+    })
+    test.port.webdav.search.mockImplementation((query) => {
+      const resources = query.includes('mtime:')
+        ? []
+        : [
+            hit('older', { name: 'Archive.docx', mimeType: undefined, mdate: '2018-11-10' }),
+            hit('undated', { name: 'Undated.odt' }),
+            hit('other-family', { name: 'Budget.xlsx', mimeType: undefined })
+          ]
+      return Promise.resolve({ resources, totalResults: resources.length })
+    })
+    await test.catalog.listSpaces(test.query.signal)
+    const result = await test.catalog.allFiles('docs', test.query.signal, noFilter)
+    expect(result.ok && result.value.items.map((item) => item.name)).toEqual([
+      'Archive.docx',
+      'Undated.odt'
+    ])
+    expect(result.ok && result.value.partial).toBe(false)
+    expect(test.port.webdav.search).toHaveBeenCalledWith(
+      'mediatype:("application/vnd.oasis.opendocument.text" OR "application/vnd.openxmlformats-officedocument.wordprocessingml.document" OR "application/vnd.oasis.opendocument.text-template")',
+      { searchLimit: 200, signal: test.query.signal }
+    )
+    expect(await test.catalog.recentlyChanged('docs', test.query.signal, noFilter)).toEqual({
+      ok: true,
+      value: { items: [], partial: false }
+    })
+  })
   it('narrows recent changes by favorites and tags, and keeps unsafe tag text out of the query', async () => {
     const test = setup()
     await test.catalog.listSpaces(test.query.signal)

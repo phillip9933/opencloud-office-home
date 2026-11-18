@@ -63,18 +63,27 @@
   margin-top: 1.5rem;
 }
 .office-column-choices {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 0.25rem 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
-.office-column-order {
-  padding-inline-start: 1.5rem;
+.office-column-choices li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-block: 0.15rem;
+  min-height: 2.25rem;
 }
-.office-column-order li {
-  padding-block: 0.2rem;
+.office-column-moves {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
 }
-.office-column-order button {
-  margin-inline-start: 0.35rem;
+.office .office-column-moves button {
+  min-width: 2rem;
+  min-height: 2rem;
+  padding: 0;
 }
 .office .office-settings-button {
   border-radius: 0.45rem;
@@ -138,9 +147,6 @@
   width: min(24rem, calc(100vw - 2rem));
   max-height: min(32rem, 70vh);
   text-align: start;
-}
-.office-column-menu .office-column-order {
-  margin-bottom: 0;
 }
 .office-file-toolbar {
   justify-content: flex-end;

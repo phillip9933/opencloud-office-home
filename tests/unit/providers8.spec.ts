@@ -7,7 +7,7 @@ import {
 } from '../../src/adapters/opencloud/providers8'
 import { createHomeModel, defaultLocation } from '../../src/services/home'
 import { fixtureServices } from '../../src/fixtures/services'
-import type { OfficeKind } from '../../src/contracts/office'
+import { officeKinds, type OfficeKind } from '../../src/contracts/files'
 
 // Captured unauthenticated from an OpenCloud 9.0.0 server running Web 8.2.1 on 2026-11-11.
 // `/app/list` is a public, user-independent endpoint there; it advertised no providers.
@@ -52,7 +52,7 @@ const formats = (p: ProviderPort8, kind: OfficeKind) =>
   createProviderCapabilities8(p).creationFormats(kind)
 
 describe('8.x provider capability candidate', () => {
-  it.each<OfficeKind>(['docs', 'sheets', 'slides'])(
+  it.each(officeKinds)(
     'reports the captured empty registry as not configured for %s',
     async (kind) => {
       expect(await formats(port(liveRegistry), kind)).toEqual({
@@ -90,6 +90,24 @@ describe('8.x provider capability candidate', () => {
     const home = createHomeModel(services, 'docs')
     await home.load(defaultLocation('docs'))
     expect(home.state.formatError).toContain('not supported by the configured editor')
+  })
+  it('requires both provider support and installation permission to create a drawing', async () => {
+    const odg = {
+      ...odt,
+      mime_type: 'application/vnd.oasis.opendocument.graphics',
+      ext: 'odg'
+    }
+    const p = port([ods, { ...odg, allow_creation: false }])
+    expect(await formats(p, 'draw')).toEqual({ ok: true, value: [] })
+    p.appProviders.mimeTypes = [ods, odg]
+    expect(await formats(p, 'draw')).toEqual({
+      ok: true,
+      value: [{ extension: 'odg', mimeType: odg.mime_type }]
+    })
+    expect(await createProviderCapabilities8(p, { draw: [] }).creationFormats('draw')).toEqual({
+      ok: true,
+      value: []
+    })
   })
   it.each([
     ['disabled', [{ ...liveCapability, enabled: false }]],

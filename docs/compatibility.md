@@ -25,10 +25,14 @@ edit/save/close/reopen round trip passed.
   Use ordinary editable documents as templates.
 - Recently opened history and personal preferences are stored in the current browser.
   Cross-device opened history is not supported.
+- All files lists indexed files in supported formats without a date limit. It shows up to 200
+  search results in pages of 25. Use search in OpenCloud Files if a file is missing.
 - Received-share aliases are not supported in Office discovery; use OpenCloud Files for those items.
 - The template gallery reads one folder level, with up to 20 categories and 200 templates.
 - Spreadsheet/presentation save fidelity, other editor integrations and concurrent collaboration
   have not been fully verified.
+- Draw uses editable OpenDocument drawings (`.odg`). Creation requires a provider that enables ODG
+  creation in OpenCloud. Draw creation, editing and saving still need verification on a live host.
 - Complete discovery/pagination, account switching and permission changes still need broader
   live testing. Screen-reader and host-theme accessibility also need manual verification.
 - [Dependency advisories and peer-version mismatches](dependency-status.md) remain unresolved.

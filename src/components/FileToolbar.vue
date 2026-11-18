@@ -3,7 +3,7 @@ import { OcIcon } from '@opencloud-eu/design-system/components'
 import TagFilter from './TagFilter.vue'
 import ColumnMenu from './ColumnMenu.vue'
 import type { OfficeContext } from '../app/context'
-const props = defineProps<{ context: OfficeContext }>()
+const props = defineProps<{ context: OfficeContext; allFiles?: boolean }>()
 const preferences = props.context.preferences
 const filter = props.context.recentFilter
 </script>
@@ -28,7 +28,7 @@ const filter = props.context.recentFilter
     />
     <label class="office-visually-hidden" for="office-sort">Sort by</label>
     <select id="office-sort" v-model="preferences.sort">
-      <option value="activity">Most recent</option>
+      <option value="activity">{{ allFiles ? 'Last modified' : 'Most recent' }}</option>
       <option value="name">Name</option>
     </select>
     <div class="office-segmented" role="group" aria-label="Layout">
@@ -51,6 +51,6 @@ const filter = props.context.recentFilter
         <OcIcon name="gallery-view-2" fill-type="none" class="office-icon" />
       </button>
     </div>
-    <ColumnMenu :context="context" />
+    <ColumnMenu :context="context" :all-files="allFiles" />
   </div>
 </template>

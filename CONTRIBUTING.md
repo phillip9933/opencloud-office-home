@@ -45,7 +45,8 @@ The pnpm directory must contain `bin/pnpm.mjs`. For browser tests, also set
 the isolated runner has no network access.
 
 `pnpm build` produces the native app in `dist/`. `pnpm package:release` packages that build
-with licenses and checksums in `release/`. See [compatibility](docs/compatibility.md) and
+as a ZIP with licenses and a checksum in `release/`. Packaging requires Python 3.
+See [compatibility](docs/compatibility.md) and
 [dependency status](docs/dependency-status.md) for outstanding limitations.
 
 Versions come from `package.json` and appear in the app manifest and sidebar. Beta tags use

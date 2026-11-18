@@ -5,7 +5,8 @@ import type { OfficeKind } from '../contracts/office'
 const accent: Record<OfficeKind, string> = {
   docs: '#2f6fb3',
   sheets: '#1f8a5b',
-  slides: '#c46a12'
+  slides: '#c46a12',
+  draw: '#8456a6'
 }
 
 function seed(name: string): number {
@@ -50,11 +51,16 @@ function slides(n: number, color: string) {
   return `<rect x="8" y="22" width="144" height="90" fill="#fff" stroke="#d5dde5"/>${band}`
 }
 
+function draw(_n: number, color: string) {
+  return `<rect x="16" y="12" width="128" height="104" fill="#fff" stroke="#d5dde5"/><path d="M80 39v15m0 20v13H49m31 0h31" fill="none" stroke="#9fb0c0" stroke-width="2"/><rect x="62" y="23" width="36" height="16" rx="2" fill="${color}"/><path d="M80 52l17 12-17 12-17-12z" fill="${color}"/><rect x="35" y="81" width="30" height="17" rx="2" fill="${color}"/><rect x="95" y="81" width="30" height="17" rx="2" fill="${color}"/>`
+}
+
+const previews = { docs, sheets, slides, draw }
+
 export function syntheticPreview(kind: OfficeKind, name: string): string {
   const n = seed(name)
   const color = accent[kind]
-  const body =
-    kind === 'docs' ? docs(n, color) : kind === 'sheets' ? sheets(n, color) : slides(n, color)
+  const body = previews[kind](n, color)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 128"><rect width="160" height="128" fill="#eef2f5"/>${body}</svg>`
   return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }

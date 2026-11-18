@@ -20,7 +20,7 @@ Templates/
     └── Resume.docx
 ```
 
-Supported editable templates are `.odt`, `.docx`, `.ods`, `.xlsx`, `.odp` and `.pptx`.
+Supported editable templates are `.odt`, `.docx`, `.ods`, `.xlsx`, `.odp`, `.pptx` and `.odg`.
 Template containers (`.ott`, `.ots`, `.otp`) cannot yet be converted; save them as ordinary
 editable documents before adding them.
 

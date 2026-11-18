@@ -8,6 +8,7 @@ import './styles/files.css'
 import './styles/forms.css'
 import './styles/folders.css'
 import { officeApps, officeRoute } from './app/registry'
+import { officeAppId, officeBasePath } from './app/identity'
 import { useNativeOffice8 } from './adapters/opencloud/host8'
 const OfficeHome = defineAsyncComponent(() => import('./views/OfficeHome.vue'))
 const OfficeSettings = defineAsyncComponent(() => import('./views/OfficeSettings.vue'))
@@ -22,29 +23,36 @@ export default defineWebApplication({
     const { context, status } = useNativeOffice8(applicationConfig)
     const router = useRouter()
     return {
-      appInfo: { id: 'office', name: 'Office Home', icon: 'file-text' },
+      appInfo: { id: officeAppId, name: 'Office Home', icon: 'file-text' },
       routes: [
-        { path: '/', redirect: '/office/docs' },
+        // OpenCloud 8.2 prefixes top-level paths and leaves absolute child paths intact.
         {
-          path: '/settings',
-          name: 'settings',
-          component: authenticatedPage(() =>
-            context.value
-              ? h(OfficeSettings, { key: context.value.id, context: context.value })
-              : h('p', { role: 'status' }, status.value)
-          ),
-          meta: { authContext: 'user', title: 'Office settings' }
-        },
-        ...officeApps.map((app) => ({
-          path: `/${app.id}`,
-          name: app.id,
-          component: authenticatedPage(() =>
-            context.value
-              ? h(OfficeHome, { key: context.value.id, kind: app.id, context: context.value })
-              : h('p', { role: 'status' }, status.value)
-          ),
-          meta: { authContext: 'user', title: app.label }
-        }))
+          path: '/',
+          redirect: { name: officeRoute('docs') },
+          children: [
+            { path: officeBasePath, redirect: { name: officeRoute('docs') } },
+            {
+              path: `${officeBasePath}/settings`,
+              name: 'settings',
+              component: authenticatedPage(() =>
+                context.value
+                  ? h(OfficeSettings, { key: context.value.id, context: context.value })
+                  : h('p', { role: 'status' }, status.value)
+              ),
+              meta: { authContext: 'user', title: 'Office settings' }
+            },
+            ...officeApps.map((app) => ({
+              path: `${officeBasePath}/${app.id}`,
+              name: app.id,
+              component: authenticatedPage(() =>
+                context.value
+                  ? h(OfficeHome, { key: context.value.id, kind: app.id, context: context.value })
+                  : h('p', { role: 'status' }, status.value)
+              ),
+              meta: { authContext: 'user' as const, title: app.label }
+            }))
+          ]
+        }
       ],
       extensions: computed<AppMenuItemExtension[]>(() => [
         {

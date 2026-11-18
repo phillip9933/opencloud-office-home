@@ -73,18 +73,19 @@ describe('static installation configuration', () => {
       parseConfiguration({
         templateFolder: { spaceId: 'space', itemId: 'folder' },
         allowPersonalTemplates: false,
-        creationFormats: { docs: [] }
+        creationFormats: { docs: [], draw: ['odg'] }
       })
     ).toEqual({
       templateFolder: { spaceId: 'space', itemId: 'folder' },
       allowPersonalTemplates: false,
-      creationFormats: { docs: [] }
+      creationFormats: { docs: [], draw: ['odg'] }
     })
     for (const value of [
       null,
       [],
       { allowPersonalTemplates: 'false' },
       { creationFormats: { sheets: ['odt'] } },
+      { creationFormats: { draw: ['svg'] } },
       { creationFormats: { docs: ['odt', 'odt'] } },
       { templateFolder: { spaceId: 'space', itemId: '../file' } },
       { settingsFile: { spaceId: 'space', itemId: 'old' } },

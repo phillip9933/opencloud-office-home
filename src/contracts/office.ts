@@ -50,7 +50,7 @@ export interface Activity {
   text: string
   at?: number
 }
-// Narrows Recent. Tags match when a file has any of them.
+// Narrows file lists. Tags match when a file has any of them.
 export interface RecentFilter {
   favorites: boolean
   tags: string[]
@@ -76,6 +76,12 @@ export interface FileCatalog {
   resolve(ref: FileRef, signal?: AbortSignal): Promise<Result<FileRecord>>
   // Family files changed within RECENT_CHANGE_DAYS across the user's spaces, newest first.
   recentlyChanged(
+    kind: OfficeKind,
+    signal: AbortSignal,
+    filter: RecentFilter
+  ): Promise<Result<Page<FileRecord>>>
+  // Indexed family files across the user's spaces, without an age restriction.
+  allFiles(
     kind: OfficeKind,
     signal: AbortSignal,
     filter: RecentFilter

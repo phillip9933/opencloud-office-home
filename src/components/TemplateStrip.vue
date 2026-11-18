@@ -99,22 +99,22 @@ function setBand(band: TemplateBand) {
             :disabled="!state.templates.length"
             @click="expanded = !expanded"
           >
-            Template gallery <span aria-hidden="true">{{ expanded ? '▴' : '▾' }}</span>
+            {{ expanded ? 'Close template gallery' : 'Show all templates' }}
           </button>
           <button
+            v-if="!expanded"
             type="button"
             class="office-quiet"
             :aria-expanded="!compact"
-            :aria-label="compact ? 'Expand new document section' : 'Collapse new document section'"
-            :title="compact ? 'Show template cards' : 'Show a single line'"
-            @click="setBand(compactBand(preferences) ? 'row' : 'compact')"
+            aria-controls="office-template-cards"
+            @click="setBand(compact ? 'row' : 'compact')"
           >
-            <span aria-hidden="true" class="office-mirror">{{ compact ? '▸' : '▾' }}</span>
+            {{ compact ? 'Show template cards' : 'Hide template cards' }}
           </button>
         </div>
       </div>
-      <div v-if="!compact" id="office-template-gallery">
-        <ul class="office-cards" :class="{ 'office-cards-row': !expanded }">
+      <div v-show="!compact" id="office-template-cards">
+        <ul v-if="!compact" class="office-cards" :class="{ 'office-cards-row': !expanded }">
           <li>
             <button
               type="button"
@@ -142,75 +142,77 @@ function setBand(band: TemplateBand) {
             </li>
           </template>
         </ul>
-        <template v-if="expanded">
-          <section class="office-gallery-group" aria-labelledby="pinned-heading">
-            <h3 id="pinned-heading">Pinned</h3>
-            <p v-if="!pinned.length" class="office-muted">
-              Pin templates below to keep them at the top. Drag pinned templates, or use the arrow
-              buttons, to change their order.
-            </p>
-            <ul v-else class="office-cards">
-              <li
-                v-for="(template, index) in pinned"
-                :key="template.id"
-                draggable="true"
-                :class="{ 'office-dragging': dragging === template.id }"
-                @dragstart="dragging = template.id"
-                @dragend="dragging = undefined"
-                @dragover.prevent
-                @drop.prevent="drop(template)"
-              >
-                <TemplateCard
-                  :template="template"
-                  :kind="kind"
-                  :services="context.services"
-                  :disabled="!creatable(template)"
-                  :pinned="true"
-                  @start="(opener) => emit('start', template, opener)"
-                  @pin="pin(template)"
-                />
-                <div class="office-reorder">
-                  <button
-                    type="button"
-                    :aria-label="`Move ${template.name} earlier`"
-                    :disabled="index === 0"
-                    @click="move(template, index - 1)"
-                  >
-                    <span aria-hidden="true" class="office-mirror">←</span>
-                  </button>
-                  <button
-                    type="button"
-                    :aria-label="`Move ${template.name} later`"
-                    :disabled="index === pinned.length - 1"
-                    @click="move(template, index + 1)"
-                  >
-                    <span aria-hidden="true" class="office-mirror">→</span>
-                  </button>
-                </div>
-              </li>
-            </ul>
-          </section>
-          <section
-            v-for="[category, templates] in categories"
-            :key="category"
-            class="office-gallery-group"
-          >
-            <h3>{{ category }}</h3>
-            <ul class="office-cards">
-              <li v-for="template in templates" :key="template.id">
-                <TemplateCard
-                  :template="template"
-                  :kind="kind"
-                  :services="context.services"
-                  :disabled="!creatable(template)"
-                  :pinned="isPinned(template)"
-                  @start="(opener) => emit('start', template, opener)"
-                  @pin="pin(template)"
-                />
-              </li>
-            </ul>
-          </section>
-        </template>
+        <div v-show="expanded" id="office-template-gallery">
+          <template v-if="expanded">
+            <section class="office-gallery-group" aria-labelledby="pinned-heading">
+              <h3 id="pinned-heading">Pinned</h3>
+              <p v-if="!pinned.length" class="office-muted">
+                Pin templates below to keep them at the top. Drag pinned templates, or use the arrow
+                buttons, to change their order.
+              </p>
+              <ul v-else class="office-cards">
+                <li
+                  v-for="(template, index) in pinned"
+                  :key="template.id"
+                  draggable="true"
+                  :class="{ 'office-dragging': dragging === template.id }"
+                  @dragstart="dragging = template.id"
+                  @dragend="dragging = undefined"
+                  @dragover.prevent
+                  @drop.prevent="drop(template)"
+                >
+                  <TemplateCard
+                    :template="template"
+                    :kind="kind"
+                    :services="context.services"
+                    :disabled="!creatable(template)"
+                    :pinned="true"
+                    @start="(opener) => emit('start', template, opener)"
+                    @pin="pin(template)"
+                  />
+                  <div class="office-reorder">
+                    <button
+                      type="button"
+                      :aria-label="`Move ${template.name} earlier`"
+                      :disabled="index === 0"
+                      @click="move(template, index - 1)"
+                    >
+                      <span aria-hidden="true" class="office-mirror">←</span>
+                    </button>
+                    <button
+                      type="button"
+                      :aria-label="`Move ${template.name} later`"
+                      :disabled="index === pinned.length - 1"
+                      @click="move(template, index + 1)"
+                    >
+                      <span aria-hidden="true" class="office-mirror">→</span>
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section
+              v-for="[category, templates] in categories"
+              :key="category"
+              class="office-gallery-group"
+            >
+              <h3>{{ category }}</h3>
+              <ul class="office-cards">
+                <li v-for="template in templates" :key="template.id">
+                  <TemplateCard
+                    :template="template"
+                    :kind="kind"
+                    :services="context.services"
+                    :disabled="!creatable(template)"
+                    :pinned="isPinned(template)"
+                    @start="(opener) => emit('start', template, opener)"
+                    @pin="pin(template)"
+                  />
+                </li>
+              </ul>
+            </section>
+          </template>
+        </div>
       </div>
       <p v-if="state.formatError" class="office-muted">New files: {{ state.formatError }}</p>
       <p v-if="state.templateNote" class="office-muted" role="status">{{ state.templateNote }}</p>

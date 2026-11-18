@@ -39,7 +39,7 @@ function destination(app: AppDescriptor) {
     </nav>
     <div class="office-sidebar-footer">
       <RouterLink
-        :to="{ name: 'office-settings' }"
+        :to="{ name: officeRoute('settings') }"
         class="office-quiet office-settings-button"
         :aria-current="kind === 'settings' ? 'page' : undefined"
       >

@@ -24,9 +24,13 @@ defineProps<{ kind: OfficeKind | 'folder' }>()
             d="M7.5 8h9v8.5h-9zm1.4 1.4v2h2.4v-2zm3.8 0v2h2.4v-2zm-3.8 3.4v2.3h2.4v-2.3zm3.8 0v2.3h2.4v-2.3z"
           />
         </template>
-        <template v-else>
+        <template v-else-if="kind === 'slides'">
           <path d="M7 8.5h10v7H7zm1.5 1.5v4h7v-4z" />
           <rect x="10" y="17" width="4" height="1.4" rx="0.7" />
+        </template>
+        <template v-else>
+          <circle cx="14.6" cy="9.1" r="2.3" />
+          <path d="M7 16.9l4-6.4 4 6.4z" />
         </template>
       </g>
     </template>

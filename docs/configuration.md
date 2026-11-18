@@ -18,11 +18,11 @@ A minimal app-local `config.json` is:
 
 The outer `disabled` flag belongs to OpenCloud's app loader. The inner `config` object is passed to Office Home. [config.example.json](config.example.json) is a copyable minimal example.
 
-| Key                      | Default | Behavior                                                                                                                                                               |
-| ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `templateFolder`         | Omitted | Optional canonical `{ "spaceId": "<space ID>", "itemId": "<folder ID>" }` for the installation template gallery. Users still need read access to its files.            |
-| `allowPersonalTemplates` | `true`  | Allow a user's personal template-folder preference. `false` ignores existing overrides and hides their selection controls.                                             |
-| `creationFormats`        | `{}`    | Optional `docs`, `sheets`, `slides` lists of built-in extensions. Omitted families retain backend-supported defaults; an empty list disables creation for that family. |
+| Key                      | Default | Behavior                                                                                                                                                                             |
+| ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `templateFolder`         | Omitted | Optional canonical `{ "spaceId": "<space ID>", "itemId": "<folder ID>" }` for the installation template gallery. Users still need read access to its files.                          |
+| `allowPersonalTemplates` | `true`  | Allow a user's personal template-folder preference. `false` ignores existing overrides and hides their selection controls.                                                           |
+| `creationFormats`        | `{}`    | Optional `docs`, `sheets`, `slides` and `draw` lists of built-in extensions. Omitted families use the formats offered by OpenCloud. An empty list disables creation for that family. |
 
 For example, `"creationFormats": { "docs": ["odt", "docx"] }` permits both supported document formats, while `"slides": []` hides presentation creation. Available formats always come from the installed backend integration; configuration can only narrow them. Templates and ordinary files retain their OpenCloud permissions.
 
@@ -35,6 +35,10 @@ After editing, restart or reload OpenCloud as required by your deployment, then 
 Unknown fields, invalid folder references, invalid flags, oversized configuration and formats outside the office family are rejected. Office displays a configuration error rather than silently ignoring a malformed installation setting. An absent configuration uses defaults and an empty installation gallery.
 
 Configure editors through OpenCloud itself. Office Home uses the host's registered editor actions.
+
+Draw supports `odg`. To permit drawing creation, the OpenCloud registry must list a provider for
+`application/vnd.oasis.opendocument.graphics` with `allow_creation: true`. The app's
+`creationFormats.draw` setting can restrict this capability.
 
 ## Microsoft creation formats
 

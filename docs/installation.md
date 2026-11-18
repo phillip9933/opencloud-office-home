@@ -5,7 +5,7 @@ Check the [tested versions and limitations](compatibility.md) before installing.
 
 ## Download
 
-Download `office-home-<version>.tar.gz` and `SHA256SUMS` from the project's
+Download `office-home-<version>.zip` and `SHA256SUMS` from the project's
 [GitHub Releases](https://github.com/phillip9933/opencloud-office-home/releases).
 No Node.js or build tools are needed on the OpenCloud server.
 
@@ -13,11 +13,12 @@ Verify and extract the download on Linux:
 
 ```sh
 sha256sum --check SHA256SUMS
-tar -xzf office-home-0.1.0-beta.2.tar.gz
+unzip office-home-0.1.0-beta.3.zip
 ```
 
-Use the filename for your downloaded version. The archive contains one `office-home/` directory.
-Download from the repository above over HTTPS; checksums verify file integrity, not publisher identity.
+Use the filename for your downloaded version. For beta.2, extract the `.tar.gz` file with
+`tar -xzf office-home-0.1.0-beta.2.tar.gz`. The archive contains one `office-home/` directory.
+Download from the repository above over HTTPS. Use the checksum to verify the file's integrity.
 
 ## Add to OpenCloud
 
@@ -37,6 +38,7 @@ Direct routes on the OpenCloud host are:
 - `/office/docs`
 - `/office/sheets`
 - `/office/slides`
+- `/office/draw`
 
 Friendly domains such as `sheets.example.com` can redirect to the corresponding route on the
 canonical OpenCloud host. Authentication stays on that host.
@@ -60,5 +62,5 @@ pnpm package:release
 ```
 
 `pnpm build` creates the native app in `dist/` as part of the checks. The packaging command
-writes the installable archive and checksums to `release/`. GitHub release downloads are built in CI
-from their version tag. The archive's `SOURCE.txt` identifies the exact source commit.
+uses Python 3 and writes the installable ZIP and checksum to `release/`. GitHub release downloads
+are built in CI from their version tag. The archive's `SOURCE.txt` identifies the source commit.

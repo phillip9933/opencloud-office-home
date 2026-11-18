@@ -25,8 +25,9 @@ export function defaultViewPreferences(): ViewPreferences {
     columns: [...defaultColumns],
     sort: 'activity',
     layout: 'list',
+    fileView: 'all',
     band: 'auto',
-    pinned: { docs: [], sheets: [], slides: [] },
+    pinned: { docs: [], sheets: [], slides: [], draw: [] },
     lastFormat: {},
     lastFolder: {},
     createdCount: 0
@@ -61,6 +62,7 @@ export function parseViewPreferences(raw: unknown): ViewPreferences {
 
   if (value.sort === 'activity' || value.sort === 'name') result.sort = value.sort
   if (value.layout === 'list' || value.layout === 'grid') result.layout = value.layout
+  if (value.fileView === 'all' || value.fileView === 'recent') result.fileView = value.fileView
   if (value.band === 'auto' || value.band === 'row' || value.band === 'compact')
     result.band = value.band
   const pinned = value.pinned && typeof value.pinned === 'object' ? value.pinned : {}

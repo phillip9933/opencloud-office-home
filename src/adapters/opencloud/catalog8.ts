@@ -5,7 +5,7 @@ import { sdkRecord } from './metadata8'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import type { Graph } from '@opencloud-eu/web-client/graph'
 import type { WebDAV } from '@opencloud-eu/web-client/webdav'
-import { belongsTo } from '../../app/registry'
+import { belongsTo, familyFormats } from '../../app/registry'
 import {
   fail,
   ok,
@@ -36,7 +36,9 @@ const RECENT_CHANGE_QUERY = `mtime:"last ${RECENT_CHANGE_DAYS} days"`
 const MEDIA_TYPE: Record<OfficeKind, string> = {
   docs: 'document',
   sheets: 'spreadsheet',
-  slides: 'presentation'
+  slides: 'presentation',
+  // Match the ODG MIME type directly so image files cannot fill the search page.
+  draw: familyFormats('draw')[0]!.mimeType
 }
 // The server ranks matches by score, not date, and truncates at its page size.
 const SEARCH_LIMIT = 200
@@ -246,7 +248,8 @@ export function createCatalog8(
   async function searchHits(
     query: string,
     kind: OfficeKind,
-    signal: AbortSignal
+    signal: AbortSignal,
+    requireModifiedAt: boolean
   ): Promise<Result<Page<FileRecord>>> {
     const key = currentSession()
     if (!key) return fail('unauthenticated')
@@ -260,16 +263,16 @@ export function createCatalog8(
       for (const resource of found.resources) {
         const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
         const item = space ? normalize(space.id, resource) : undefined
-        if (!item?.ok || item.value.modifiedAt === undefined) {
+        if (!item?.ok || (requireModifiedAt && item.value.modifiedAt === undefined)) {
           skipped++
           continue
         }
         // The server's media groups include non-office types such as plain text.
-        if (item.value.kind === 'file' && belongsTo(item.value, kind))
+        if (item.value.access.read && item.value.kind === 'file' && belongsTo(item.value, kind))
           items.set(refKey(item.value.ref), item.value)
       }
       return ok({
-        items: [...items.values()].sort((a, b) => b.modifiedAt! - a.modifiedAt!),
+        items: [...items.values()].sort((a, b) => (b.modifiedAt ?? 0) - (a.modifiedAt ?? 0)),
         partial:
           skipped > 0 ||
           typeof found.totalResults !== 'number' ||
@@ -352,7 +355,13 @@ export function createCatalog8(
       }
     },
     recentlyChanged(kind, signal, filter) {
-      return searchHits(recentQuery(kind, filter), kind, signal)
+      return searchHits(recentQuery(kind, filter), kind, signal, true)
+    },
+    allFiles(kind, signal, filter) {
+      // Search exact registered types: OpenCloud's broad categories omit some office formats.
+      const types = familyFormats(kind).map((format) => `"${format.mimeType}"`)
+      const query = [`mediatype:(${types.join(' OR ')})`, ...filterClauses(filter)].join(' AND ')
+      return searchHits(query, kind, signal, false)
     },
     async latestActivity(ref, signal) {
       const key = currentSession()

@@ -20,10 +20,11 @@
   /* Fixed colors chosen to keep at least 3:1 on both light and dark surfaces. */
   --office-focus: #b0680a;
   --office-favorite: #a8700a;
-  /* Family colors identify Docs, Sheets and Slides; text labels always accompany them. */
+  /* Text labels accompany the family colors. */
   --office-docs: #2f6fb3;
   --office-sheets: #1f7f54;
   --office-slides: #b85f0f;
+  --office-draw: #8456a6;
   color: var(--office-ink);
   background: var(--office-surface);
   font:

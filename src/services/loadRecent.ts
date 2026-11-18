@@ -11,7 +11,7 @@ import type { RecentEntry } from './recentView'
 import { attempt, errorText } from './errors'
 import { waitForResult } from './cancellation'
 
-function matchesFilter(file: FileRecord, filter: RecentFilter): boolean {
+export function matchesFilter(file: FileRecord, filter: RecentFilter): boolean {
   return (
     (!filter.favorites || file.favorite === true) &&
     (!filter.tags.length || filter.tags.some((tag) => file.tags?.includes(tag)))

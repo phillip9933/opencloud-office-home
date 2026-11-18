@@ -3,6 +3,11 @@ import type { FileRecord } from '../contracts/office'
 import type { FileColumn } from '../contracts/preferences'
 export { defaultColumns, fileColumns } from '../contracts/preferences'
 export type { FileColumn } from '../contracts/preferences'
+
+export function allFileColumn(column: FileColumn): FileColumn {
+  return column === 'activity' ? 'modified' : column
+}
+
 const dateFormat = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 function date(value?: number) {
   return value !== undefined && Number.isFinite(value) && Math.abs(value) < 8.64e15

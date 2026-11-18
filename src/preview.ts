@@ -26,7 +26,7 @@ const router = createRouter({
   routes: [
     {
       path: '/office/settings',
-      name: 'office-settings',
+      name: officeRoute('settings'),
       component: OfficeSettings,
       props: { context }
     },

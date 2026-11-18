@@ -27,7 +27,10 @@ describe('view preferences', () => {
     saved.layout = 'grid'
     saved.pinned.docs = ['t2', 't1']
     saved.columns = ['owner', 'created', 'tags']
-    saved.lastKind = 'sheets'
+    saved.lastKind = 'draw'
+    saved.pinned.draw = ['drawing-template']
+    saved.lastFormat.draw = 'odg'
+    saved.lastFolder.draw = { spaceId: 'space', itemId: 'drawings' }
     saved.templateFolder = { spaceId: 'templates', itemId: 'approved-folder' }
     alice.save(saved)
     expect(alice.load()).toEqual(saved)
@@ -48,7 +51,7 @@ describe('view preferences', () => {
     ).toEqual({
       ...defaultViewPreferences(),
       columns: ['owner'],
-      pinned: { docs: ['ok', 'n'], sheets: [], slides: [] }
+      pinned: { docs: ['ok', 'n'], sheets: [], slides: [], draw: [] }
     })
     const storage = memory()
     storage.values.set(JSON.stringify(['office-view', 1, 'a', 'u']), '{not json')

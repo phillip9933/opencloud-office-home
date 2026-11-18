@@ -1,4 +1,4 @@
-export const officeKinds = ['docs', 'sheets', 'slides'] as const
+export const officeKinds = ['docs', 'sheets', 'slides', 'draw'] as const
 export type OfficeKind = (typeof officeKinds)[number]
 export type FileRef = Readonly<{ spaceId: string; itemId: string }>
 export const DAY_MS = 86_400_000

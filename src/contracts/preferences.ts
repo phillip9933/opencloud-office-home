@@ -22,6 +22,7 @@ export interface ViewPreferences {
   templateFolder?: FileRef
   sort: RecentSort
   layout: 'list' | 'grid'
+  fileView: 'all' | 'recent'
   band: TemplateBand
   // Template IDs in the user's order; IDs are opaque and revalidated against the live gallery.
   pinned: Record<OfficeKind, string[]>

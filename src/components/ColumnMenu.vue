@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref, type CSSProperties } from 'vue'
 import { OcIcon } from '@opencloud-eu/design-system/components'
 import ColumnChoices from './ColumnChoices.vue'
 import type { OfficeContext } from '../app/context'
-defineProps<{ context: OfficeContext }>()
+defineProps<{ context: OfficeContext; allFiles?: boolean }>()
 const open = ref(false)
 const root = ref<HTMLElement>()
 const trigger = ref<HTMLButtonElement>()
@@ -58,7 +58,7 @@ onBeforeUnmount(() => close(false))
       role="group"
       aria-label="Columns"
     >
-      <ColumnChoices :context="context" />
+      <ColumnChoices :context="context" :all-files="allFiles" />
       <div class="office-popover-actions"><button type="button" @click="close()">Done</button></div>
     </div>
   </div>

@@ -4,6 +4,7 @@ import { useRouter } from '@opencloud-eu/web-pkg'
 import AppSidebar from '../components/AppSidebar.vue'
 import CreatePanel from '../components/CreatePanel.vue'
 import RecentFiles from '../components/RecentFiles.vue'
+import AllFiles from '../components/AllFiles.vue'
 import TemplateStrip from '../components/TemplateStrip.vue'
 import { officeApps } from '../app/registry'
 import type { OfficeContext } from '../app/context'
@@ -20,7 +21,8 @@ const state = computed(() => model.value.state)
 const nouns: Record<OfficeKind, string> = {
   docs: 'document',
   sheets: 'spreadsheet',
-  slides: 'presentation'
+  slides: 'presentation',
+  draw: 'drawing'
 }
 const createPanel = ref<InstanceType<typeof CreatePanel>>()
 const viewport = ref<HTMLElement>()
@@ -198,17 +200,44 @@ onBeforeUnmount(() => {
             </button>
           </p>
         </div>
-        <RecentFiles
-          v-if="!state.error || state.recent.length"
-          :kind="kind"
-          :context="context"
-          :entries="state.recent"
-          :note="state.recentNote"
-          :opening="state.opening"
-          :loading="state.loading || state.recentLoading"
-          @retry="model.refreshRecent()"
-          @action="act"
-        />
+        <template v-if="!state.error || state.spaces.length">
+          <div class="office-segmented office-file-views" role="group" aria-label="Files to show">
+            <button
+              type="button"
+              :aria-pressed="preferences.fileView === 'all'"
+              @click="preferences.fileView = 'all'"
+            >
+              All files
+            </button>
+            <button
+              type="button"
+              :aria-pressed="preferences.fileView === 'recent'"
+              @click="preferences.fileView = 'recent'"
+            >
+              Recent
+            </button>
+          </div>
+          <AllFiles
+            v-if="preferences.fileView === 'all'"
+            :key="route.fullPath"
+            :kind="kind"
+            :context="context"
+            :opening="state.opening"
+            :waiting="state.loading"
+            @action="act"
+          />
+          <RecentFiles
+            v-else
+            :kind="kind"
+            :context="context"
+            :entries="state.recent"
+            :note="state.recentNote"
+            :opening="state.opening"
+            :loading="state.loading || state.recentLoading"
+            @retry="model.refreshRecent()"
+            @action="act"
+          />
+        </template>
       </div>
     </main>
   </div>

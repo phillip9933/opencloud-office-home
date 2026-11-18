@@ -1,56 +1,79 @@
 <script setup lang="ts">
+import { computed, nextTick } from 'vue'
 import type { OfficeContext } from '../app/context'
-import { fileColumns, type FileColumn } from '../services/columns'
-const props = defineProps<{ context: OfficeContext }>()
+import { allFileColumn, fileColumns, type FileColumn } from '../services/columns'
+const props = defineProps<{ context: OfficeContext; allFiles?: boolean }>()
 const preferences = props.context.preferences
-function toggle(id: FileColumn, checked: boolean) {
+const columnForView = (id: FileColumn) => (props.allFiles ? allFileColumn(id) : id)
+const selected = computed(() => [...new Set(preferences.columns.map(columnForView))])
+const available = computed(() =>
+  fileColumns
+    .map(({ id }) => id)
+    .filter((id) => columnForView(id) === id && !selected.value.includes(id))
+)
+const choices = computed(() =>
+  [...selected.value, ...available.value].map((id) =>
+    fileColumns.find((column) => column.id === id)!
+  )
+)
+async function toggle(id: FileColumn, input: HTMLInputElement) {
   const columns = preferences.columns
-  preferences.columns = checked ? [...columns, id] : columns.filter((value) => value !== id)
+  preferences.columns = input.checked
+    ? [...columns, id]
+    : columns.filter((value) => columnForView(value) !== id)
+  await nextTick()
+  input.focus()
 }
-function move(id: FileColumn, offset: number) {
-  const columns = [...preferences.columns]
+async function move(id: FileColumn, offset: number, button: HTMLButtonElement) {
+  const columns = [...selected.value]
   const from = columns.indexOf(id)
   const to = from + offset
   if (from < 0 || to < 0 || to >= columns.length) return
   columns.splice(from, 1)
   columns.splice(to, 0, id)
-  preferences.columns = columns
+  // Keep the user's Recent columns when the All files view shows them as one date column.
+  preferences.columns = columns.flatMap((column) =>
+    preferences.columns.filter((value) => columnForView(value) === column)
+  )
+  await nextTick()
+  if (button.disabled)
+    button.parentElement?.querySelector<HTMLButtonElement>('button:enabled')?.focus()
+  else button.focus()
 }
 </script>
 <template>
   <fieldset class="office-settings-group">
-    <legend>Recent columns</legend>
-    <p class="office-muted">
-      Name and file actions are always shown. Select optional columns and set their order.
-    </p>
-    <label v-for="column in fileColumns" :key="column.id" class="office-check">
-      <input
-        type="checkbox"
-        :checked="context.preferences.columns.includes(column.id)"
-        @change="toggle(column.id, ($event.target as HTMLInputElement).checked)"
-      />
-      <span>{{ column.label }}</span>
-    </label>
-    <ol class="office-column-order">
-      <li v-for="(id, index) in context.preferences.columns" :key="id">
-        <span>{{ fileColumns.find((column) => column.id === id)!.label }}</span>
-        <button
-          type="button"
-          :aria-label="`Move ${fileColumns.find((column) => column.id === id)!.label} earlier`"
-          :disabled="index === 0"
-          @click="move(id, -1)"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          :aria-label="`Move ${fileColumns.find((column) => column.id === id)!.label} later`"
-          :disabled="index === context.preferences.columns.length - 1"
-          @click="move(id, 1)"
-        >
-          ↓
-        </button>
+    <legend>Optional columns</legend>
+    <p class="office-muted">Select columns to show. Use the arrows to change their order.</p>
+    <ul class="office-column-choices">
+      <li v-for="(column, index) in choices" :key="column.id">
+        <label class="office-check">
+          <input
+            type="checkbox"
+            :checked="index < selected.length"
+            @change="toggle(column.id, $event.currentTarget as HTMLInputElement)"
+          />
+          <span>{{ column.label }}</span>
+        </label>
+        <div v-if="index < selected.length" class="office-column-moves">
+          <button
+            type="button"
+            :aria-label="`Move ${column.label} earlier`"
+            :disabled="index === 0"
+            @click="move(column.id, -1, $event.currentTarget as HTMLButtonElement)"
+          >
+            <span aria-hidden="true">↑</span>
+          </button>
+          <button
+            type="button"
+            :aria-label="`Move ${column.label} later`"
+            :disabled="index === selected.length - 1"
+            @click="move(column.id, 1, $event.currentTarget as HTMLButtonElement)"
+          >
+            <span aria-hidden="true">↓</span>
+          </button>
+        </div>
       </li>
-    </ol>
+    </ul>
   </fieldset>
 </template>

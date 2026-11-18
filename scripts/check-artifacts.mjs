@@ -1,6 +1,7 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import assert from 'node:assert/strict'
 import { resolve, sep } from 'node:path'
+import { officeAppId } from '../src/app/identity.ts'
 
 async function textTree(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
@@ -32,6 +33,7 @@ assert(
 const manifest = JSON.parse(await readFile(`${directory}/manifest.json`, 'utf8'))
 const pkg = JSON.parse(await readFile('package.json', 'utf8'))
 assert.equal(manifest.name, pkg.name)
+assert.equal(manifest.name, officeAppId, 'Native manifest name must match the installation ID')
 assert.equal(manifest.version, pkg.version)
 assert.equal(manifest.license, pkg.license)
 assert.equal(typeof manifest.entrypoint, 'string')

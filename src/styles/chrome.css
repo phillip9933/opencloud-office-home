@@ -141,6 +141,10 @@
 .office [data-kind='slides'] {
   --office-family: var(--office-slides);
 }
+.office[data-kind='draw'],
+.office [data-kind='draw'] {
+  --office-family: var(--office-draw);
+}
 .office-family-icon {
   width: 1.4rem;
   height: 1.4rem;
@@ -189,11 +193,14 @@
     width: 100%;
     order: 3;
     flex-basis: 100%;
-    overflow-x: auto;
   }
   .office-nav {
-    grid-auto-flow: column;
-    justify-content: start;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .office-nav a {
+    gap: 0.35rem;
+    padding-inline: 0.45rem;
   }
   .office-sidebar-footer {
     margin: 0;

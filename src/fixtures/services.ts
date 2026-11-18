@@ -33,6 +33,7 @@ const mime: Record<string, string> = {
   odp: 'application/vnd.oasis.opendocument.presentation',
   otp: 'application/vnd.oasis.opendocument.presentation-template',
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  odg: 'application/vnd.oasis.opendocument.graphics',
   png: 'image/png'
 }
 
@@ -47,6 +48,7 @@ const templateFiles: [category: string, file: string, preview: boolean][] = [
   ['Business', 'Project timeline.ods', false],
   ['Business', 'Quarterly review.otp', true],
   ['Business', 'Product pitch.otp', true],
+  ['Business', 'Process diagram.odg', true],
   ['Personal', 'Resume.ott', true],
   ['Personal', 'Event invitation.ott', true],
   ['Personal', 'Household budget.ots', true],
@@ -119,7 +121,7 @@ export function fixtureServices(
     )
     file(
       { ...root, itemId: `read-${app.id}` },
-      `Shared ${app.label}.${secondary.extension}`,
+      `Shared ${app.label}.${(secondary ?? primary).extension}`,
       '/Personal files/Reports',
       folder,
       readOnly
@@ -131,9 +133,12 @@ export function fixtureServices(
     ['expenses', 'Expense log.ods'],
     ['inventory', 'Studio inventory.xlsx'],
     ['kickoff', 'Kickoff deck.odp'],
-    ['training', 'Onboarding training.pptx']
+    ['training', 'Onboarding training.pptx'],
+    ['floor-plan', 'Studio floor plan.odg']
   ]
   for (const [id, name] of extra) file({ ...team, itemId: id }, name, '/Team space', team)
+  file({ ...team, itemId: 'archived' }, 'Archived report.docx', '/Team space', team).modifiedAt =
+    now() - 365 * DAY_MS
 
   const categories = new Map<string, FileRef>()
   for (const [category, name, hasPreview] of templateFiles) {
@@ -175,7 +180,8 @@ export function fixtureServices(
     [{ ...team, itemId: 'expenses' }, 'sheets', 9 * DAY_MS],
     [{ ...team, itemId: 'inventory' }, 'sheets', 40 * DAY_MS],
     [{ ...team, itemId: 'kickoff' }, 'slides', 5 * DAY_MS],
-    [{ ...root, itemId: 'slides' }, 'slides', 20 * DAY_MS]
+    [{ ...root, itemId: 'slides' }, 'slides', 20 * DAY_MS],
+    [{ ...root, itemId: 'draw' }, 'draw', 2 * DAY_MS]
   ]
   // Synthetic changes made in OpenCloud, for example by a colleague on another device.
   const changes: [FileRef, number][] = [
@@ -184,7 +190,8 @@ export function fixtureServices(
     [{ ...team, itemId: 'training' }, 4 * DAY_MS],
     [{ ...team, itemId: 'kickoff' }, 3 * DAY_MS],
     [{ ...team, itemId: 'inventory' }, 50 * DAY_MS],
-    [{ ...root, itemId: 'docs' }, 6 * DAY_MS]
+    [{ ...root, itemId: 'docs' }, 6 * DAY_MS],
+    [{ ...team, itemId: 'floor-plan' }, 4 * DAY_MS]
   ]
   if (options.seedHistory)
     for (const [ref, age] of changes) {
@@ -273,6 +280,18 @@ export function fixtureServices(
         return Promise.resolve(record ? ok(record) : fail('forbiddenOrMissing'))
       },
       list: listChildren,
+      allFiles(kind, signal, filter) {
+        if (signal.aborted) return Promise.resolve(fail('cancelled'))
+        const items = records.filter(
+          (r) =>
+            r.kind === 'file' &&
+            r.ref.spaceId !== templatesRoot.spaceId &&
+            belongsTo(r, kind) &&
+            (!filter.favorites || r.favorite) &&
+            (!filter.tags.length || filter.tags.some((tag) => r.tags?.includes(tag)))
+        )
+        return Promise.resolve(ok({ items, partial: false }))
+      },
       recentlyChanged(kind, _signal, filter) {
         const since = now() - RECENT_CHANGE_DAYS * DAY_MS
         const items = records

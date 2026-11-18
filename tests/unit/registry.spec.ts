@@ -15,4 +15,14 @@ describe('family classification', () => {
     expect(belongsTo({ ...file, mimeType: 'application/x-unknown' }, 'docs')).toBe(false)
     expect(belongsTo({ ...file, kind: 'folder' }, 'sheets')).toBe(true)
   })
+  it('classifies editable ODG drawings independently from images, PDFs and other office files', () => {
+    const drawing = { ...file, name: 'DIAGRAM.ODG' }
+    expect(belongsTo(drawing, 'draw')).toBe(true)
+    expect(belongsTo(drawing, 'slides')).toBe(false)
+    expect(
+      belongsTo({ ...drawing, mimeType: 'application/vnd.oasis.opendocument.graphics' }, 'draw')
+    ).toBe(true)
+    expect(belongsTo({ ...drawing, mimeType: 'application/pdf' }, 'draw')).toBe(false)
+    expect(belongsTo({ ...file, name: 'diagram.svg' }, 'draw')).toBe(false)
+  })
 })

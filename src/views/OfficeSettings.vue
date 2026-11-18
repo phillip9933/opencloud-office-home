@@ -3,6 +3,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { version } from '../../package.json'
 import AppSidebar from '../components/AppSidebar.vue'
 import FolderPicker from '../components/FolderPicker.vue'
+import { officeRoute } from '../app/registry'
 import type { OfficeContext } from '../app/context'
 import type { FileRecord } from '../contracts/office'
 import { errorText } from '../services/errors'
@@ -15,6 +16,7 @@ const folderError = ref('')
 const heading = ref<HTMLElement>()
 const lastKind = preferences.lastKind
 const lastView = props.context.lastView.get(lastKind)
+const lastLabel = props.context.menu.find((app) => app.id === lastKind)?.label ?? 'Office'
 let revision = 0
 const controller = new AbortController()
 onBeforeUnmount(() => {
@@ -65,12 +67,9 @@ onMounted(async () => {
         <div class="office-page-heading">
           <h1 ref="heading" tabindex="-1">Settings</h1>
           <RouterLink
-            :to="{ name: `office-${lastKind}`, query: lastView ? { view: lastView } : {} }"
+            :to="{ name: officeRoute(lastKind), query: lastView ? { view: lastView } : {} }"
             class="office-link"
-            >Back to
-            {{
-              lastKind === 'docs' ? 'Docs' : lastKind === 'sheets' ? 'Sheets' : 'Slides'
-            }}</RouterLink
+            >Back to {{ lastLabel }}</RouterLink
           >
         </div>
         <section class="office-settings-section" aria-labelledby="template-settings-heading">
@@ -118,7 +117,7 @@ onMounted(async () => {
           />
           <p class="office-muted">
             <span v-if="context.services.configuration?.allowPersonalTemplates !== false"
-              >Your choice applies to Docs, Sheets and Slides in this browser.</span
+              >Your choice applies to all Office apps in this browser.</span
             >
             An administrator can configure an installation default for all users. Choose ordinary
             editable documents for templates; conversion from .ott, .ots and .otp is not yet

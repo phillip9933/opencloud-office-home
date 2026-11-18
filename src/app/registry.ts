@@ -1,4 +1,5 @@
 import type { FileRecord, Format, OfficeKind } from '../contracts/office'
+import { officeAppId } from './identity'
 
 export interface AppDescriptor {
   id: OfficeKind
@@ -67,21 +68,26 @@ export const officeApps = [
         creates: 'odp'
       }
     ]
+  },
+  {
+    id: 'draw',
+    label: 'Draw',
+    formats: [{ extension: 'odg', mimeType: 'application/vnd.oasis.opendocument.graphics' }]
   }
 ] as const satisfies readonly AppDescriptor[]
 
 // The host prefixes local route names with the application ID.
-export const officeRoute = (kind: OfficeKind) => `office-${kind}`
+export const officeRoute = (page: OfficeKind | 'settings') => `${officeAppId}-${page}`
 
 export function familyFormats(kind: OfficeKind): readonly Format[] {
-  const app = officeApps.find((app) => app.id === kind)!
+  const app: AppDescriptor = officeApps.find((app) => app.id === kind)!
   return [...app.formats, ...(app.templateFormats ?? [])]
 }
 
 // Resolves the editable format a document or template file produces, if it belongs to the family.
 export function resultFormat(file: FileRecord, kind: OfficeKind): Format | undefined {
   if (file.kind !== 'file' || !belongsTo(file, kind)) return undefined
-  const app = officeApps.find((app) => app.id === kind)!
+  const app: AppDescriptor = officeApps.find((app) => app.id === kind)!
   const matches = (format: Format) =>
     file.mimeType
       ? format.mimeType === file.mimeType.toLowerCase()

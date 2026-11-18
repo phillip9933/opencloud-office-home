@@ -1,11 +1,11 @@
 # Office Home for OpenCloud
 
-A starting point for documents, spreadsheets and presentations inside OpenCloud.
+A starting point for documents, spreadsheets, presentations and drawings inside OpenCloud.
 
 Office Home brings your office files together with:
 
-- Dedicated Docs, Sheets and Slides pages.
-- Recent files, favorites and customizable list or grid views.
+- Dedicated Docs, Sheets, Slides and Draw pages.
+- All files and Recent views, favorites, and customizable list or grid views.
 - Templates from a shared or personal folder.
 - New documents that open directly in your configured editor.
 - Direct page links for shortcuts such as `sheets.example.com`.

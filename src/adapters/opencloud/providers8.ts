@@ -2,7 +2,13 @@ import { sdkRecord } from './metadata8'
 import type { AppProviderCapability } from '@opencloud-eu/web-client/ocs'
 import type { AppProviderService } from '@opencloud-eu/web-pkg'
 import { officeApps } from '../../app/registry'
-import { fail, ok, type Format, type OfficeCapabilities } from '../../contracts/office'
+import {
+  fail,
+  ok,
+  type Format,
+  type OfficeCapabilities,
+  type OfficeConfiguration
+} from '../../contracts/office'
 
 // These shapes come from the installed 8.x SDK. Web 8.2.1 loads `mimeTypes` from the
 // unauthenticated app-registry list at boot, so the values describe the server, not a user.
@@ -34,7 +40,7 @@ function matches(entry: Record<string, unknown>, format: Format): boolean {
  */
 export function createProviderCapabilities8(
   port: ProviderPort8,
-  allowed: Partial<Record<'docs' | 'sheets' | 'slides', string[]>> = {}
+  allowed: OfficeConfiguration['creationFormats'] = {}
 ): OfficeCapabilities {
   return {
     creationFormats(kind) {

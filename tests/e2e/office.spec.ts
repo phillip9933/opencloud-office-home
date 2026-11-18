@@ -4,9 +4,25 @@ import packageInfo from '../../package.json' with { type: 'json' }
 const { version } = packageInfo
 
 const recents = (page: Page) => page.getByRole('region', { name: 'Recent', exact: true })
+const allFiles = (page: Page) => page.getByRole('region', { name: 'All files', exact: true })
 const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Office applications' })
 const toast = (page: Page) => page.locator('.office-toast')
 const file = (name: string) => ({ name, exact: true })
+
+test('All files discovers older documents and keeps the Recent scope available', async ({
+  page
+}) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', file('All files'))).toHaveAttribute('aria-pressed', 'true')
+  await expect(allFiles(page).getByRole('button', file('Archived report.docx'))).toBeVisible()
+  await page.getByRole('button', file('Recent')).click()
+  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await expect(recents(page).getByRole('button', file('Archived report.docx'))).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('button', file('Recent'))).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', file('All files')).click()
+  await expect(allFiles(page).getByRole('button', file('Archived report.docx'))).toBeVisible()
+})
 
 test('create, conflict recovery, launch, family history and full-page settings', async ({
   page
@@ -16,6 +32,7 @@ test('create, conflict recovery, launch, family history and full-page settings',
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Docs', exact: true })).toBeVisible()
   await expect(page.getByText(/Interactive preview|Synthetic preview/)).toHaveCount(0)
+  await page.getByRole('button', file('Recent')).click()
   // Date groups depend on the wall clock; their boundaries are covered by unit tests.
   await expect(recents(page).getByRole('heading', { level: 3 }).first()).toBeVisible()
   await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
@@ -66,6 +83,44 @@ test('create, conflict recovery, launch, family history and full-page settings',
   expect(errors).toEqual([])
 })
 
+test('Draw creates editable ODG files and copies drawing templates', async ({ page }) => {
+  await page.goto('/#/office/draw')
+  await expect(sidebar(page).getByRole('link', file('Draw'))).toHaveAttribute(
+    'aria-current',
+    'page'
+  )
+  await expect(page.getByRole('heading', file('Draw'))).toBeVisible()
+  await page.getByRole('button', file('Recent')).click()
+  await expect(recents(page).getByRole('button', file('Project Draw.odg'))).toBeVisible()
+  await expect(recents(page).getByRole('button', file('Project Slides.odp'))).toHaveCount(0)
+
+  const blank = page.getByRole('button', file('Blank drawing'))
+  await blank.focus()
+  await page.keyboard.press('Enter')
+  const panel = page.getByRole('region', file('New drawing'))
+  await panel.getByRole('textbox', file('Name')).fill('New diagram')
+  await panel.getByRole('button', file('Create')).click()
+  await expect(toast(page)).toContainText('Simulated launch accepted')
+
+  const template = page.getByRole('button', file('Process diagram'))
+  await template.click()
+  const copy = page.getByRole('region', file('New from Process diagram'))
+  await copy.getByRole('textbox', file('Name')).fill('Process review')
+  await copy.getByRole('button', file('Create')).click()
+  await expect(toast(page)).toContainText('Simulated launch accepted')
+  await expect(template).toBeVisible()
+  await page.getByRole('button', file('All files')).click()
+  await expect(allFiles(page).getByRole('button', file('New diagram.odg'))).toBeVisible()
+  await expect(allFiles(page).getByRole('button', file('Process review.odg'))).toBeVisible()
+
+  await page.getByRole('link', file('Settings')).click()
+  await page.getByRole('link', file('Back to Draw')).click()
+  await expect(page.getByRole('heading', file('Draw'))).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(sidebar(page).getByRole('link', file('Draw'))).toBeInViewport({ ratio: 1 })
+})
+
 test('failed automatic launch retries opening the same created file', async ({ page }) => {
   await page.goto('/tests/e2e/recovery.html?case=editor-failure')
   await page.getByRole('button', file('Blank document')).click()
@@ -105,6 +160,7 @@ test('sidebar navigation, version, info tip, OpenCloud icons and Back', async ({
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
 
+  await page.getByRole('button', file('Recent')).click()
   const about = page.getByRole('button', { name: 'About Recent' })
   await about.focus()
   await expect(page.getByRole('tooltip')).toContainText('changed in OpenCloud in the last 30 days')
@@ -126,10 +182,14 @@ test('sidebar navigation, version, info tip, OpenCloud icons and Back', async ({
 test('template gallery categories, previews, grid layout and name sorting', async ({ page }) => {
   await page.goto('/#/office/sheets')
   await expect(page.getByRole('heading', { name: 'Sheets', exact: true })).toBeVisible()
-  const gallery = page.getByRole('button', { name: 'Template gallery' })
+  await page.getByRole('button', file('Recent')).click()
+  const gallery = page.getByRole('button', file('Show all templates'))
   await expect(gallery).toBeEnabled()
   await gallery.click()
-  await expect(gallery).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.getByRole('button', file('Close template gallery'))).toHaveAttribute(
+    'aria-expanded',
+    'true'
+  )
   for (const category of ['Business', 'Personal', 'Education'])
     await expect(page.getByRole('heading', { name: category, level: 3 })).toBeVisible()
   // Companion images become previews; a template without one falls back to its format card.
@@ -187,6 +247,7 @@ test('inline creation focus, cancellation, mobile width, and safe text rendering
   await page.getByRole('button', file('Create')).click()
   await expect(toast(page)).toContainText('Simulated launch accepted')
   // Automatic opening replaces the creation message; inspect the persisted name in Recent.
+  await page.getByRole('button', file('Recent')).click()
   await sidebar(page).getByRole('link', { name: 'Sheets', exact: true }).click()
   await sidebar(page).getByRole('link', { name: 'Docs', exact: true }).click()
   await expect(
@@ -218,6 +279,7 @@ test('inline creation focus, cancellation, mobile width, and safe text rendering
 
 test('recent filters, template pinning and order, and the compact band', async ({ page }) => {
   await page.goto('/#/office/sheets')
+  await page.getByRole('button', file('Recent')).click()
   await expect(recents(page).getByRole('button', file('Project Sheets.ods'))).toBeVisible()
   const favorites = page.getByRole('button', { name: 'Favorites' })
   await favorites.click()
@@ -232,27 +294,32 @@ test('recent filters, template pinning and order, and the compact band', async (
   await page.getByRole('button', { name: 'Clear filters' }).click()
   await expect(recents(page).getByRole('button', file('Project Sheets.ods'))).toBeVisible()
 
-  await page.getByRole('button', { name: 'Template gallery' }).click()
+  await page.getByRole('button', file('Show all templates')).click()
+  await expect(page.getByRole('button', file('Hide template cards'))).toHaveCount(0)
   await page.getByRole('button', { name: 'Pin Invoice to the top' }).first().click()
   await page.getByRole('button', { name: 'Pin Gradebook to the top' }).first().click()
   await page.getByRole('button', { name: 'Move Gradebook earlier' }).click()
-  await page.getByRole('button', { name: 'Template gallery' }).click()
+  await page.getByRole('button', file('Close template gallery')).click()
   const row = await page.locator('.office-cards-row .office-card-name').allTextContents()
   expect(row.slice(0, 3)).toEqual(['Blank spreadsheet', 'Gradebook', 'Invoice'])
 
-  await page.getByRole('button', { name: 'Collapse new document section' }).click()
+  await page.getByRole('button', file('Hide template cards')).click()
   await expect(page.getByRole('button', file('Blank spreadsheet'))).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '+ Blank spreadsheet' })).toBeEnabled()
+  await page.getByRole('button', file('Show all templates')).press('Enter')
+  await expect(page.getByRole('heading', file('Pinned'))).toBeVisible()
+  await page.getByRole('button', file('Close template gallery')).press('Enter')
   await expect(page.getByRole('button', { name: '+ Blank spreadsheet' })).toBeEnabled()
   await sidebar(page).getByRole('link', { name: 'Docs' }).click()
   await expect(page.getByRole('button', { name: '+ Blank document' })).toBeVisible()
-  await page.getByRole('button', { name: 'Expand new document section' }).click()
+  await page.getByRole('button', file('Show template cards')).click()
   await expect(page.getByRole('button', file('Blank document'))).toBeVisible()
 })
 
 test('file menu, status marks, latest activity and native actions', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write'])
   await page.goto('/#/office/slides')
-  const kickoff = recents(page).getByRole('row', { name: /Kickoff deck\.odp/ })
+  const kickoff = allFiles(page).getByRole('row', { name: /Kickoff deck\.odp/ })
   await expect(kickoff).toContainText('Locked by Synthetic colleague')
   await expect(kickoff).toContainText('Shared')
   const more = page.getByRole('button', { name: 'More actions for Kickoff deck.odp' })
@@ -350,7 +417,7 @@ test('column dropdown stays on the home, closes with Escape/outside click, and u
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 })
   await page.goto('/')
-  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await expect(allFiles(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
   await expect(page.getByRole('searchbox', { name: 'Search files' })).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Search scope' })).toHaveCount(0)
   const widths = await page
@@ -368,21 +435,36 @@ test('column dropdown stays on the home, closes with Escape/outside click, and u
   await trigger.click()
   const columns = page.getByRole('group', { name: 'Columns', exact: true })
   await expect(columns).toBeVisible()
-  await columns.getByRole('checkbox', { name: 'Owner', exact: true }).check()
+  await expect(columns.getByRole('checkbox', file('Date modified'))).toBeChecked()
+  await expect(columns.getByRole('checkbox', file('Last activity'))).toHaveCount(0)
+  const owner = columns.getByRole('checkbox', file('Owner'))
+  const ownerRow = columns.getByRole('listitem').filter({
+    has: page.getByRole('checkbox', file('Owner'))
+  })
+  await expect(ownerRow).toHaveCount(1)
+  await expect(ownerRow.getByRole('button')).toHaveCount(0)
+  await owner.press('Space')
+  await expect(owner).toBeFocused()
+  const earlier = ownerRow.getByRole('button', file('Move Owner earlier'))
+  await earlier.press('Enter')
+  await expect(earlier).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(earlier).toBeDisabled()
+  await expect(ownerRow.getByRole('button', file('Move Owner later'))).toBeFocused()
+  await expect(
+    columns.getByRole('listitem').first().getByRole('checkbox', file('Owner'))
+  ).toBeChecked()
   await page.keyboard.press('Escape')
   await expect(columns).toBeHidden()
   await expect(trigger).toBeFocused()
   expect(page.url()).toBe(before)
-  await expect(
-    recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
-  ).toBeVisible()
+  const headings = allFiles(page).getByRole('columnheader')
+  await expect(headings.nth(1)).toHaveText('Owner')
   await trigger.click()
-  await page.getByRole('heading', { name: 'Recent', exact: true }).click()
+  await page.getByRole('heading', { name: 'All files', exact: true }).click()
   await expect(columns).toBeHidden()
   await page.reload()
-  await expect(
-    recents(page).getByRole('columnheader', { name: 'Owner', exact: true }).first()
-  ).toBeVisible()
+  await expect(headings.nth(1)).toHaveText('Owner')
   await sidebar(page).getByRole('link', { name: 'Sheets' }).click()
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Docs', exact: true })).toBeVisible()
@@ -390,7 +472,7 @@ test('column dropdown stays on the home, closes with Escape/outside click, and u
 
 test('visual inspection artifacts for desktop light and mobile dark', async ({ page }) => {
   await page.goto('/')
-  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await expect(allFiles(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
   await page.screenshot({ path: test.info().outputPath('desktop-light.png'), fullPage: true })
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.setViewportSize({ width: 390, height: 844 })
@@ -570,8 +652,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       )
       await expect(page.getByRole('button', file('Favorites')).locator('svg')).toBeVisible()
       const noticeBox = await toast(page).boundingBox()
-      const recentBox = await recents(page).boundingBox()
-      expect(noticeBox!.y + noticeBox!.height).toBeLessThanOrEqual(recentBox!.y)
+      const filesBox = await allFiles(page).boundingBox()
+      expect(noticeBox!.y + noticeBox!.height).toBeLessThanOrEqual(filesBox!.y)
       await page.screenshot({ path: info.outputPath('recovery-paused.png'), fullPage: true })
       const check = page.getByRole('button', file('Check destination'))
       await check.focus()
@@ -607,7 +689,7 @@ test('load failure is visible and retry retains the chosen save folder', async (
   await page.screenshot({ path: info.outputPath('load-failure-mobile.png'), fullPage: true })
   await page.getByRole('button', { name: 'Retry loading', exact: true }).click()
   await expect(page.getByRole('alert')).toHaveCount(0)
-  await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+  await expect(allFiles(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
   await page.getByRole('button', { name: 'Blank document' }).click()
   await expect(page.getByRole('region', file('New document'))).toContainText(
     'Save in Personal files / Reports'

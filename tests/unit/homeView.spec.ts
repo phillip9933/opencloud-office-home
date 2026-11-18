@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createRouter, createMemoryHistory, RouterView } from 'vue-router'
 import { fixtureServices } from '../../src/fixtures/services'
 import { createOfficeContext } from '../../src/app/context'
+import { officeApps, officeRoute } from '../../src/app/registry'
 import { fail } from '../../src/contracts/office'
 vi.mock('@opencloud-eu/web-pkg', async () => {
   const { useRouter } = await import('vue-router')
@@ -21,13 +22,22 @@ async function setup(remembered: boolean) {
     routes: [
       {
         path: '/office/docs',
-        name: 'office-docs',
+        name: officeRoute('docs'),
         component: OfficeHome,
         props: { kind: 'docs', context }
       },
-      { path: '/office/sheets', name: 'office-sheets', component: { template: '<div />' } },
-      { path: '/office/slides', name: 'office-slides', component: { template: '<div />' } },
-      { path: '/office/settings', name: 'office-settings', component: { template: '<div />' } }
+      ...officeApps
+        .filter((app) => app.id !== 'docs')
+        .map((app) => ({
+          path: `/office/${app.id}`,
+          name: officeRoute(app.id),
+          component: { template: '<div />' }
+        })),
+      {
+        path: '/office/settings',
+        name: officeRoute('settings'),
+        component: { template: '<div />' }
+      }
     ]
   })
   await router.push('/office/docs')
