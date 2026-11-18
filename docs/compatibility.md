@@ -34,10 +34,10 @@ supplies the shared runtime packages.
 
 ## Fresh installation
 
-On a fresh OpenCloud 9.2.0 Linux AMD64 installation, the ZIP was installed as the only custom app.
-After sign-in, Docs, including All files, Sheets, Slides and Draw opened successfully. This check
-used a synthetic account and an installation without an editor integration. Creation and editing
-were verified separately on the existing installation described above.
+On a fresh OpenCloud 9.2.0 Linux AMD64 installation, beta 4 opened Docs, Sheets, Slides and Draw
+after sign-in. Two ODT documents were uploaded through Files. After the template folder was selected
+in Office Settings, the gallery showed one document under General and the other under its subfolder
+name. This installation had no editor integration. The beta 3 checks above cover editing and saving.
 
 ## Current limitations
 
