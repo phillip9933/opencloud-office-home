@@ -37,7 +37,8 @@ export function recentLoader(services: OfficeServices, kind: OfficeKind, filter:
           signal
         )
         if (signal.aborted) return
-        if (!resolved.ok && resolved.error === 'forbiddenOrMissing') services.recents.remove(ref)
+        if (!resolved.ok && resolved.error === 'forbiddenOrMissing')
+          await services.recents.remove(ref)
         recent.push({ resolved, openedAt })
       }
     }

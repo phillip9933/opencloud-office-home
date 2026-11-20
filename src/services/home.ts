@@ -2,7 +2,6 @@ import { reactive } from 'vue'
 import { officeApps } from '../app/registry'
 import type { RecentEntry } from './recentView'
 import {
-  fail,
   refKey,
   type CreationRequest,
   type FileRecord,
@@ -37,6 +36,7 @@ export function createHomeModel(
     formats: [] as Format[],
     templates: [] as Template[],
     loading: false,
+    templatesLoading: false,
     recentLoading: false,
     spaceNote: '',
     error: '' as string,
@@ -81,14 +81,29 @@ export function createHomeModel(
     abort.abort()
     recentAbort.abort()
     state.loading = false
+    state.templatesLoading = false
     state.recentLoading = false
     state.recent = []
     state.destinationWritable = false
   }
 
+  async function loadTemplates(signal: AbortSignal) {
+    state.templatesLoading = true
+    const templates = await attempt(() => services.templates(kind, templateFolder(), signal))
+    if (signal.aborted) return
+    state.templatesLoading = false
+    state.templates = templates.ok ? templates.value.items.filter((t) => t.kind === kind) : []
+    state.templateNote =
+      templates.ok && templates.value.partial
+        ? 'Some templates could not be shown. The gallery reads up to 20 categories and 200 templates; check the source folder in Files.'
+        : ''
+    state.templateError = templates.ok ? '' : errorText[templates.error]
+  }
+
   async function load(location: HomeLocation) {
     active = true
     recentAbort.abort()
+    recentRequest++
     state.recentLoading = false
     abort.abort()
     abort = new AbortController()
@@ -98,6 +113,11 @@ export function createHomeModel(
     state.location = structuredClone(location)
     state.loading = true
     state.error = ''
+    state.templatesLoading = false
+    state.templates = []
+    state.templateNote = ''
+    state.templateError = ''
+    state.recentNote = ''
     state.destinationWritable = false
     state.recent = []
     const [spaces, formats] = await Promise.all([
@@ -117,16 +137,6 @@ export function createHomeModel(
             .formats.some((f) => f.mimeType === format.mimeType && f.extension === format.extension)
         )
       : []
-    const templates = spaces.ok
-      ? await attempt(() => services.templates(kind, templateFolder(), signal))
-      : fail(spaces.error)
-    if (!current()) return
-    state.templates = templates.ok ? templates.value.items.filter((t) => t.kind === kind) : []
-    state.templateNote =
-      templates.ok && templates.value.partial
-        ? 'Some templates could not be shown. The gallery reads up to 20 categories and 200 templates; check the source folder in Files.'
-        : ''
-    state.templateError = !spaces.ok || templates.ok ? '' : errorText[templates.error]
     // Keep "not configured" distinct from a configured editor that cannot create this family.
     state.formatError = !formats.ok
       ? errorText[formats.error]
@@ -138,15 +148,16 @@ export function createHomeModel(
       state.loading = false
       return
     }
+    const gallery = loadTemplates(signal)
     const space = state.spaces.find((s) => s.id === location.spaceId) ?? state.spaces[0]
     if (location.spaceId && !state.spaces.some((s) => s.id === location.spaceId)) {
       state.error = errorText.spaceUnavailable
       state.loading = false
-      return
+      return gallery
     }
     if (!space) {
       state.loading = false
-      return
+      return gallery
     }
     if (space.id !== location.spaceId)
       state.location = {
@@ -156,24 +167,18 @@ export function createHomeModel(
       }
     const folder = state.location.folder ?? space.root
     state.location.folder = { ...folder }
-    const recentLoad = ++recentRequest
-    const [destination, recent] = await Promise.all([
-      attempt(() => services.catalog.resolve(folder, signal)),
-      loadRecent(signal)
-    ])
-    if (!current()) return
-    state.destinationWritable =
-      destination.ok && destination.value.kind === 'folder' && destination.value.access.createChild
-    // A remembered destination has no ancestor contract; display its verified folder name only.
-    state.location.folderName =
-      destination.ok && refKey(folder) !== refKey(space.root) ? destination.value.name : undefined
-    if (!destination.ok) state.error = errorText[destination.error]
-    // A filter change during this load already started a newer Recent request.
-    if (recentLoad === recentRequest) {
-      state.recent = recent.entries
-      state.recentNote = recent.note
+    const destination = attempt(() => services.catalog.resolve(folder, signal))
+    const recent = refreshRecent()
+    const resolved = await destination
+    if (current()) {
+      state.destinationWritable =
+        resolved.ok && resolved.value.kind === 'folder' && resolved.value.access.createChild
+      state.location.folderName =
+        resolved.ok && refKey(folder) !== refKey(space.root) ? resolved.value.name : undefined
+      if (!resolved.ok) state.error = errorText[resolved.error]
+      state.loading = false
     }
-    state.loading = false
+    await Promise.all([gallery, recent])
   }
 
   // Native file actions; the host performs them and enforces permissions.
@@ -205,7 +210,7 @@ export function createHomeModel(
       // Transient transport or adapter failures do not prove a file was deleted or revoked.
       if (resolved.ok || resolved.error === 'forbiddenOrMissing') {
         state.recent = state.recent.filter((r) => refKey(r.file.ref) !== refKey(file.ref))
-        services.recents.remove(file.ref)
+        await services.recents.remove(file.ref)
       } else if (resolved.error === 'unauthenticated') {
         state.recent = []
       }
@@ -218,7 +223,7 @@ export function createHomeModel(
         })
       )
       if (launched.ok) {
-        services.recents.record(resolved.value.ref, kind)
+        await services.recents.record(resolved.value.ref, kind)
         state.notice =
           launched.value.message ?? 'Open request accepted. Save status belongs to the editor.'
       } else state.notice = errorText[launched.error]

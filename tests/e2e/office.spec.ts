@@ -9,6 +9,26 @@ const sidebar = (page: Page) => page.getByRole('navigation', { name: 'Office app
 const toast = (page: Page) => page.locator('.office-toast')
 const file = (name: string) => ({ name, exact: true })
 
+test('a pending gallery leaves files and blank creation available', async ({ page }) => {
+  const gallery = Promise.withResolvers<void>()
+  await page.route('**/pending-templates', async (route) => {
+    await gallery.promise
+    await route.fulfill({ status: 204 })
+  })
+  try {
+    await page.goto('/tests/e2e/recovery.html?case=slow-gallery')
+    await expect(page.getByText('Loading templates…')).toBeVisible()
+    await expect(allFiles(page).getByRole('button', file('Archived report.docx'))).toBeVisible()
+    await page.getByRole('button', file('Recent')).click()
+    await expect(recents(page).getByRole('button', file('Project Docs.odt'))).toBeVisible()
+    await page.getByRole('button', file('Blank document')).click()
+    await expect(page.getByRole('button', file('Create'))).toBeEnabled()
+  } finally {
+    gallery.resolve()
+  }
+  await expect(page.getByText('Loading templates…')).toHaveCount(0)
+})
+
 test('All files discovers older documents and keeps the Recent scope available', async ({
   page
 }) => {

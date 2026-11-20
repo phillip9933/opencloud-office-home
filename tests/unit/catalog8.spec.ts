@@ -67,6 +67,7 @@ function setup() {
     activities: {
       listActivities: vi.fn<ReadPort8['activities']['listActivities']>().mockResolvedValue([])
     },
+    markSearchVault: vi.fn<ReadPort8['markSearchVault']>(),
     webdav: {
       listFiles: vi
         .fn<ReadPort8['webdav']['listFiles']>()
@@ -183,6 +184,7 @@ describe('8.x SDK catalog candidate', () => {
     const test = setup()
     test.port.webdav.listFiles.mockResolvedValue({
       resource: test.root,
+      partial: false,
       children: [
         file(),
         file('sheet', {
@@ -205,6 +207,48 @@ describe('8.x SDK catalog candidate', () => {
       { path: '/' },
       { depth: 1, signal: expect.any(AbortSignal), extraProps: ['d:creationdate'] }
     )
+  })
+  it('reports a complete folder listing after expected family filtering', async () => {
+    const test = setup()
+    test.port.webdav.listFiles.mockResolvedValue({
+      resource: test.root,
+      children: [
+        file(),
+        file('sheet', { mimeType: 'application/vnd.oasis.opendocument.spreadsheet' })
+      ],
+      partial: false
+    })
+    await test.catalog.listSpaces(test.query.signal)
+    expect(await test.catalog.list(test.query)).toMatchObject({
+      ok: true,
+      value: { items: [{ name: 'Report.odt' }], partial: false }
+    })
+  })
+  it.each(['allFiles', 'recentlyChanged'] as const)('excludes vault hits from %s', async (view) => {
+    const test = setup()
+    test.port.markSearchVault.mockImplementation((_space, hit) => {
+      if (hit.path.startsWith('/Vault/')) hit.isInVault = true
+    })
+    test.port.webdav.search.mockResolvedValue({
+      resources: [
+        {
+          ...file('secret', {
+            name: 'Private.odt',
+            path: '/Vault/Private.odt',
+            mdate: '2026-11-18'
+          }),
+          storageId: test.personal.id,
+          highlights: ''
+        },
+        { ...file(), storageId: test.personal.id, highlights: '', mdate: '2026-11-18' }
+      ],
+      totalResults: 2
+    })
+    await test.catalog.listSpaces(test.query.signal)
+    expect(await test.catalog[view]('docs', test.query.signal, noFilter)).toMatchObject({
+      ok: true,
+      value: { items: [{ name: 'Report.odt' }], partial: false }
+    })
   })
   it('discards in-flight metadata after account change and clears previously discovered roots', async () => {
     const test = setup()

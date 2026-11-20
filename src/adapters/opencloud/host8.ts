@@ -81,6 +81,7 @@ export function useNativeOffice8(applicationConfig: unknown) {
           drives: client.graphAuthenticated.drives,
           tags: client.graphAuthenticated.tags,
           activities: client.graphAuthenticated.activities,
+          markSearchVault: (space, resource) => markVaultStatus(extensions, space, [resource]),
           webdav: {
             ...client.webdav,
             async listFiles(space, target, options) {

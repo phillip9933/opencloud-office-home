@@ -78,7 +78,7 @@ function start(template: Template | undefined, opener: HTMLElement) {
 }
 watch(
   () => route.value.fullPath,
-  async () => {
+  async (_path, _previousPath, onCleanup) => {
     preferences.lastKind = props.kind
     const revision = ++navigation
     const focusAtStart = document.activeElement
@@ -107,13 +107,21 @@ watch(
     const saved = props.context.views.get(id)
     props.context.lastView.set(props.kind, id)
     const location = saved?.kind === props.kind ? saved : defaultLocation(props.kind)
-    await activeModel.load(location)
-    if (revision !== navigation) return
-    await nextTick()
-    if (viewport.value) viewport.value.scrollTop = location.scroll
-    // Announce the new view, unless the user already moved focus while it was loading.
-    if (document.activeElement === focusAtStart || document.activeElement === document.body)
-      heading.value?.focus({ preventScroll: true })
+    const current = activeModel
+    void current.load(location)
+    // Restore navigation when the main view is ready, even while the gallery is still loading.
+    onCleanup(
+      watch(
+        () => current.state.loading,
+        () => {
+          if (revision !== navigation) return
+          if (viewport.value) viewport.value.scrollTop = location.scroll
+          if (document.activeElement === focusAtStart || document.activeElement === document.body)
+            heading.value?.focus({ preventScroll: true })
+        },
+        { flush: 'post', once: true }
+      )
+    )
   },
   { immediate: true }
 )

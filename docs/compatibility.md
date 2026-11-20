@@ -44,7 +44,8 @@ name. This installation had no editor integration. The beta 3 checks above cover
 - Template containers (`.ott`, `.ots`, `.otp`) cannot yet be converted into new documents.
   Use ordinary editable documents as templates.
 - Recently opened history and personal preferences are stored in the current browser.
-  Cross-device opened history is not supported.
+  Tabs share opened history when browser storage and Web Locks are available. Otherwise, new
+  history lasts for the current session. Cross-device opened history is not supported.
 - All files lists indexed files in supported formats without a date limit. It shows up to 200
   search results in pages of 25. Use search in OpenCloud Files if a file is missing.
 - Received-share aliases are not supported in Office discovery; use OpenCloud Files for those items.

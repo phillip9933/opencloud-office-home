@@ -78,7 +78,37 @@ it('resolves a folder identity and maps a bounded number of direct DAV rows thro
     isFolder: true,
     path: '/Policies %#? 日'
   })
+  expect(result.partial).toBe(true)
   expect(result.children).toHaveLength(FOLDER_ROW_LIMIT)
   expect(result.children?.[0]).toMatchObject({ name: 'Policy 0.odt', fileId: 'policy-0' })
   expect(result.children?.[0] && nativeAccess8(result.children[0]).read).toBe(true)
+})
+
+it.each([true, false])('reports an omitted row only when one was skipped (%s)', async (skipped) => {
+  const root = row(
+    `${spaces}/`,
+    '<d:resourcetype><d:collection/></d:resourcetype><oc:fileid>root</oc:fileid>'
+  )
+  const child = row(`${spaces}/Policy.odt`, '<oc:fileid>policy</oc:fileid>')
+  const request = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(
+      envelope(
+        root +
+          child +
+          (skipped
+            ? '<d:response><d:href>/dav/spaces/team/Unavailable.odt</d:href><d:status>HTTP/1.1 403 Forbidden</d:status></d:response>'
+            : '')
+      )
+    )
+  const space = {
+    id: 'team',
+    getWebDavUrl: ({ path }: { path: string }) => `${base}${spaces}${path}`
+  } as SpaceResource
+  expect(
+    await boundedFolderList8(base, () => ({}), request)(space, { path: '/' }, { signal })
+  ).toMatchObject({
+    children: [{ fileId: 'policy' }],
+    partial: skipped
+  })
 })

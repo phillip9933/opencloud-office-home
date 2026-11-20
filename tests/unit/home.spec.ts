@@ -22,6 +22,23 @@ beforeEach(() => {
 })
 
 describe('home workflow', () => {
+  it('makes files, Recent and blank creation available while templates are pending', async () => {
+    const pending = deferred<Awaited<ReturnType<OfficeServices['templates']>>>()
+    vi.spyOn(services, 'templates').mockReturnValue(pending.promise)
+    const recent = vi.spyOn(services.catalog, 'recentlyChanged')
+    const home = createHomeModel(services, 'docs')
+    const load = home.load(defaultLocation('docs'))
+    try {
+      await vi.waitFor(() => expect(home.state.destinationWritable).toBe(true))
+      expect(home.state.loading).toBe(false)
+      expect(recent).toHaveBeenCalledOnce()
+      await home.create('Independent blank', 'odt')
+      expect(home.state.created?.name).toBe('Independent blank.odt')
+    } finally {
+      pending.resolve(ok({ items: [], partial: false }))
+      await load
+    }
+  })
   it('cancels an unfinished template gallery when leaving the page', async () => {
     const started = deferred<AbortSignal>()
     const pending = deferred<Awaited<ReturnType<OfficeServices['templates']>>>()

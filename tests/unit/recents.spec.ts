@@ -2,6 +2,64 @@ import { describe, expect, it } from 'vitest'
 import { createRecentStore } from '../../src/preferences/recents'
 
 describe('browser-local recents', () => {
+  it('preserves interleaved opens and removals from two active tabs', async () => {
+    const storage = new Map<string, string>()
+    let writtenWithoutLock = false
+    let locked = false
+    const port = {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem(key: string, value: string) {
+        writtenWithoutLock ||= !locked
+        storage.set(key, value)
+      }
+    }
+    const scope = { instance: 'same-instance', user: 'same-user' }
+    let queue = Promise.resolve()
+    const locks = {
+      request(_name: string, callback: () => void) {
+        queue = queue.then(() => {
+          locked = true
+          try {
+            callback()
+          } finally {
+            locked = false
+          }
+        })
+        return queue
+      }
+    }
+    const first = createRecentStore(scope, port, Date.now, locks)
+    const second = createRecentStore(scope, port, Date.now, locks)
+    const a = { spaceId: 's', itemId: 'a' }
+    const b = { spaceId: 's', itemId: 'b' }
+    await Promise.all([first.record(a, 'docs'), second.record(b, 'docs')])
+    expect((await first.list('docs')).map((entry) => entry.ref.itemId).sort()).toEqual(['a', 'b'])
+    await first.remove(a)
+    await second.record({ spaceId: 's', itemId: 'c' }, 'docs')
+    expect((await first.list('docs')).map((entry) => entry.ref.itemId).sort()).toEqual(['b', 'c'])
+    expect(writtenWithoutLock).toBe(false)
+  })
+  it('preserves legacy stored history when a browser cannot coordinate shared writes', () => {
+    const scope = { instance: 'same-instance', user: 'same-user' }
+    const key = JSON.stringify(['office-recents', 1, scope.instance, scope.user])
+    const initial = JSON.stringify([
+      { ref: { spaceId: 's', itemId: 'old' }, kind: 'docs', openedAt: Date.now() }
+    ])
+    const storage = new Map([[key, initial]])
+    const port = {
+      getItem: (id: string) => storage.get(id) ?? null,
+      setItem: (id: string, value: string) => void storage.set(id, value)
+    }
+    const store = createRecentStore(scope, port, Date.now, false)
+    store.record({ spaceId: 's', itemId: 'new' }, 'docs')
+    expect(
+      store
+        .list('docs')
+        .map(({ ref }) => ref.itemId)
+        .sort()
+    ).toEqual(['new', 'old'])
+    expect(storage.get(key)).toBe(initial)
+  })
   it('isolates users and instances, stores only references and removes revoked entries', () => {
     const map = new Map<string, string>()
     const storage = {

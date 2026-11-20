@@ -1,5 +1,5 @@
 import { buildResource, type Resource, type WebDavResponseResource } from '@opencloud-eu/web-client'
-import { DavNamespaces, type WebDAV } from '@opencloud-eu/web-client/webdav'
+import { DavNamespaces, type ListFilesResult, type WebDAV } from '@opencloud-eu/web-client/webdav'
 import { FolderListingLimitError, HttpStatusError } from './errors8'
 import { FOLDER_ROW_LIMIT } from '../../contracts/office'
 
@@ -57,8 +57,14 @@ function readResource(element: Element, origin: string, davPath: string): Resour
   if (element.localName !== 'response' || element.namespaceURI !== DavNamespaces.d) return
   const href = childElement(element, 'href')?.textContent
   if (!href || href.length > 4096) return
-  const resolved = new URL(href, origin)
-  if (resolved.origin !== origin || !resolved.pathname.startsWith(davPath)) return
+  let filename: string
+  try {
+    const resolved = new URL(href, origin)
+    if (resolved.origin !== origin || !resolved.pathname.startsWith(davPath)) return
+    filename = decodeURIComponent(resolved.pathname.slice(davPath.length - 1))
+  } catch {
+    return
+  }
   const props: Record<string, string> = {}
   let directory = false
   for (const status of element.children) {
@@ -79,7 +85,6 @@ function readResource(element: Element, origin: string, davPath: string): Resour
     }
   }
   if (!props.fileid) return
-  const filename = decodeURIComponent(resolved.pathname.slice(davPath.length - 1))
   const basename = filename.replace(/\/$/, '').split('/').pop() ?? ''
   const stat = {
     filename,
@@ -106,18 +111,14 @@ function folderResources(xml: string, origin: string, davPath: string) {
   const resource = first && readResource(first, origin, davPath)
   if (!first || !resource) throw new HttpStatusError(404)
   const children: Resource[] = []
-  let count = 0
-  for (
-    let row = first.nextElementSibling;
-    row && count < FOLDER_ROW_LIMIT;
-    row = row.nextElementSibling
-  ) {
-    count++
-    if (row.localName !== 'response' || row.namespaceURI !== DavNamespaces.d) continue
+  let partial = false
+  let row = first.nextElementSibling
+  for (let count = 0; row && count < FOLDER_ROW_LIMIT; count++, row = row.nextElementSibling) {
     const item = readResource(row, origin, davPath)
     if (item) children.push(item)
+    else partial = true
   }
-  return { resource, children }
+  return { resource, children, partial: partial || row !== null }
 }
 
 /** Only the signed-in user's read-only folder listings use this bounded transport. */
@@ -125,7 +126,7 @@ export function boundedFolderList8(
   server: string,
   headers: () => HeadersInit,
   request: typeof fetch = fetch
-): WebDAV['listFiles'] {
+): (...args: Parameters<WebDAV['listFiles']>) => Promise<ListFilesResult & { partial: boolean }> {
   return async (space, { fileId } = {}, { signal } = {}) => {
     const base = new URL(server)
     const davUrl = new URL(base)

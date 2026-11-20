@@ -4,7 +4,7 @@ import { waitForResult } from '../../services/cancellation'
 import { sdkRecord } from './metadata8'
 import type { Resource, SpaceResource } from '@opencloud-eu/web-client'
 import type { Graph } from '@opencloud-eu/web-client/graph'
-import type { WebDAV } from '@opencloud-eu/web-client/webdav'
+import type { ListFilesResult, WebDAV } from '@opencloud-eu/web-client/webdav'
 import { belongsTo, familyFormats } from '../../app/registry'
 import {
   fail,
@@ -28,7 +28,12 @@ export interface ReadPort8 {
   drives: Pick<Graph['drives'], 'listMyDrives'>
   tags: Pick<Graph['tags'], 'listTags'>
   activities: Pick<Graph['activities'], 'listActivities'>
-  webdav: Pick<WebDAV, 'listFiles' | 'getFileInfo' | 'search'>
+  webdav: Pick<WebDAV, 'getFileInfo' | 'search'> & {
+    listFiles(
+      ...args: Parameters<WebDAV['listFiles']>
+    ): Promise<ListFilesResult & { partial?: boolean }>
+  }
+  markSearchVault(space: SpaceResource, resource: Resource): void
 }
 
 // OpenCloud 9.0.0 KQL: the natural-language date matches RECENT_CHANGE_DAYS, and the media
@@ -263,8 +268,14 @@ export function createCatalog8(
       let skipped = 0
       for (const resource of found.resources) {
         const space = typeof resource.storageId === 'string' && spaces.get(resource.storageId)
-        const item = space ? normalize(space.id, resource) : undefined
-        if (!item?.ok || (requireModifiedAt && item.value.modifiedAt === undefined)) {
+        if (!space || typeof resource.path !== 'string' || !resource.path) {
+          skipped++
+          continue
+        }
+        port.markSearchVault(space, resource)
+        if (resource.isInVault) continue
+        const item = normalize(space.id, resource)
+        if (!item.ok || (requireModifiedAt && item.value.modifiedAt === undefined)) {
           skipped++
           continue
         }
@@ -337,13 +348,15 @@ export function createCatalog8(
         )
           return fail('forbiddenOrMissing')
         const items = new Map<string, FileRecord>()
-        for (const resource of page.children?.slice(0, FOLDER_ROW_LIMIT) ?? []) {
+        const children = page.children ?? []
+        let partial = page.partial !== false || children.length > FOLDER_ROW_LIMIT
+        for (const resource of children.slice(0, FOLDER_ROW_LIMIT)) {
           const item = normalize(space.id, resource)
-          if (item.ok && (query.kind === 'any' || belongsTo(item.value, query.kind)))
+          if (!item.ok) partial = true
+          else if (query.kind === 'any' || belongsTo(item.value, query.kind))
             items.set(refKey(item.value.ref), item.value)
         }
-        // This SDK result has no verified cursor/total/truncation contract. Keep the limit visible.
-        return ok({ items: [...items.values()], partial: true })
+        return ok({ items: [...items.values()], partial })
       } catch (error) {
         return fail(interrupted(key, query.signal) ?? catalogError(error))
       }

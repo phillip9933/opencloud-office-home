@@ -53,6 +53,7 @@ function setup() {
   let created = false
   let session: string | undefined = 'user-a/session-1'
   const port = {
+    markSearchVault: vi.fn<NativePort8['markSearchVault']>(),
     drives: {
       listMyDrives: vi.fn<NativePort8['drives']['listMyDrives']>().mockResolvedValue([space])
     },
@@ -68,7 +69,9 @@ function setup() {
           if (ref?.fileId === 'root' || ref?.path === '/') return Promise.resolve(root)
           if (ref?.path === '/New.odt') {
             if (!created) return Promise.reject({ statusCode: 404 })
-            return Promise.resolve(file({ name: 'New.odt', path: '/New.odt', fileId: 'new' }))
+            return Promise.resolve(
+              file({ name: 'New.odt', path: '/New.odt', fileId: 'new', parentFolderId: 'root' })
+            )
           }
           return Promise.resolve(file())
         }),
@@ -228,6 +231,7 @@ describe('native SDK integration boundaries', () => {
     expect(url.origin).toBe('https://cloud.example')
     expect(url.searchParams.get('parent_container_id')).toBe('root')
     expect(url.searchParams.get('filename')).toBe('New.odt')
+    expect(t.port.webdav.listFiles).not.toHaveBeenCalled()
   })
   it('resolves an ID-addressed subfolder path before name checks and creation confirmation', async () => {
     const t = setup()
@@ -241,7 +245,14 @@ describe('native SDK integration boundaries', () => {
       if (ref?.fileId === 'folder' || ref?.path === '/Testing') return Promise.resolve(folder)
       if (ref?.path === '/Testing/New.odt')
         return created
-          ? Promise.resolve(file({ fileId: 'new', name: 'New.odt', path: '/Testing/New.odt' }))
+          ? Promise.resolve(
+              file({
+                fileId: 'new',
+                name: 'New.odt',
+                path: '/Testing/New.odt',
+                parentFolderId: 'folder'
+              })
+            )
           : Promise.reject({ statusCode: 404 })
       return original(space, ref, options)
     })
@@ -413,6 +424,78 @@ describe('native SDK integration boundaries', () => {
       outcome: 'uncertain'
     })
     expect(t.port.requestNew).toHaveBeenCalledOnce()
+  })
+  it('does not confirm a file whose parent ID differs even if the destination path appears unchanged', async () => {
+    const t = setup()
+    await t.init()
+    const original = t.port.webdav.getFileInfo.getMockImplementation()!
+    t.port.webdav.getFileInfo.mockImplementation((space, ref, options) => {
+      if (t.port.requestNew.mock.calls.length && ref?.path === '/New.odt')
+        return Promise.resolve(
+          file({ fileId: 'unrelated', name: 'New.odt', parentFolderId: 'replacement' })
+        )
+      return original(space, ref, options)
+    })
+    expect(await t.native.services.creation.blank(input)).toEqual({
+      ok: false,
+      error: 'timeout',
+      outcome: 'uncertain'
+    })
+    expect(t.port.requestNew).toHaveBeenCalledOnce()
+    expect(t.port.webdav.listFiles).not.toHaveBeenCalled()
+  })
+
+  it.each(['member', 'absent', 'replacement', 'ambiguous', 'wrong-file'] as const)(
+    'verifies folder membership when the child omits its parent ID (%s)',
+    async (scenario) => {
+      const t = setup()
+      await t.init()
+      const child = file({ fileId: 'new', name: 'New.odt', path: '/New.odt' })
+      const other = { ...child, fileId: 'other-file' }
+      const original = t.port.webdav.getFileInfo.getMockImplementation()!
+      t.port.webdav.getFileInfo.mockImplementation((space, ref, options) => {
+        if (t.port.requestNew.mock.calls.length && ref?.path === '/New.odt')
+          return Promise.resolve(child)
+        return original(space, ref, options)
+      })
+      t.port.webdav.listFiles.mockResolvedValue({
+        resource: scenario === 'replacement' ? { ...t.root, fileId: 'replacement' } : t.root,
+        children: {
+          member: [child],
+          absent: [],
+          replacement: [child],
+          ambiguous: [child, other],
+          'wrong-file': [other]
+        }[scenario],
+        partial: true
+      })
+      const created = await t.native.services.creation.blank(input)
+      if (scenario === 'member')
+        expect(created).toMatchObject({ ok: true, value: { ref: { itemId: 'new' } } })
+      else expect(created).toEqual({ ok: false, error: 'timeout', outcome: 'uncertain' })
+      expect(t.port.requestNew).toHaveBeenCalledOnce()
+      expect(t.port.webdav.listFiles).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('shows only native templates that can be copied in their original format', async () => {
+    const t = setup()
+    await t.init()
+    t.port.webdav.listFiles.mockResolvedValue({
+      resource: t.root,
+      children: [
+        file(),
+        file({
+          fileId: 'container',
+          name: 'Container.ott',
+          mimeType: 'application/vnd.oasis.opendocument.text-template'
+        }),
+        file({ fileId: 'mismatch', name: 'Mismatch.pdf' }),
+        file({ fileId: 'missing-mime', name: 'Unknown.odt', mimeType: undefined })
+      ]
+    })
+    const result = await t.native.services.templates('docs', rootRef)
+    expect(result.ok && result.value.items.map((template) => template.name)).toEqual(['Template'])
   })
 })
 

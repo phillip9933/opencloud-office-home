@@ -15,7 +15,7 @@ import {
 } from '../../contracts/office'
 import { createRecentStore } from '../../preferences/recents'
 import { createViewPreferenceStore } from '../../preferences/view'
-import { folderTemplates } from '../../services/templates'
+import { canCopyTemplate, folderTemplates } from '../../services/templates'
 import {
   createCatalog8,
   catalogError,
@@ -98,6 +98,50 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     }
   }
 
+  async function confirmCreatedFile(
+    input: CreationRequest,
+    space: SpaceResource,
+    path: string
+  ): Promise<Result<FileRecord>> {
+    if (!session()) return fail('unauthenticated')
+    const resource = await port.webdav.getFileInfo(space, { path }, { signal: abort.signal })
+    if (!session()) return fail('unauthenticated')
+    const result = normalizeReadMetadata(space.id, resource)
+    if (!result.ok) return fail('timeout')
+    const file = result.value
+    file.access = nativeAccess8(resource)
+    if (
+      !file.access.read ||
+      file.kind !== 'file' ||
+      file.name !== input.name ||
+      file.mimeType !== input.format.mimeType
+    )
+      return fail('timeout')
+
+    // A path lookup by itself cannot confirm which folder contained the returned file.
+    if (resource.parentFolderId)
+      return resource.parentFolderId === input.destination.itemId ? result : fail('timeout')
+
+    const listing = await catalog.list({
+      folder: input.destination,
+      kind: 'any',
+      signal: abort.signal
+    })
+    if (!session()) return fail('unauthenticated')
+    if (!listing.ok) return fail('timeout')
+    const named = listing.value.items.filter((item) => item.name === input.name)
+    const member = named[0]
+    if (
+      named.length !== 1 ||
+      member?.kind !== 'file' ||
+      !member.access.read ||
+      member.mimeType !== file.mimeType ||
+      refKey(member.ref) !== refKey(file.ref)
+    )
+      return fail('timeout')
+    return result
+  }
+
   async function create(input: CreationRequest, source?: FileRef): Promise<CreationResult> {
     let dispatched = false
     let acknowledged = false
@@ -165,12 +209,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
           const original = await read(source)
           if (!original.ok) return original
           // DEV-LIMIT(DL-006): ODF template containers need native editor conversion, never rename.
-          if (
-            original.value.file.kind !== 'file' ||
-            original.value.file.mimeType !== input.format.mimeType ||
-            !original.value.file.name.toLowerCase().endsWith(`.${input.format.extension}`)
-          )
-            return fail('unsupportedType')
+          if (!canCopyTemplate(original.value.file, input.format)) return fail('unsupportedType')
           if (!session()) return fail('unauthenticated')
           dispatched = true
           const copied = await port.webdav.copyFiles(
@@ -198,15 +237,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
           if (response.status !== 200) throw new HttpStatusError(response.status)
         }
         acknowledged = true
-        if (!session()) return fail('unauthenticated')
-        const resource = await port.webdav.getFileInfo(destination.value.space, { path })
-        if (!session()) return fail('unauthenticated')
-        const result = normalizeReadMetadata(destination.value.space.id, resource)
-        if (!result.ok) return fail('timeout')
-        if (result.value.name !== input.name || result.value.mimeType !== input.format.mimeType)
-          return fail('timeout')
-        result.value.access = nativeAccess8(resource)
-        return result
+        return await confirmCreatedFile(input, destination.value.space, path)
       } catch (error) {
         return fail(
           acknowledged ? 'timeout' : dispatched ? mutationError(error) : catalogError(error)
@@ -234,7 +265,12 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
     catalog,
     capabilities,
     filters: options.filters,
-    recents: createRecentStore(options, options.storage),
+    recents: createRecentStore(
+      options,
+      options.storage,
+      Date.now,
+      globalThis.navigator?.locks ?? false
+    ),
     viewPreferences: createViewPreferenceStore(options, options.storage),
     creation: {
       blank: (input) => create(input),
@@ -244,7 +280,7 @@ export function createNativeServices8(port: NativePort8, options: NativeOptions)
       const folder = selectedFolder ?? configuration.templateFolder
       if (!folder) return Promise.resolve(ok({ items: [], partial: false }))
       const lifetime = signal ? AbortSignal.any([signal, abort.signal]) : abort.signal
-      return folderTemplates(catalog, folder, kind, lifetime)
+      return folderTemplates(catalog, folder, kind, lifetime, canCopyTemplate)
     },
     editor: {
       async open(input) {

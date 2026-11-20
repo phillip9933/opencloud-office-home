@@ -161,8 +161,8 @@ export interface Preview {
 }
 export interface RecentStore {
   list(kind: OfficeKind): RecentRef[]
-  record(ref: FileRef, kind: OfficeKind): void
-  remove(ref: FileRef): void
+  record(ref: FileRef, kind: OfficeKind): void | Promise<void>
+  remove(ref: FileRef): void | Promise<void>
 }
 export interface OfficeServices {
   mode: 'fixture' | 'native'

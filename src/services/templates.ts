@@ -7,6 +7,7 @@ import {
   type FileCatalog,
   type FileRecord,
   type FileRef,
+  type Format,
   type OfficeKind,
   type Page,
   type Result,
@@ -28,13 +29,26 @@ function isPreviewImage(file: FileRecord): boolean {
   return file.kind === 'file' && PREVIEW_TYPES.includes(file.mimeType?.toLowerCase() ?? '')
 }
 
-function templatesIn(items: FileRecord[], kind: OfficeKind, category: string): Template[] {
+export function canCopyTemplate(file: FileRecord, format: Format): boolean {
+  return (
+    file.kind === 'file' &&
+    file.mimeType === format.mimeType &&
+    file.name.toLowerCase().endsWith(`.${format.extension}`)
+  )
+}
+
+function templatesIn(
+  items: FileRecord[],
+  kind: OfficeKind,
+  category: string,
+  eligible: (file: FileRecord, format: Format) => boolean
+): Template[] {
   const previews = new Map(
     items.filter(isPreviewImage).map((image) => [stem(image.name).toLowerCase(), image.ref])
   )
   return items.flatMap((file) => {
     const format = resultFormat(file, kind)
-    if (!format || !file.access.read) return []
+    if (!format || !file.access.read || !eligible(file, format)) return []
     const name = stem(file.name)
     const preview: FileRef | undefined = previews.get(name.toLowerCase())
     return [
@@ -60,7 +74,8 @@ export async function folderTemplates(
   catalog: FileCatalog,
   folder: FileRef,
   kind: OfficeKind,
-  signal: AbortSignal
+  signal: AbortSignal,
+  eligible: (file: FileRecord, format: Format) => boolean = () => true
 ): Promise<Result<Page<Template>>> {
   if (signal.aborted) return fail('cancelled')
   const root = await catalog.list({ folder, kind: 'any', signal })
@@ -70,7 +85,7 @@ export async function folderTemplates(
   const templates: Template[] = []
 
   function append(items: FileRecord[], category: string) {
-    const candidates = templatesIn(items.slice(0, FOLDER_ROW_LIMIT), kind, category)
+    const candidates = templatesIn(items.slice(0, FOLDER_ROW_LIMIT), kind, category, eligible)
     candidates.sort((a, b) => a.name.localeCompare(b.name))
     const remaining = MAX_TEMPLATES - templates.length
     partial ||= items.length > FOLDER_ROW_LIMIT || candidates.length > remaining

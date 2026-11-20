@@ -16,7 +16,14 @@ import { createOfficeContext } from '../../src/app/context'
 import { officeApps, officeRoute } from '../../src/app/registry'
 const services = fixtureServices({ seedHistory: true })
 const blank = services.creation.blank
-if (new URLSearchParams(location.search).get('case') === 'editor-failure') {
+const scenario = new URLSearchParams(location.search).get('case')
+if (scenario === 'slow-gallery') {
+  const templates = services.templates
+  services.templates = async (kind, folder, signal) => {
+    await fetch('/pending-templates', { signal })
+    return templates(kind, folder, signal)
+  }
+} else if (scenario === 'editor-failure') {
   const open = services.editor.open
   let first = true
   services.editor.open = (input) => {
@@ -33,7 +40,7 @@ if (new URLSearchParams(location.search).get('case') === 'editor-failure') {
   }
 }
 const context = createOfficeContext(services)
-if (new URLSearchParams(location.search).get('case') === 'load-failure') {
+if (scenario === 'load-failure') {
   context.preferences.lastFolder.docs = { spaceId: 'fixture-personal', itemId: 'reports' }
   const listSpaces = services.catalog.listSpaces
   let first = true
