@@ -30,6 +30,7 @@ pnpm peers check
 ```
 
 `pnpm check` runs type checks, lint, formatting, unit tests and build/artifact checks.
+The packaging regression in the unit suite uses Git, tar and Python 3.
 Browser tests need the matching Playwright Chromium installation
 (`pnpm exec playwright install chromium`). CI runs validation on Node 24 and 26.
 
@@ -44,8 +45,8 @@ The pnpm directory must contain `bin/pnpm.mjs`. For browser tests, also set
 `OFFICE_BROWSER_EXECUTABLE` to the matching Chromium executable. Install dependencies separately;
 the isolated runner has no network access.
 
-`pnpm build` produces the native app in `dist/`. `pnpm package:release` packages that build
-as a ZIP with licenses and a checksum in `release/`. Packaging requires Python 3.
+`pnpm build` produces the native app in `dist/`. From a clean checkout, `pnpm package:release`
+builds the committed source and writes the ZIP, licenses and checksum to `release/`.
 See [compatibility](docs/compatibility.md) and
 [dependency status](docs/dependency-status.md) for outstanding limitations.
 

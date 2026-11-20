@@ -61,6 +61,7 @@ pnpm check
 pnpm package:release
 ```
 
-`pnpm build` creates the native app in `dist/` as part of the checks. The packaging command
-uses Python 3 and writes the installable ZIP and checksum to `release/`. GitHub release downloads
-are built in CI from their version tag. The archive's `SOURCE.txt` identifies the source commit.
+`pnpm build` creates the native app in `dist/` as part of the checks. Commit your changes before
+you run the packaging command. It uses Git, tar and Python 3 to build from the source commit and
+writes the installable ZIP and checksum to `release/`. The archive's `SOURCE.txt` identifies that
+commit. GitHub release downloads are built in CI from their version tag.
