@@ -13,7 +13,7 @@ Verify and extract the download on Linux:
 
 ```sh
 sha256sum --check SHA256SUMS
-unzip office-home-0.1.0-beta.4.zip
+unzip office-home-0.1.0-beta.5.zip
 ```
 
 Use the filename for your downloaded version. For beta.2, extract the `.tar.gz` file with
