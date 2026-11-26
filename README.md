@@ -2,7 +2,11 @@
 
 A starting point for documents, spreadsheets, presentations and drawings inside OpenCloud.
 
-Office Home brings your office files together with:
+<a href="https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.5"><img src="docs/badges/github-releases.svg" alt="Download Office Home 0.1.0 beta 5 from GitHub Releases" height="40"></a>
+
+**Support:** [Buy me a coffee](https://buymeacoffee.com/phillip9933) · [GitHub Sponsors](https://github.com/sponsors/phillip9933)
+
+## Features
 
 - Dedicated Docs, Sheets, Slides and Draw pages.
 - All files and Recent views, favorites, and customizable list or grid views.
@@ -35,6 +39,6 @@ these workflows could fit into OpenCloud Files.
 Office Home is [AGPL-3.0-only](LICENSE-AGPL-3.0). The original app skeleton remains
 [Apache-2.0](LICENSE); see [third-party notices](THIRD_PARTY_NOTICES.md).
 
-## AI usage and license
+## AI usage
 
-I use AI tools to help with development, including analysis, code, tests and documentation. Validation records distinguish checks actually run from checks still required. Source review and automated tests are not security certification.
+I use AI tools for analysis, implementation, tests, and documentation. I decide what ships and take responsibility for maintaining it. Project-specific testing and known limitations are documented separately.
