@@ -2,7 +2,7 @@
 
 Find, create and open documents, spreadsheets, presentations and drawings inside OpenCloud.
 
-<a href="https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.5"><img src="docs/badges/github-releases.svg" alt="Download Office Home 0.1.0 beta 5 from GitHub Releases" height="40"></a>
+<a href="https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.6"><img src="docs/badges/github-releases.svg" alt="Download Office Home 0.1.0 beta 6 from GitHub Releases" height="40"></a>
 
 **Support:** [Buy me a coffee](https://buymeacoffee.com/phillip9933) · [GitHub Sponsors](https://github.com/sponsors/phillip9933)
 
@@ -27,7 +27,7 @@ The Docs page in the beta 5 preview, with sample files.
 
 ## Get started
 
-Download the ZIP and checksum from [the beta 5 release](https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.5).
+Download the ZIP and checksum from [the beta 6 release](https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.6).
 Install the ZIP on your OpenCloud server. Beta 5 was tested on OpenCloud 9.2.0.
 See the [installation guide](docs/installation.md) to add it to OpenCloud and
 [configuration](docs/configuration.md) to set template folders and defaults.
