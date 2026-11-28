@@ -1,6 +1,6 @@
 # Office Home for OpenCloud
 
-A starting point for documents, spreadsheets, presentations and drawings inside OpenCloud.
+Find, create and open documents, spreadsheets, presentations and drawings inside OpenCloud.
 
 <a href="https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.5"><img src="docs/badges/github-releases.svg" alt="Download Office Home 0.1.0 beta 5 from GitHub Releases" height="40"></a>
 
@@ -9,7 +9,7 @@ A starting point for documents, spreadsheets, presentations and drawings inside 
 ## Features
 
 - Dedicated Docs, Sheets, Slides and Draw pages.
-- All files and Recent views, favorites, and customizable list or grid views.
+- An All files view for indexed office files, a Recent view, favorites, and list or grid layouts.
 - Templates from a shared or personal folder.
 - New documents that open directly in your configured editor.
 - Direct page links for shortcuts such as `sheets.example.com`.
@@ -17,10 +17,18 @@ A starting point for documents, spreadsheets, presentations and drawings inside 
 It uses your existing OpenCloud files, permissions and office integration. No additional container
 is needed. Built on the official [OpenCloud app skeleton](https://github.com/opencloud-eu/web-app-skeleton).
 
+## Screenshots
+
+The Docs page in the beta 5 preview, with sample files.
+
+![Docs on desktop with template cards and the All files list](docs/screenshots/docs-desktop.png)
+
+<img src="docs/screenshots/docs-mobile.png" alt="Docs in dark mode on a phone, with Office navigation and the file list" width="300">
+
 ## Get started
 
-Office Home is available as an installable beta, tested with Collabora.
-Download the app archive from [Releases](https://github.com/phillip9933/opencloud-office-home/releases).
+Download the ZIP and checksum from [the beta 5 release](https://github.com/phillip9933/opencloud-office-home/releases/tag/v0.1.0-beta.5).
+Install the ZIP on your OpenCloud server. Beta 5 was tested on OpenCloud 9.2.0.
 See the [installation guide](docs/installation.md) to add it to OpenCloud and
 [configuration](docs/configuration.md) to set template folders and defaults.
 [Compatibility and known limitations](docs/compatibility.md) are documented separately.

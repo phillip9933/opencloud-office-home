@@ -3,6 +3,17 @@
 Office Home is available as a beta. It runs as a static OpenCloud Web app using the host's files,
 permissions and configured editor. No additional backend or container is required.
 
+## Beta 5 verification
+
+On 2026-11-20, the published beta 5 ZIP passed a clean installation check on OpenCloud 9.2.0.
+After sign-in, all four Office pages opened. The gallery showed ODT templates from the selected
+folder and a category subfolder. It excluded an OTT template container.
+
+On an existing installation with Collabora Online, all four pages showed files and templates
+after the upgrade. A new ODT opened automatically in Collabora and reopened from Recent.
+The next creation form remembered the selected folder. The seven-format edit and save checks
+below used beta 3.
+
 ## Beta 3 live verification
 
 | Component                     | Version                 |
@@ -32,7 +43,7 @@ and PPTX, template copies, automatic editor opening, and a basic ODT save and re
 The OpenCloud SDK dependencies in this repository remain pinned to 8.2.1. The installed host
 supplies the shared runtime packages.
 
-## Fresh installation
+## Beta 4 fresh installation
 
 On a fresh OpenCloud 9.2.0 Linux AMD64 installation, beta 4 opened Docs, Sheets, Slides and Draw
 after sign-in. Two ODT documents were uploaded through Files. After the template folder was selected
