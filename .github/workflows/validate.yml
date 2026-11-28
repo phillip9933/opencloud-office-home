@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: validate-${{ github.workflow }}-${{ github.ref }}
+  group: validate-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && 'audit' || 'validation' }}
   cancel-in-progress: true
 jobs:
   validate:
